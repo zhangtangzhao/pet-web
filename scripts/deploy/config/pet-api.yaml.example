@@ -1,0 +1,61 @@
+# pet-api 配置模板（敏感项全部经环境变量注入，支持 ${VAR} 占位）
+# 用法：
+#   1) 复制为 config/pet-api.yaml（该文件已被 .gitignore 忽略，勿提交密钥）
+#   2) 复制 .env.example 为 .env 并填入真实值；docker compose 会注入到 api 容器
+#   3) 服务启动时 conf.UseEnv() 展开占位符；生产模式缺失关键变量会拒绝启动
+Name: pet-api
+Host: 0.0.0.0
+Port: 8888
+Mode: ${APP_MODE}                  # dev / test / pro（prod 下测试公共验证码强制失效且校验关键配置）；默认值由 compose 注入 dev
+
+# JWT：用户端 / 平台端双 secret 隔离（生产必须经 .env 注入随机长字符串）
+Auth:
+  MemberAccessSecret: "${AUTH_MEMBER_SECRET}"
+  MemberAccessExpire: 7200          # 2h
+  AdminAccessSecret: "${AUTH_ADMIN_SECRET}"
+  AdminAccessExpire: 1800           # 30min
+
+# PostgreSQL（compose 内通过服务名 postgres 访问）
+Database:
+  DataSource: "host=postgres port=5432 user=pet password=${POSTGRES_PASSWORD} dbname=pet sslmode=disable TimeZone=Asia/Shanghai"
+
+Redis:
+  Addr: "redis:6379"
+  Pass: "${REDIS_PASSWORD}"
+
+Snowflake:
+  Node: 1                           # 多实例部署时各节点不能重复
+
+# 微信登录
+WeChat:
+  MiniAppID: "${WECHAT_MINI_APPID}"
+  MiniSecret: "${WECHAT_MINI_SECRET}"
+  H5AppID: "${WECHAT_H5_APPID}"     # 公众号 AppId（H5 网页授权）
+  H5Secret: "${WECHAT_H5_SECRET}"
+
+# 微信支付 V3
+WeChatPay:
+  MchID: "${WECHATPAY_MCH_ID}"
+  MchAPIv3Key: "${WECHATPAY_APIV3_KEY}"
+  MchSerialNo: "${WECHATPAY_SERIAL_NO}"
+  PrivateKeyPath: "/app/etc/wechatpay/apiclient_key.pem"
+  NotifyURL: "${WECHATPAY_NOTIFY_URL}"   # 如 https://your-domain.com/api/pay/notify/wx
+
+# 短信验证码登录
+Sms:
+  Provider: "${SMS_PROVIDER}"       # aliyun / tencent；留空则不发真实短信
+  TestCode: "${SMS_TEST_CODE}"      # 测试公共验证码：仅 Mode != prod 且非空时生效，生产必须留空
+  CodeExpireSeconds: 300
+  SendIntervalSeconds: 60
+  DailyLimit: 10
+
+# 对象存储（媒体直传凭证签发）
+COS:
+  Bucket: "${COS_BUCKET}"           # bucket-appid
+  Region: "${COS_REGION}"           # 默认值由 compose 注入 ap-guangzhou
+  SecretID: "${COS_SECRET_ID}"
+  SecretKey: "${COS_SECRET_KEY}"
+
+Log:
+  ServiceName: pet-api
+  Level: info

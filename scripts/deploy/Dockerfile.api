@@ -1,0 +1,29 @@
+# scripts/deploy/Dockerfile.api —— pet-api 后端镜像
+# 构建上下文为 backend/（见 docker-compose.yml services.api.build）
+# 代码与 go.sum 于 M1 就绪后即可构建
+
+# ── 构建阶段 ──
+FROM golang:1.25-alpine AS builder
+WORKDIR /build
+
+# 先拷贝依赖清单，利用层缓存
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o bin/pet-api pet.go
+
+# ── 运行阶段 ──
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata \
+    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone \
+    && addgroup -S app && adduser -S app -G app
+
+WORKDIR /app
+COPY --from=builder /build/bin/pet-api /app/pet-api
+COPY --from=builder /build/etc /app/etc
+
+USER app
+EXPOSE 8888
+ENTRYPOINT ["/app/pet-api", "-f", "/app/etc/pet-api.yaml"]

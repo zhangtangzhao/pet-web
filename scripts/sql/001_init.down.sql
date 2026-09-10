@@ -1,0 +1,12 @@
+-- 回滚：按依赖逆序删除
+DROP TABLE IF EXISTS payment;
+DROP TABLE IF EXISTS order_item;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS member_favorite;
+DROP TABLE IF EXISTS product_image;
+DROP TABLE IF EXISTS pet_product;
+DROP TABLE IF EXISTS breed;
+DROP TABLE IF EXISTS category;
+DROP TABLE IF EXISTS admin_user;
+DROP TABLE IF EXISTS wechat_auth;
+DROP TABLE IF EXISTS member;

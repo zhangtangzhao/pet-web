@@ -1,0 +1,100 @@
+# scripts/deploy/docker-compose.yml
+# 一期单机部署编排：nginx + pet-api + PostgreSQL + Redis
+# 生产部署：复制 .env.example 为 .env 并修改密码；配置见 config/pet-api.yaml.example
+name: pet
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pet-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pet
+      POSTGRES_USER: pet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pet_dev_123}
+      TZ: Asia/Shanghai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # 首次初始化自动建表（M1 落地 scripts/sql 后启用）
+      # - ./init-sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"   # 仅本机可连，便于调试
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pet -d pet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: pet-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-redis_dev_123}"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_123}
+
+  api:
+    build:
+      context: ../../backend
+      dockerfile: ../scripts/deploy/Dockerfile.api
+    image: pet-api:latest
+    container_name: pet-api
+    restart: unless-stopped
+    volumes:
+      - ./config/pet-api.yaml:/app/etc/pet-api.yaml:ro
+    # 配置中的 ${VAR} 占位符由以下环境变量注入（值来自同目录 .env）
+    environment:
+      APP_MODE: ${APP_MODE:-dev}
+      AUTH_MEMBER_SECRET: ${AUTH_MEMBER_SECRET}
+      AUTH_ADMIN_SECRET: ${AUTH_ADMIN_SECRET}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pet_dev_123}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_dev_123}
+      WECHAT_MINI_APPID: ${WECHAT_MINI_APPID}
+      WECHAT_MINI_SECRET: ${WECHAT_MINI_SECRET}
+      WECHAT_H5_APPID: ${WECHAT_H5_APPID}
+      WECHAT_H5_SECRET: ${WECHAT_H5_SECRET}
+      WECHATPAY_MCH_ID: ${WECHATPAY_MCH_ID}
+      WECHATPAY_APIV3_KEY: ${WECHATPAY_APIV3_KEY}
+      WECHATPAY_SERIAL_NO: ${WECHATPAY_SERIAL_NO}
+      WECHATPAY_NOTIFY_URL: ${WECHATPAY_NOTIFY_URL}
+      SMS_PROVIDER: ${SMS_PROVIDER}
+      SMS_TEST_CODE: ${SMS_TEST_CODE:-888888}
+      COS_BUCKET: ${COS_BUCKET}
+      COS_REGION: ${COS_REGION:-ap-guangzhou}
+      COS_SECRET_ID: ${COS_SECRET_ID}
+      COS_SECRET_KEY: ${COS_SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8888:8888"   # 生产仅经 nginx 访问，可删除此映射
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: pet-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../../frontend/apps/mobile/dist:/usr/share/nginx/html/h5:ro      # Taro H5 构建产物
+      - ../../frontend/apps/admin/dist:/usr/share/nginx/html/admin:ro    # 平台端构建产物（base=/admin/）
+      # 生产 HTTPS：./certs:/etc/nginx/certs:ro 并放开下方 443
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      # - "443:443"
+
+volumes:
+  pgdata:
+  redisdata:

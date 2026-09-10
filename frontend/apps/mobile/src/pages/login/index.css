@@ -1,0 +1,61 @@
+.login {
+  padding: 64px 48px;
+}
+
+.login-title {
+  margin-bottom: 48px;
+}
+
+.login-hello {
+  display: block;
+  font-size: 44px;
+  font-weight: 700;
+}
+
+.login-form {
+  padding: 40px 32px;
+}
+
+.login-input {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  font-size: 28px;
+}
+
+.login-code-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.login-code-row .login-input {
+  flex: 1;
+}
+
+.send {
+  color: #999;
+  font-size: 24px;
+  white-space: nowrap;
+  padding: 8px;
+}
+
+.send-on {
+  color: #ff7a45;
+}
+
+.btn-login {
+  margin-top: 16px;
+  background: #ff7a45 !important;
+  color: #fff !important;
+  border-radius: 44px !important;
+}
+
+.login-tip {
+  display: block;
+  text-align: center;
+  color: #999;
+  font-size: 22px;
+  margin-top: 24px;
+}

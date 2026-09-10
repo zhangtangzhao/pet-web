@@ -1,0 +1,27 @@
+page {
+  --brand: #ff7a45;
+  --bg: #f7f7f7;
+  background: var(--bg);
+  font-size: 28px;
+  color: #333;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.price {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+  border-radius: 44px;
+  text-align: center;
+  padding: 20px 0;
+  font-size: 30px;
+}

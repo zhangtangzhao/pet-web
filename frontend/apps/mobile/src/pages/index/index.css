@@ -1,0 +1,109 @@
+.home {
+  padding: 24px;
+}
+
+.banner {
+  background: linear-gradient(135deg, #ff9a6c, #ff7a45);
+  padding: 48px 32px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-title {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.banner-sub {
+  margin-top: 12px;
+  font-size: 26px;
+  opacity: 0.9;
+}
+
+.cats {
+  display: flex;
+  gap: 24px;
+  margin: 24px 0;
+}
+
+.cat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.cat-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+}
+
+.cat-name {
+  font-size: 24px;
+  color: #666;
+}
+
+.section-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 24px 0 16px;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.pet-card {
+  width: calc(50% - 10px);
+}
+
+.pet-img {
+  width: 100%;
+  height: 320px;
+  display: block;
+}
+
+.pet-img-empty {
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80px;
+}
+
+.pet-body {
+  padding: 16px;
+}
+
+.pet-title {
+  font-size: 26px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pet-meta {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pet-meta .price {
+  font-size: 30px;
+}
+
+.pet-sales {
+  color: #999;
+  font-size: 22px;
+}

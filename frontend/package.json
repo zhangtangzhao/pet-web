@@ -1,0 +1,20 @@
+{
+  "name": "pet-frontend",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:mobile": "pnpm --filter mobile dev",
+    "dev:admin": "pnpm --filter admin dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "check-types": "turbo run check-types"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.0",
+    "typescript": "5.9.2"
+  }
+}

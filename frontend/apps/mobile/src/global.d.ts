@@ -1,0 +1,18 @@
+/// <reference types="@tarojs/taro" />
+
+declare module '*.css'
+declare module '*.png'
+declare module '*.gif'
+declare module '*.jpg'
+declare module '*.jpeg'
+declare module '*.svg'
+declare module '*.xlsx'
+declare module '*.docx'
+declare module '*.mpeg'
+declare module '*.mp3'
+declare module '*.mp4'
+declare module '*.ogg'
+declare module '*.webp'
+declare module '*.ttf'
+declare module '*.woff'
+declare module '*.woff2'

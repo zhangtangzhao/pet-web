@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞
+    url: https://docs.github.com/zh/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities
+    about: 请勿公开提交安全漏洞，使用仓库 Security 标签页的「私下报告漏洞」，见 SECURITY.md
+  - name: 使用问题 / 问答
+    url: https://github.com/
+    about: 使用与部署问题请先查阅 docs/ 与 scripts/README.md

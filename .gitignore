@@ -1,0 +1,23 @@
+# 前端
+node_modules/
+dist/
+.taro/
+.turbo/
+
+# 环境与密钥
+.env
+.env.*
+!.env.example
+
+# 后端构建产物
+backend/bin/
+*.exe
+*.test
+
+# 服务真实配置（含密钥，从 scripts/deploy/config/pet-api.yaml.example 复制）
+scripts/deploy/config/pet-api.yaml
+
+# IDE / 系统
+.idea/
+.DS_Store
+.claude/

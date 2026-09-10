@@ -1,0 +1,52 @@
+Name: pet-api
+Host: 0.0.0.0
+Port: 8888
+Mode: dev # dev/test/。生产使用 pro，此时短信测试公共验证码失效
+
+Auth:
+  MemberAccessSecret: member-jwt-secret-change-me
+  MemberAccessExpire: 7200 # 2h
+  AdminAccessSecret: admin-jwt-secret-change-me
+  AdminAccessExpire: 7200 # 2h
+RefreshTokenExpireDays: 30
+
+Database:
+  DataSource: host=127.0.0.1 port=25432 user=pet password=pet123456 dbname=pet sslmode=disable TimeZone=Asia/Shanghai
+
+Redis:
+  Addr: 127.0.0.1:56379
+  DB: 0
+
+Snowflake:
+  Node: 1
+
+WeChat:
+  MiniAppID: ""
+  MiniSecret: ""
+  H5AppID: ""
+  H5Secret: ""
+
+WeChatPay:
+  MchID: ""
+  MchAPIv3Key: ""
+  MchSerialNo: ""
+  PrivateKeyPath: ""
+  NotifyURL: ""
+
+Sms:
+  Provider: "" # aliyun/tencent；空 = 不发真实短信，验证码见服务日志
+  TestCode: "888888" # 测试公共验证码，仅 Mode != prod 生效
+  CodeExpireSeconds: 300
+  SendIntervalSeconds: 60
+  DailyLimit: 10
+
+COS:
+  Bucket: ""
+  Region: ""
+  SecretID: ""
+  SecretKey: ""
+  BaseURL: ""
+
+Log:
+  ServiceName: pet-api
+  Level: info
