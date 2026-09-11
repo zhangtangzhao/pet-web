@@ -81,10 +81,77 @@ export interface OrderView {
   orderNo: string
   status: number
   statusText: string
+  totalAmount: string
+  discountAmount: string
+  serviceFee: string
   payAmount: string
+  couponInfo: string
+  serviceItems: string
   contactName: string
   contactPhone: string
   expireAt: string
   createdAt: string
   items: { productId: string; productTitle: string; productImage: string; breedName: string; price: string; quantity: number }[]
 }
+
+// ───────── 营销 ─────────
+
+export interface ServiceItemView {
+  id: string
+  name: string
+  description: string
+  originalPrice: string
+  price: string
+}
+
+export interface CouponTemplateView {
+  id: string
+  name: string
+  type: number
+  typeText: string
+  thresholdAmount: string
+  discountAmount: string
+  discountPercent: number
+  maxDiscountAmount: string
+  totalCount: number
+  issuedCount: number
+  perLimit: number
+  newUserOnly: number
+  validStart: string
+  validEnd: string
+}
+
+export interface MyCouponView {
+  id: string
+  templateId: string
+  name: string
+  type: number
+  threshold: string
+  discount: string
+  discountValid: boolean
+  percent: number
+  validEnd: string
+  status: number
+  statusText: string
+  receivedAt: string
+}
+
+export interface UsableCouponView {
+  id: string
+  name: string
+  type: number
+  threshold: string
+  discount: string
+  discountValid: boolean
+  percent: number
+  validEnd: string
+}
+
+export interface CreateOrderResult {
+  orderNo: string
+  payAmount: string
+  expireAt: string
+  payParams: unknown | null
+  h5PayUrl: string
+}
+

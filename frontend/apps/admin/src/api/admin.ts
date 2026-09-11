@@ -51,7 +51,11 @@ export interface OrderView {
   status: number
   statusText: string
   totalAmount: string
+  discountAmount: string
+  serviceFee: string
   payAmount: string
+  couponInfo: string
+  serviceItems: string
   contactName: string
   contactPhone: string
   remark: string
@@ -258,4 +262,96 @@ export async function upsertKnowledge(payload: {
 
 export async function deleteKnowledge(id: string) {
   await client.delete(`/admin/ai/knowledge/${id}`)
+}
+
+// ───────── 营销：优惠券 / 增值服务 ─────────
+
+export interface CouponTemplate {
+  id: string
+  name: string
+  type: number
+  typeText: string
+  thresholdAmount: string
+  discountAmount: string
+  discountPercent: number
+  maxDiscountAmount: string
+  totalCount: number
+  issuedCount: number
+  perLimit: number
+  newUserOnly: number
+  pickupStart: string
+  pickupEnd: string
+  validStart: string
+  validEnd: string
+  status: number
+  updatedAt: string
+}
+
+export interface ServiceItemRow {
+  id: string
+  name: string
+  description: string
+  originalPrice: string
+  price: string
+  sort?: number
+  status: number
+}
+
+export async function fetchCoupons(params: {
+  page?: number
+  pageSize?: number
+  status?: number
+  keyword?: string
+}): Promise<PageResp<CouponTemplate>> {
+  return (await client.get('/admin/marketing/coupons', { params })) as any
+}
+
+export async function upsertCoupon(payload: {
+  id?: string
+  name: string
+  type: number
+  thresholdAmount?: string
+  discountAmount?: string
+  discountPercent?: number
+  maxDiscountAmount?: string
+  totalCount?: number
+  perLimit?: number
+  newUserOnly?: number
+  pickupStart?: string
+  pickupEnd?: string
+  validStart?: string
+  validEnd?: string
+  status?: number
+}) {
+  if (payload.id) await client.put(`/admin/marketing/coupons/${payload.id}`, payload)
+  else await client.post('/admin/marketing/coupons', payload)
+}
+
+export async function deleteCoupon(id: string) {
+  await client.delete(`/admin/marketing/coupons/${id}`)
+}
+
+export async function issueCoupon(id: string, memberIds: string[]) {
+  return (await client.post(`/admin/marketing/coupons/${id}/issue`, { memberIds })) as any
+}
+
+export async function fetchServices(): Promise<ServiceItemRow[]> {
+  return (await client.get('/admin/marketing/services')) as any
+}
+
+export async function upsertService(payload: {
+  id?: string
+  name: string
+  description?: string
+  originalPrice?: string
+  price: string
+  sort?: number
+  status?: number
+}) {
+  if (payload.id) await client.put(`/admin/marketing/services/${payload.id}`, payload)
+  else await client.post('/admin/marketing/services', payload)
+}
+
+export async function deleteService(id: string) {
+  await client.delete(`/admin/marketing/services/${id}`)
 }

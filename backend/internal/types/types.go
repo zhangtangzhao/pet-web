@@ -161,10 +161,12 @@ type HomeResp struct {
 // ─────────────────────────── 用户端 · 订单支付 ───────────────────────────
 
 type CreateOrderReq struct {
-	ProductID    string `json:"productId"`
-	ContactName  string `json:"contactName"`
-	ContactPhone string `json:"contactPhone"`
-	Remark       string `json:"remark,optional"`
+	ProductID    string   `json:"productId"`
+	ServiceIDs   []string `json:"serviceIds,optional"` // 增值服务
+	CouponID     string   `json:"couponId,optional"`   // 用户券 ID，空 = 不用券
+	ContactName  string   `json:"contactName"`
+	ContactPhone string   `json:"contactPhone"`
+	Remark       string   `json:"remark,optional"`
 }
 
 type WxPayParams struct {
@@ -198,18 +200,22 @@ type OrderItemView struct {
 }
 
 type OrderView struct {
-	OrderNo      string          `json:"orderNo"`
-	Status       int             `json:"status"`
-	StatusText   string          `json:"statusText"`
-	TotalAmount  string          `json:"totalAmount"`
-	PayAmount    string          `json:"payAmount"`
-	ContactName  string          `json:"contactName"`
-	ContactPhone string          `json:"contactPhone"`
-	Remark       string          `json:"remark"`
-	ExpireAt     string          `json:"expireAt"`
-	PaidAt       string          `json:"paidAt"`
-	CreatedAt    string          `json:"createdAt"`
-	Items        []OrderItemView `json:"items"`
+	OrderNo        string          `json:"orderNo"`
+	Status         int             `json:"status"`
+	StatusText     string          `json:"statusText"`
+	TotalAmount    string          `json:"totalAmount"`
+	DiscountAmount string          `json:"discountAmount"`
+	ServiceFee     string          `json:"serviceFee"`
+	PayAmount      string          `json:"payAmount"`
+	CouponInfo     string          `json:"couponInfo"`
+	ServiceItems   string          `json:"serviceItems"` // 服务快照 JSON [{id,name,price}]
+	ContactName    string          `json:"contactName"`
+	ContactPhone   string          `json:"contactPhone"`
+	Remark         string          `json:"remark"`
+	ExpireAt       string          `json:"expireAt"`
+	PaidAt         string          `json:"paidAt"`
+	CreatedAt      string          `json:"createdAt"`
+	Items          []OrderItemView `json:"items"`
 }
 
 type OrderNoPathReq struct {
@@ -454,4 +460,104 @@ type KnowledgeUpsertReq struct {
 	Content  string `json:"content"`
 	Sort     int    `json:"sort,optional"`
 	Status   int    `json:"status,optional"`
+}
+
+// ─────────────────────────── 营销 · 增值服务/优惠券 ───────────────────────────
+
+type ServiceItemView struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	OriginalPrice string `json:"originalPrice"`
+	Price         string `json:"price"`
+}
+
+type ServiceUpsertReq struct {
+	ID            string `json:"id,optional"`
+	Name          string `json:"name"`
+	Description   string `json:"description,optional"`
+	OriginalPrice string `json:"originalPrice,optional"`
+	Price         string `json:"price"`
+	Sort          int    `json:"sort,optional"`
+	Status        int    `json:"status,optional"`
+}
+
+type CouponTemplateView struct {
+	ID                string `json:"id"`
+	Name              string `json:"name"`
+	Type              int    `json:"type"`
+	TypeText          string `json:"typeText"`
+	ThresholdAmount   string `json:"thresholdAmount"`
+	DiscountAmount    string `json:"discountAmount"`
+	DiscountPercent   int    `json:"discountPercent"`
+	MaxDiscountAmount string `json:"maxDiscountAmount"`
+	TotalCount        int    `json:"totalCount"`
+	IssuedCount       int    `json:"issuedCount"`
+	PerLimit          int    `json:"perLimit"`
+	NewUserOnly       int    `json:"newUserOnly"`
+	PickupStart       string `json:"pickupStart"`
+	PickupEnd         string `json:"pickupEnd"`
+	ValidStart        string `json:"validStart"`
+	ValidEnd          string `json:"validEnd"`
+	Status            int    `json:"status"`
+	UpdatedAt         string `json:"updatedAt"`
+}
+
+type CouponUpsertReq struct {
+	ID                string `json:"id,optional"`
+	Name              string `json:"name"`
+	Type              int    `json:"type"`
+	ThresholdAmount   string `json:"thresholdAmount,optional"`
+	DiscountAmount    string `json:"discountAmount,optional"`
+	DiscountPercent   int    `json:"discountPercent,optional"`
+	MaxDiscountAmount string `json:"maxDiscountAmount,optional"`
+	TotalCount        int    `json:"totalCount,optional"`
+	PerLimit          int    `json:"perLimit,optional"`
+	NewUserOnly       int    `json:"newUserOnly,optional"`
+	PickupStart       string `json:"pickupStart,optional"`
+	PickupEnd         string `json:"pickupEnd,optional"`
+	ValidStart        string `json:"validStart,optional"`
+	ValidEnd          string `json:"validEnd,optional"`
+	Status            int    `json:"status,optional"`
+}
+
+type CouponIssueReq struct {
+	MemberIDs []string `json:"memberIds"`
+}
+
+type MyCouponView struct {
+	ID            string `json:"id"`
+	TemplateID    string `json:"templateId"`
+	Name          string `json:"name"`
+	Type          int    `json:"type"`
+	Threshold     string `json:"threshold"`
+	Discount      string `json:"discount"`
+	DiscountValid bool   `json:"discountValid"` // 折扣券展示：true=按 percent 展示
+	Percent       int    `json:"percent"`
+	ValidEnd      string `json:"validEnd"`
+	Status        int    `json:"status"`
+	StatusText    string `json:"statusText"`
+	ReceivedAt    string `json:"receivedAt"`
+}
+
+type UsableCouponView struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Type          int    `json:"type"`
+	Threshold     string `json:"threshold"`
+	Discount      string `json:"discount"` // 预估抵扣金额
+	DiscountValid bool   `json:"discountValid"`
+	Percent       int    `json:"percent"`
+	ValidEnd      string `json:"validEnd"`
+}
+
+type UsableCouponsReq struct {
+	ProductID  string   `json:"productId"`
+	ServiceIDs []string `json:"serviceIds,optional"`
+}
+
+type CouponAdminListReq struct {
+	PageReq
+	Status  int    `form:"status,optional"` // 模板状态筛选
+	Keyword string `form:"keyword,optional"`
 }

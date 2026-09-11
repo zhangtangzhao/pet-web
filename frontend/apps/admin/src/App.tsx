@@ -7,6 +7,7 @@ import Catalog from './pages/Catalog'
 import Orders from './pages/Orders'
 import Members from './pages/Members'
 import Knowledge from './pages/Knowledge'
+import Marketing from './pages/Marketing'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="products" element={<Products />} />
         <Route path="catalog" element={<Catalog />} />
         <Route path="knowledge" element={<Knowledge />} />
+        <Route path="marketing" element={<Marketing />} />
         <Route path="orders" element={<Orders />} />
         <Route path="members" element={<Members />} />
       </Route>

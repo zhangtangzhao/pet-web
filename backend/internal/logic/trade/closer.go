@@ -28,6 +28,19 @@ func closeOrder(sc *svc.ServiceContext, o *model.Order, target int, reason strin
 		if res.RowsAffected == 0 {
 			return nil // 状态已流转（并发/幂等）
 		}
+		// 回滚锁定的优惠券：未过期回到可用，已过期置为过期
+		if o.CouponID > 0 {
+			if err := tx.Exec(
+				`UPDATE member_coupon SET status = CASE
+					WHEN EXISTS (SELECT 1 FROM coupon_template t WHERE t.id = member_coupon.template_id
+					             AND t.valid_end IS NOT NULL AND t.valid_end < now())
+					THEN ?::smallint ELSE ?::smallint END,
+				 order_id = NULL
+				 WHERE id = ? AND status = ?`,
+				model.CouponExpired, model.CouponUsable, o.CouponID, model.CouponLocked).Error; err != nil {
+				return err
+			}
+		}
 		var items []model.OrderItem
 		if err := tx.Where("order_id = ?", o.ID).Find(&items).Error; err != nil {
 			return err

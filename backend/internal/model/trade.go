@@ -39,9 +39,9 @@ func OrderStatusText(s int) string {
 
 // 支付流水
 const (
-	PayChannelMini   = 1 // 小程序 JSAPI
+	PayChannelMini    = 1 // 小程序 JSAPI
 	PayChannelH5Jsapi = 2 // 公众号 JSAPI
-	PayChannelH5     = 3 // H5 支付
+	PayChannelH5      = 3 // H5 支付
 )
 
 const (
@@ -57,22 +57,27 @@ const (
 )
 
 type Order struct {
-	ID           int64           `gorm:"primaryKey" json:"id"`
-	OrderNo      string          `json:"orderNo"`
-	MemberID     int64           `json:"memberId"`
-	TotalAmount  decimal.Decimal `gorm:"type:numeric(10,2)" json:"totalAmount"`
-	PayAmount    decimal.Decimal `gorm:"type:numeric(10,2)" json:"payAmount"`
-	Status       int             `json:"status"`
-	ContactName  string          `json:"contactName"`
-	ContactPhone string          `json:"contactPhone"`
-	Remark       string          `json:"remark"`
-	PaidAt       *time.Time      `json:"paidAt"`
-	CompletedAt  *time.Time      `json:"completedAt"`
-	CanceledAt   *time.Time      `json:"canceledAt"`
-	CancelReason string          `json:"cancelReason"`
-	ExpireAt     time.Time       `json:"expireAt"`
-	CreatedAt    time.Time       `json:"createdAt"`
-	UpdatedAt    time.Time       `json:"updatedAt"`
+	ID             int64           `gorm:"primaryKey" json:"id"`
+	OrderNo        string          `json:"orderNo"`
+	MemberID       int64           `json:"memberId"`
+	TotalAmount    decimal.Decimal `gorm:"type:numeric(10,2)" json:"totalAmount"`
+	DiscountAmount decimal.Decimal `gorm:"type:numeric(10,2)" json:"discountAmount"`
+	ServiceFee     decimal.Decimal `gorm:"type:numeric(10,2)" json:"serviceFee"`
+	PayAmount      decimal.Decimal `gorm:"type:numeric(10,2)" json:"payAmount"`
+	CouponID       int64           `json:"couponId"`
+	CouponInfo     string          `json:"couponInfo"`
+	ServiceItems   string          `json:"serviceItems"`
+	Status         int             `json:"status"`
+	ContactName    string          `json:"contactName"`
+	ContactPhone   string          `json:"contactPhone"`
+	Remark         string          `json:"remark"`
+	PaidAt         *time.Time      `json:"paidAt"`
+	CompletedAt    *time.Time      `json:"completedAt"`
+	CanceledAt     *time.Time      `json:"canceledAt"`
+	CancelReason   string          `json:"cancelReason"`
+	ExpireAt       time.Time       `json:"expireAt"`
+	CreatedAt      time.Time       `json:"createdAt"`
+	UpdatedAt      time.Time       `json:"updatedAt"`
 }
 
 func (Order) TableName() string { return "orders" }

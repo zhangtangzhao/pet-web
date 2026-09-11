@@ -107,3 +107,23 @@
   color: #999;
   font-size: 22px;
 }
+
+.banner-coupon {
+  margin-top: 24px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 32px;
+  padding: 14px 24px;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner-coupon-icon {
+  font-size: 26px;
+}
+
+.banner-coupon-arrow {
+  margin-left: auto;
+  font-size: 26px;
+}

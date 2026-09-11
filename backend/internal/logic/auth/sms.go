@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -120,6 +121,7 @@ func SmsLogin(sc *svc.ServiceContext, rawPhone, code string) (*types.LoginResp, 
 
 func findOrCreateMemberByPhone(sc *svc.ServiceContext, phone string) (*types.LoginResp, error) {
 	var m model.Member
+	isNew := false
 	err := sc.DB.Where("phone = ?", phone).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		m = model.Member{
@@ -133,6 +135,8 @@ func findOrCreateMemberByPhone(sc *svc.ServiceContext, phone string) (*types.Log
 			if e := sc.DB.Where("phone = ?", phone).First(&m).Error; e != nil {
 				return nil, err
 			}
+		} else {
+			isNew = true
 		}
 	} else if err != nil {
 		return nil, err
@@ -140,6 +144,9 @@ func findOrCreateMemberByPhone(sc *svc.ServiceContext, phone string) (*types.Log
 	if m.Status != 1 {
 		return nil, common.ErrForbidden
 	}
+	if isNew {
+		go marketing.GrantNewUserCoupons(sc, m.ID)
+	}
 	touchLastLogin(sc.DB, m.ID)
-	return IssueTokens(sc, &m, false)
+	return IssueTokens(sc, &m, isNew)
 }

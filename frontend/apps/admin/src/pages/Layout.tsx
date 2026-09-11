@@ -5,6 +5,7 @@ import {
   ShoppingOutlined,
   TagsOutlined,
   RobotOutlined,
+  GiftOutlined,
   ProfileOutlined,
   TeamOutlined,
   LogoutOutlined,
@@ -19,6 +20,7 @@ const items = [
   { key: '/products', icon: <ShoppingOutlined />, label: '宠物商品' },
   { key: '/catalog', icon: <TagsOutlined />, label: '分类/品种' },
   { key: '/knowledge', icon: <RobotOutlined />, label: 'AI 知识库' },
+  { key: '/marketing', icon: <GiftOutlined />, label: '营销管理' },
   { key: '/orders', icon: <ProfileOutlined />, label: '订单管理' },
   { key: '/members', icon: <TeamOutlined />, label: '会员管理' },
 ]

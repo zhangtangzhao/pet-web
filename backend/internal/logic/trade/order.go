@@ -5,9 +5,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -21,6 +23,28 @@ func parseID(s string) (int64, error) {
 		return 0, common.ErrParam
 	}
 	return id, nil
+}
+
+func strconvSingle(s string) (int64, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return parseID(s)
+}
+
+func strconvSlice(ss []string) ([]int64, error) {
+	if len(ss) == 0 {
+		return nil, nil
+	}
+	ids := make([]int64, 0, len(ss))
+	for _, s := range ss {
+		id, err := parseID(s)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }
 
 func releaseProduct(db *gorm.DB, productID int64) {
@@ -64,18 +88,71 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 	var breed model.Breed
 	_ = sc.DB.First(&breed, p.BreedID).Error
 
+	// 增值服务：必须全部启用，汇总服务费
+	serviceIDs, err := strconvSlice(req.ServiceIDs)
+	if err != nil {
+		releaseProduct(sc.DB, productID)
+		return nil, err
+	}
+	serviceFee, svcItems, err := marketing.LoadOrderServices(sc, serviceIDs)
+	if err != nil {
+		releaseProduct(sc.DB, productID)
+		return nil, err
+	}
+
+	// 金额计算：total = 商品价 + 服务费；pay = total - 券抵扣（保底 0.01，微信不支持 0 元单）
+	couponID, err := strconvSingle(req.CouponID)
+	if err != nil {
+		releaseProduct(sc.DB, productID)
+		return nil, err
+	}
+	base := p.Price.Add(serviceFee)
+	discount := decimal.Zero
+	var couponName string
+	if couponID > 0 {
+		var mc model.MemberCoupon
+		if err := sc.DB.Where("id = ? AND member_id = ?", couponID, memberID).First(&mc).Error; err != nil {
+			releaseProduct(sc.DB, productID)
+			return nil, common.ErrCouponUnusable
+		}
+		var tpl model.CouponTemplate
+		if err := sc.DB.First(&tpl, mc.TemplateID).Error; err != nil {
+			releaseProduct(sc.DB, productID)
+			return nil, common.ErrCouponUnusable
+		}
+		if mc.Status != model.CouponUsable {
+			releaseProduct(sc.DB, productID)
+			return nil, common.ErrCouponUnusable
+		}
+		if err := marketing.ValidateUsable(&tpl, base); err != nil {
+			releaseProduct(sc.DB, productID)
+			return nil, err
+		}
+		discount = marketing.CalcDiscount(&tpl, base)
+		couponName = tpl.Name
+	}
+	payAmount := base.Sub(discount)
+	if payAmount.LessThan(decimal.NewFromFloat(0.01)) {
+		payAmount = decimal.NewFromFloat(0.01)
+	}
+
 	now := time.Now()
 	order := model.Order{
-		ID:           common.NewID(),
-		OrderNo:      common.NewBizNo("P"),
-		MemberID:     memberID,
-		TotalAmount:  p.Price,
-		PayAmount:    p.Price,
-		Status:       model.OrderPending,
-		ContactName:  req.ContactName,
-		ContactPhone: req.ContactPhone,
-		Remark:       req.Remark,
-		ExpireAt:     now.Add(orderPayTTL),
+		ID:             common.NewID(),
+		OrderNo:        common.NewBizNo("P"),
+		MemberID:       memberID,
+		TotalAmount:    base,
+		DiscountAmount: discount,
+		ServiceFee:     serviceFee,
+		PayAmount:      payAmount,
+		CouponID:       couponID,
+		CouponInfo:     couponName,
+		ServiceItems:   marketing.ServiceSnapshotJSON(svcItems),
+		Status:         model.OrderPending,
+		ContactName:    req.ContactName,
+		ContactPhone:   req.ContactPhone,
+		Remark:         req.Remark,
+		ExpireAt:       now.Add(orderPayTTL),
 	}
 	item := model.OrderItem{
 		ID:           common.NewID(),
@@ -92,14 +169,28 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		OrderID:   order.ID,
 		OrderNo:   order.OrderNo,
 		MemberID:  memberID,
-		Amount:    p.Price,
+		Amount:    payAmount,
 		Channel:   model.PayChannelMini,
 		PayType:   model.PayTypePurchase,
 		Status:    model.PayStatusPending,
 	}
 
 	err = sc.DB.Transaction(func(tx *gorm.DB) error {
-		order.ID = common.NewID()
+		// 用券：事务内原子锁定（并发用同一张券只有一单成功）
+		if couponID > 0 {
+			res := tx.Exec(
+				`UPDATE member_coupon SET status = ?, order_id = ?
+				 WHERE id = ? AND member_id = ? AND status = ?
+				   AND NOT EXISTS (SELECT 1 FROM coupon_template t WHERE t.id = member_coupon.template_id
+				                   AND t.valid_end IS NOT NULL AND t.valid_end < now())`,
+				model.CouponLocked, order.ID, couponID, memberID, model.CouponUsable)
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected == 0 {
+				return common.ErrCouponUnusable
+			}
+		}
 		item.OrderID = order.ID
 		payment.OrderID = order.ID
 		if err := tx.Create(&order).Error; err != nil {
@@ -224,17 +315,21 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 	views := make([]*types.OrderView, 0, len(orders))
 	for _, o := range orders {
 		v := &types.OrderView{
-			OrderNo:      o.OrderNo,
-			Status:       o.Status,
-			StatusText:   model.OrderStatusText(o.Status),
-			TotalAmount:  o.TotalAmount.StringFixed(2),
-			PayAmount:    o.PayAmount.StringFixed(2),
-			ContactName:  o.ContactName,
-			ContactPhone: o.ContactPhone,
-			Remark:       o.Remark,
-			ExpireAt:     o.ExpireAt.Format(time.RFC3339),
-			CreatedAt:    o.CreatedAt.Format(time.RFC3339),
-			Items:        itemMap[o.ID],
+			OrderNo:        o.OrderNo,
+			Status:         o.Status,
+			StatusText:     model.OrderStatusText(o.Status),
+			TotalAmount:    o.TotalAmount.StringFixed(2),
+			DiscountAmount: o.DiscountAmount.StringFixed(2),
+			ServiceFee:     o.ServiceFee.StringFixed(2),
+			PayAmount:      o.PayAmount.StringFixed(2),
+			CouponInfo:     o.CouponInfo,
+			ServiceItems:   o.ServiceItems,
+			ContactName:    o.ContactName,
+			ContactPhone:   o.ContactPhone,
+			Remark:         o.Remark,
+			ExpireAt:       o.ExpireAt.Format(time.RFC3339),
+			CreatedAt:      o.CreatedAt.Format(time.RFC3339),
+			Items:          itemMap[o.ID],
 		}
 		if v.Items == nil {
 			v.Items = []types.OrderItemView{}

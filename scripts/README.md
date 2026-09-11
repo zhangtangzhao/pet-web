@@ -55,6 +55,8 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/002_seed.down.sql](sql/002_seed.down.sql) | 回滚种子数据 |
 | [sql/003_ai_knowledge.up.sql](sql/003_ai_knowledge.up.sql) | AI 客服知识库表 + 种子条目（平台通用 + 品种专属养护知识） |
 | [sql/003_ai_knowledge.down.sql](sql/003_ai_knowledge.down.sql) | 回滚知识库表 |
+| [sql/004_marketing.up.sql](sql/004_marketing.up.sql) | 营销表：增值服务 / 优惠券模板 / 用户券 + orders 优惠列 + 种子（服务项与 3 张券模板） |
+| [sql/004_marketing.down.sql](sql/004_marketing.down.sql) | 回滚营销表与 orders 优惠列 |
 
 说明：
 

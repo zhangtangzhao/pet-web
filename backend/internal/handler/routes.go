@@ -21,6 +21,7 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/breeds", Handler: Breeds(sc)},
 		{Method: "GET", Path: "/api/products", Handler: ProductList(sc)},
 		{Method: "GET", Path: "/api/products/:id", Handler: ProductDetail(sc)},
+		{Method: "GET", Path: "/api/services", Handler: ServiceList(sc)},
 		{Method: "POST", Path: "/api/pay/notify/wx", Handler: WxPayNotify(sc)},
 	})
 
@@ -40,6 +41,11 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/orders/:orderNo/prepay", Handler: Prepay(sc)},
 		{Method: "GET", Path: "/api/payments/:paymentNo/status", Handler: PaymentStatus(sc)},
 		{Method: "POST", Path: "/api/ai/ask", Handler: AIAsk(sc)},
+		{Method: "GET", Path: "/api/coupons", Handler: MyCoupons(sc)},
+		{Method: "GET", Path: "/api/coupons/center", Handler: CouponCenter(sc)},
+		{Method: "GET", Path: "/api/coupons/usable", Handler: UsableCoupons(sc)},
+		{Method: "POST", Path: "/api/coupons/usable", Handler: UsableCoupons(sc)},
+		{Method: "POST", Path: "/api/coupons/:id/claim", Handler: ClaimCoupon(sc)},
 	})
 
 	// ───────── 平台端 · 登录/刷新（无需 token）─────────
@@ -80,5 +86,16 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/admin/ai/knowledge", Handler: AdminKnowledgeUpsert(sc)},
 		{Method: "PUT", Path: "/api/admin/ai/knowledge/:id", Handler: AdminKnowledgeUpsert(sc)},
 		{Method: "DELETE", Path: "/api/admin/ai/knowledge/:id", Handler: AdminKnowledgeDelete(sc)},
+
+		{Method: "GET", Path: "/api/admin/marketing/services", Handler: AdminServiceList(sc)},
+		{Method: "POST", Path: "/api/admin/marketing/services", Handler: AdminServiceUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/marketing/services/:id", Handler: AdminServiceUpsert(sc)},
+		{Method: "DELETE", Path: "/api/admin/marketing/services/:id", Handler: AdminServiceDelete(sc)},
+
+		{Method: "GET", Path: "/api/admin/marketing/coupons", Handler: AdminCouponList(sc)},
+		{Method: "POST", Path: "/api/admin/marketing/coupons", Handler: AdminCouponUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/marketing/coupons/:id", Handler: AdminCouponUpsert(sc)},
+		{Method: "DELETE", Path: "/api/admin/marketing/coupons/:id", Handler: AdminCouponDelete(sc)},
+		{Method: "POST", Path: "/api/admin/marketing/coupons/:id/issue", Handler: AdminCouponIssue(sc)},
 	})
 }

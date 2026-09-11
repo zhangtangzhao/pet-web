@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -93,6 +94,7 @@ func wechatLogin(sc *svc.ServiceContext, appType int, openid, unionid, sessionKe
 	if err := sc.DB.Create(&m).Error; err != nil {
 		return nil, err
 	}
+	go marketing.GrantNewUserCoupons(sc, m.ID)
 	if err := createWxAuth(sc, m.ID, appType, openid, unionid, sessionKey); err != nil {
 		return nil, err
 	}

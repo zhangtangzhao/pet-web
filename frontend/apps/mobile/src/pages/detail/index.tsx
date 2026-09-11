@@ -37,7 +37,7 @@ export default function Detail() {
   }
 
   const buy = () => {
-    Taro.navigateTo({ url: `/pages/login/index?redirect=/pages/detail/index?id=${params.id}` })
+    Taro.navigateTo({ url: `/pages/checkout/index?id=${params.id}` })
   }
 
   if (!d) return <View className='detail-loading'>加载中…</View>

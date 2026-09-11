@@ -26,7 +26,7 @@
 | ------- | ---- |
 | 0 | 成功 |
 | 40xxx | 客户端错误：40100 未登录 / 40101 过期 / 40300 无权限 / 40400 资源不存在 |
-| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 |
+| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 / 41401 优惠券不可用 / 41402 未达用券门槛 / 41403 券已领完 / 41404 超过限领 / 41405 不在可领时段 / 41406 增值服务不可用 |
 | 50xxx | 服务端错误：50000 系统异常 / 50001 微信接口异常 / 50002 支付下单失败 / 50003 短信发送失败 / 50005 AI 服务不可用 |
 
 ### 1.3 通用约定
@@ -222,6 +222,30 @@
 
 实现要点：服务端组装提示词（品种 intro + 8 项档案字段 + 检索到的知识条目 top4），大模型走 OpenAI 兼容接口（`AI.BaseURL/ApiKey/Model` 三项配置启用）；未配置时非生产走演示模式（知识库+档案模板回答），生产返回 50005 且入口隐藏。
 
+### 2.7 营销：增值服务与优惠券（已实现，实际路径前缀为 /api）
+
+金额模型：`total = 商品价 + 服务费合计`，`pay = total - 券抵扣`（保底 0.01 元）。券生命周期：领取 `1可用` → 下单锁定 `2已锁定`（同事务 CAS，防并发重复用券）→ 支付成功核销 `3已使用`；取消/超时关单自动回滚（未过期回 `1`，已过期置 `4`）；退款不回券。
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/services` | 增值服务列表（无需登录，status=1） |
+| GET | `/api/coupons/center` | 领券中心（可领的模板，自动过滤已领完/已领过/不在时段） |
+| POST | `/api/coupons/:id/claim` | 领取优惠券（CAS 扣库存，41403 领完 / 41404 限领） |
+| GET | `/api/coupons?status=` | 我的优惠券（status: 1可用 2锁定 3已使用 4已过期；查询时惰性过期） |
+| POST | `/api/coupons/usable` | 某笔消费可用券及预估抵扣 `{productId, serviceIds[]}`（门槛=商品价+服务费） |
+
+```json
+// POST /api/coupons/usable Response data
+[
+  { "id": "2098...", "name": "全场9折券", "type": 2, "threshold": "0.00",
+    "discount": "88.00", "discountValid": false, "percent": 90, "validEnd": "..." },
+  { "id": "2097...", "name": "新人立减券", "type": 3, "threshold": "0.00",
+    "discount": "30.00", "discountValid": true, "percent": 0, "validEnd": "..." }
+]
+```
+
+建单入参扩展（`POST /api/orders`）：`serviceIds []string`（增值服务 ID）、`couponId string`（用户券 ID，空 = 不用券）；响应 `payAmount` 为折后实付。订单视图（用户端/平台端）新增 `totalAmount / discountAmount / serviceFee / couponInfo / serviceItems`（服务快照 JSON 字符串）。
+
 ---
 
 ## 3. 平台端接口（/admin/api/v1，PC）
@@ -282,6 +306,18 @@
 | POST | `/api/admin/ai/knowledge` | 新建条目 `{breedId?, title, keywords?, content, sort?, status?}` |
 | PUT | `/api/admin/ai/knowledge/:id` | 编辑条目（breedId 空 = 平台通用） |
 | DELETE | `/api/admin/ai/knowledge/:id` | 删除条目 |
+
+### 3.7 营销管理（已实现，实际路径前缀为 /api/admin/marketing）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET / POST | `/api/admin/marketing/coupons` | 券模板分页（status/keyword） / 新建 |
+| PUT / DELETE | `/api/admin/marketing/coupons/:id` | 编辑（已发放量不可改）/ 删除（有发放记录禁删 41206） |
+| POST | `/api/admin/marketing/coupons/:id/issue` | 定向发放 `{memberIds[]}` → `{issued, failed}`（逐人按限领） |
+| GET / POST | `/api/admin/marketing/services` | 增值服务列表 / 新建 `{name, description?, originalPrice?, price, sort?, status?}` |
+| PUT / DELETE | `/api/admin/marketing/services/:id` | 编辑 / 删除 |
+
+券模板入参：`{name, type(1满减/2折扣/3立减), thresholdAmount?, discountAmount?, discountPercent?, maxDiscountAmount?, totalCount?(0不限), perLimit?, newUserOnly?, pickupStart?, pickupEnd?, validStart?, validEnd?, status?}`，时段格式 `YYYY-MM-DD HH:mm:ss` 或 RFC3339，空 = 不限。
 
 ---
 

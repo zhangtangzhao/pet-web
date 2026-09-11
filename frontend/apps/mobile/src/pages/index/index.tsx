@@ -21,12 +21,18 @@ export default function Home() {
   usePullDownRefresh(load)
 
   const goDetail = (p: ProductCard) => Taro.navigateTo({ url: `/pages/detail/index?id=${p.id}` })
+  const goCoupons = () => Taro.navigateTo({ url: '/pages/coupon-center/index' })
 
   return (
     <View className='home'>
       <View className='banner card'>
         <Text className='banner-title'>遇见你的毛孩子</Text>
         <Text className='banner-sub'>健康活体 · 平台保障 · 售后无忧</Text>
+        <View className='banner-coupon' onClick={goCoupons}>
+          <Text className='banner-coupon-icon'>🎫</Text>
+          <Text>领券中心 · 新人立省 30 元</Text>
+          <Text className='banner-coupon-arrow'>→</Text>
+        </View>
       </View>
 
       <View className='cats'>

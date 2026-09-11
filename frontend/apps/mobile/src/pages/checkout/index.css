@@ -1,0 +1,292 @@
+.checkout {
+  padding: 24px;
+  padding-bottom: 160px;
+}
+
+.co-card {
+  margin-bottom: 24px;
+}
+
+.co-prod {
+  display: flex;
+  gap: 20px;
+}
+
+.co-prod-img {
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  flex-shrink: 0;
+}
+
+.co-prod-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.co-prod-title {
+  font-size: 28px;
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.co-sec-title {
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.co-svc {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.co-svc:last-child {
+  border-bottom: none;
+}
+
+.co-svc-check {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.co-svc-check-on {
+  background: #ff7a45;
+  border-color: #ff7a45;
+}
+
+.co-svc-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.co-svc-name {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.co-svc-desc {
+  font-size: 22px;
+  color: #999;
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.co-svc-price {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.co-svc-now {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.co-svc-orig {
+  font-size: 20px;
+  color: #bbb;
+  text-decoration: line-through;
+  margin-left: 8px;
+}
+
+.co-coupon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.co-coupon-left {
+  font-size: 26px;
+}
+
+.co-coupon-value {
+  color: #ff7a45;
+  font-weight: 700;
+}
+
+.co-coupon-arrow {
+  color: #999;
+  font-size: 24px;
+}
+
+.co-sum-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 26px;
+  padding: 8px 0;
+  color: #666;
+}
+
+.co-sum-discount {
+  color: #ff7a45;
+}
+
+.co-input {
+  width: 100%;
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 18px 20px;
+  font-size: 26px;
+  margin-bottom: 16px;
+}
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid #eee;
+  z-index: 10;
+}
+
+.pay {
+  font-size: 24px;
+  color: #666;
+}
+
+.pay-num {
+  font-size: 36px;
+  color: #ff7a45;
+  font-weight: 700;
+}
+
+.btn-submit {
+  background: #ff7a45;
+  color: #fff;
+  border-radius: 44px;
+  padding: 20px 64px;
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.btn-submit-off {
+  opacity: 0.6;
+}
+
+/* 券选择弹层 */
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 20;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 32px 24px calc(24px + env(safe-area-inset-bottom));
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 21;
+}
+
+.sheet-title {
+  text-align: center;
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.cp-item {
+  display: flex;
+  align-items: center;
+  border: 2px solid #eee;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.cp-item-on {
+  border-color: #ff7a45;
+  background: #fff7f2;
+}
+
+.cp-left {
+  min-width: 140px;
+  text-align: center;
+  color: #ff7a45;
+  border-right: 2px dashed #ffd8c2;
+  padding-right: 16px;
+}
+
+.cp-val {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.cp-val-unit {
+  font-size: 22px;
+}
+
+.cp-cond {
+  font-size: 20px;
+  color: #b8875f;
+  margin-top: 4px;
+}
+
+.cp-main {
+  flex: 1;
+}
+
+.cp-name {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.cp-date {
+  font-size: 20px;
+  color: #999;
+  margin-top: 6px;
+}
+
+.cp-pick {
+  font-size: 24px;
+  color: #999;
+}
+
+.cp-pick-on {
+  color: #ff7a45;
+  font-weight: 700;
+}
+
+.cp-empty {
+  text-align: center;
+  color: #999;
+  padding: 60px 0;
+  font-size: 26px;
+}

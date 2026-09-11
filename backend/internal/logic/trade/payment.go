@@ -151,6 +151,12 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 			Error; err != nil {
 			return err
 		}
+		// 核销锁定的优惠券
+		if err := tx.Exec(
+			`UPDATE member_coupon SET status = ?, used_at = ? WHERE order_id = ? AND status = ?`,
+			model.CouponUsed, now, p.OrderID, model.CouponLocked).Error; err != nil {
+			return err
+		}
 		// 商品锁定 → 已售出，累计销量
 		return tx.Exec(`
 			UPDATE pet_product SET status = ?, sales = sales + 1, updated_at = now()

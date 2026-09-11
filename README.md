@@ -42,6 +42,7 @@
 
 - 微信支付 V3（JSAPI 下单、支付回调验签幂等、超时自动关单、退款）
 - 订单状态机 + 数据库原子占位防超卖（同一活体仅一单可锁）
+- 营销：优惠券（满减 / 折扣 / 立减，领券中心 + 管理端定向发放 + 注册赠送）与订单增值服务，券锁定防并发复用、关单自动回滚
 - 敏感信息脱敏、错误码规范化、雪花 ID 主键
 
 ## 架构总览
@@ -76,6 +77,8 @@ flowchart LR
 # 1. 建库 + 种子数据（管理员 admin / admin123456，示例分类品种商品）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
+psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
+psql -U pet -d pet -f scripts/sql/004_marketing.up.sql
 
 # 2. 后端（配置 backend/etc/pet-api.yaml，dev 模板开箱即用）→ :8888
 cd backend && go run .
@@ -102,10 +105,10 @@ cp .env.example .env                                  # 填入全部密钥（勿
 docker compose up -d --build
 
 # 初始化数据库
-docker exec -i $(docker compose ps -q postgres) \
-  psql -U pet -d pet -v ON_ERROR_STOP=1 < ../sql/001_init.up.sql
-docker exec -i $(docker compose ps -q postgres) \
-  psql -U pet -d pet -v ON_ERROR_STOP=1 < ../sql/002_seed.up.sql
+for f in 001_init 002_seed 003_ai_knowledge 004_marketing; do
+  docker exec -i $(docker compose ps -q postgres) \
+    psql -U pet -d pet -v ON_ERROR_STOP=1 < ../sql/$f.up.sql
+done
 ```
 
 配置注入链路：`.env` → compose `environment` → 容器环境变量 → `conf.UseEnv()` 展开 `pet-api.yaml` 中的 `${VAR}`。详见 [scripts/README.md](scripts/README.md)。

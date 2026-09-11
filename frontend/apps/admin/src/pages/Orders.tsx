@@ -130,6 +130,22 @@ export default function Orders() {
                 <Tag color={STATUS_TAG[detail.status]}>{detail.statusText}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="实付金额">¥{detail.payAmount}</Descriptions.Item>
+              {(Number(detail.serviceFee) > 0 || Number(detail.discountAmount) > 0 || detail.couponInfo) && (
+                <>
+                  <Descriptions.Item label="商品金额">¥{detail.totalAmount}</Descriptions.Item>
+                  {Number(detail.serviceFee) > 0 && (
+                    <Descriptions.Item label="增值服务费">¥{detail.serviceFee}</Descriptions.Item>
+                  )}
+                  {Number(detail.discountAmount) > 0 && (
+                    <Descriptions.Item label="券抵扣">
+                      <span style={{ color: '#fa541c' }}>
+                        -¥{detail.discountAmount}
+                        {detail.couponInfo ? `（${detail.couponInfo}）` : ''}
+                      </span>
+                    </Descriptions.Item>
+                  )}
+                </>
+              )}
               <Descriptions.Item label="联系人">
                 {detail.contactName} {detail.contactPhone}
               </Descriptions.Item>
@@ -152,6 +168,20 @@ export default function Orders() {
               ]}
               dataSource={detail.items}
             />
+            {detail.serviceItems && detail.serviceItems !== '[]' && (
+              <div style={{ marginTop: 12, fontSize: 13, color: '#666' }}>
+                增值服务：
+                {(() => {
+                  try {
+                    return (JSON.parse(detail.serviceItems) as { name: string; price: string }[])
+                      .map((s) => `${s.name} ¥${s.price}`)
+                      .join('、')
+                  } catch {
+                    return '-'
+                  }
+                })()}
+              </div>
+            )}
           </>
         )}
       </Drawer>

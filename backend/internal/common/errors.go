@@ -39,6 +39,13 @@ var (
 	ErrAIAskDaily     = NewErr(429, 41302, "今日提问次数已达上限")
 	ErrAIReferenced   = NewErr(400, 41209, "知识条目所属品种不存在")
 
+	ErrCouponUnusable  = NewErr(400, 41401, "优惠券不可用")
+	ErrCouponThreshold = NewErr(400, 41402, "未达到优惠券使用门槛")
+	ErrCouponSoldOut   = NewErr(400, 41403, "优惠券已领完")
+	ErrCouponPerLimit  = NewErr(400, 41404, "已达到该券的领取上限")
+	ErrCouponNotInTime = NewErr(400, 41405, "不在优惠券可领取时段")
+	ErrServiceInvalid  = NewErr(400, 41406, "包含不可用的增值服务")
+
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")
 	ErrPayConfig = NewErr(500, 50002, "支付未配置")
