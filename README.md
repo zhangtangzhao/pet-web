@@ -24,13 +24,16 @@
 - 手机号 + 短信验证码登录，微信授权登录（小程序 code2session / 公众号 H5 OAuth2，unionid 归并）
 - 宠物商品列表 / 详情（图片轮播 + 视频播放 + 宠物档案：品种、年龄、疫苗等）
 - 分类 / 品种浏览，收藏与取消收藏
+- 确认下单（增值服务加购、优惠券选择、金额明细实时计算）
+- 领券中心 / 我的优惠券（可用、锁定、已使用、已过期状态一目了然）
 
 **平台管理端（PC，React 19 + Ant Design 5）**
 
 - 图形验证码登录，双端独立 JWT（30 分钟自动刷新轮换）
 - 数据看板（在售 / 今日订单 / 今日 GMV / 会员数）
 - 商品 CRUD（上下架、锁定 / 售出状态管控）、分类 / 品种管理
-- 订单管理（详情、退款）、会员管理（启用 / 禁用）
+- 订单管理（详情含优惠明细、退款）、会员管理（启用 / 禁用）
+- AI 知识库维护、营销管理（优惠券模板 / 增值服务 / 定向发放）
 
 **AI 智能客服（RAG）**
 
@@ -132,6 +135,7 @@ done
 | `SMS_PROVIDER` | aliyun / tencent，留空不发真实短信 | 空 |
 | `SMS_TEST_CODE` | 测试公共验证码（仅非生产生效） | `888888` |
 | `COS_BUCKET` / `COS_REGION` / `COS_SECRET_ID` / `COS_SECRET_KEY` | 腾讯云 COS 直传 | 无 |
+| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | AI 问宠大模型（OpenAI 兼容接口，三项齐备启用；未配置时非生产为演示模式） | 无 | |
 
 > 微信登录 / 支付、COS 直传、真实短信通道需填入对应密钥后联调。
 
@@ -143,7 +147,7 @@ pet/
 │   ├── apps/mobile    # Taro：微信小程序 + H5 一套代码
 │   ├── apps/admin     # PC 平台管理端（React 19 + antd 5）
 │   └── packages/      # @pet/api / @pet/utils / @pet/ui
-├── backend/     # Go 后端：go-zero 单体服务 pet-api（auth/pet/favorite/trade/manage）
+├── backend/     # Go 后端：go-zero 单体服务 pet-api（auth/pet/favorite/trade/manage/ai/marketing）
 ├── scripts/     # sql/（迁移·种子）、deploy/（Docker·Nginx）、dev/（本地辅助）
 └── docs/        # 技术方案文档
 ```
@@ -154,7 +158,7 @@ pet/
 | ---- | ---- |
 | [01-技术选型](docs/01-技术选型.md) | Go vs Java、Taro vs uni-app 评估结论与依赖清单 |
 | [02-系统架构](docs/02-系统架构.md) | 总体架构图、登录/支付时序图、订单状态机、部署架构 |
-| [03-数据库设计](docs/03-数据库设计.md) | ER 图、11 张表 DDL、防超卖事务、索引策略 |
+| [03-数据库设计](docs/03-数据库设计.md) | ER 图、15 张表 DDL（商品/交易/AI 知识库/营销）、防超卖事务、索引策略 |
 | [04-API接口设计](docs/04-API接口设计.md) | 路由域、错误码、用户端/平台端全量接口、安全清单 |
 | [05-前端设计](docs/05-前端设计.md) | Monorepo 结构、页面信息架构、UI 设计 Token |
 
@@ -165,6 +169,7 @@ pet/
 | M1 基础框架 | 服务骨架、PG 迁移、双端 JWT + 短信/微信登录 | ✅ 完成（实库验证） |
 | M2 商品域 | 分类/品种/商品 CRUD、COS 直传、浏览收藏 | ✅ 完成（COS 待真实密钥联调） |
 | M3 交易域 | 下单防超卖、微信支付、回调幂等、超时关单、退款 | ✅ 完成（支付待商户号联调） |
+| M3.5 AI + 营销 | AI 问宠（知识库 RAG）、优惠券（满减/折扣/立减）与订单增值服务 | ✅ 完成（实库验证） |
 | M4 上线 | Docker 编排、监控告警、小程序审核发布 | ⏳ 编排就绪，监控待接入 |
 
 ## 参与贡献
