@@ -4,6 +4,7 @@ import {
   DashboardOutlined,
   ShoppingOutlined,
   TagsOutlined,
+  RobotOutlined,
   ProfileOutlined,
   TeamOutlined,
   LogoutOutlined,
@@ -17,6 +18,7 @@ const items = [
   { key: '/', icon: <DashboardOutlined />, label: '运营看板' },
   { key: '/products', icon: <ShoppingOutlined />, label: '宠物商品' },
   { key: '/catalog', icon: <TagsOutlined />, label: '分类/品种' },
+  { key: '/knowledge', icon: <RobotOutlined />, label: 'AI 知识库' },
   { key: '/orders', icon: <ProfileOutlined />, label: '订单管理' },
   { key: '/members', icon: <TeamOutlined />, label: '会员管理' },
 ]

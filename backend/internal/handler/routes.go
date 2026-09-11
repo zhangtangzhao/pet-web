@@ -39,6 +39,7 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/orders/:orderNo/confirm", Handler: ConfirmOrder(sc)},
 		{Method: "POST", Path: "/api/orders/:orderNo/prepay", Handler: Prepay(sc)},
 		{Method: "GET", Path: "/api/payments/:paymentNo/status", Handler: PaymentStatus(sc)},
+		{Method: "POST", Path: "/api/ai/ask", Handler: AIAsk(sc)},
 	})
 
 	// ───────── 平台端 · 登录/刷新（无需 token）─────────
@@ -74,5 +75,10 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 
 		{Method: "GET", Path: "/api/admin/members", Handler: AdminMemberList(sc)},
 		{Method: "PUT", Path: "/api/admin/members/:id/status", Handler: AdminMemberStatus(sc)},
+
+		{Method: "GET", Path: "/api/admin/ai/knowledge", Handler: AdminKnowledgeList(sc)},
+		{Method: "POST", Path: "/api/admin/ai/knowledge", Handler: AdminKnowledgeUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/ai/knowledge/:id", Handler: AdminKnowledgeUpsert(sc)},
+		{Method: "DELETE", Path: "/api/admin/ai/knowledge/:id", Handler: AdminKnowledgeDelete(sc)},
 	})
 }

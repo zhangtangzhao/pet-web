@@ -146,6 +146,7 @@ type ProductDetail struct {
 	Breed      BreedItem   `json:"breed"`
 	Category   CategoryRef `json:"category"`
 	IsFavorite bool        `json:"isFavorite"`
+	AIEnabled  bool        `json:"aiEnabled"`
 }
 
 type FavoriteListReq struct {
@@ -400,4 +401,57 @@ type OverviewResp struct {
 	TodayOrders int64  `json:"todayOrders"`
 	TodayGMV    string `json:"todayGmv"`
 	MemberCount int64  `json:"memberCount"`
+}
+
+// ─────────────────────────── AI 智能客服 ───────────────────────────
+
+type AIChatMessage struct {
+	Role    string `json:"role"` // user / assistant
+	Content string `json:"content"`
+}
+
+type AIAskReq struct {
+	ProductID string          `json:"productId"`
+	Question  string          `json:"question"`
+	History   []AIChatMessage `json:"history,optional"` // 客户端携带的最近对话（服务端截断）
+}
+
+type AIKnowledgeRef struct {
+	Title           string `json:"title"`
+	Content         string `json:"content"`
+	IsBreedSpecific bool   `json:"isBreedSpecific"`
+}
+
+type AIAskResp struct {
+	Answer string           `json:"answer"`
+	Refs   []AIKnowledgeRef `json:"refs"` // 引用的知识库条目
+	Demo   bool             `json:"demo"` // 是否演示模式（未接入真实大模型）
+}
+
+type KnowledgeListReq struct {
+	PageReq
+	BreedID string `form:"breedId,optional"`
+	Keyword string `form:"keyword,optional"`
+}
+
+type KnowledgeItem struct {
+	ID        string `json:"id"`
+	BreedID   string `json:"breedId"` // 空 = 平台通用
+	BreedName string `json:"breedName"`
+	Title     string `json:"title"`
+	Keywords  string `json:"keywords"`
+	Content   string `json:"content"`
+	Sort      int    `json:"sort"`
+	Status    int    `json:"status"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
+type KnowledgeUpsertReq struct {
+	ID       string `json:"id,optional"`
+	BreedID  string `json:"breedId,optional"`
+	Title    string `json:"title"`
+	Keywords string `json:"keywords,optional"`
+	Content  string `json:"content"`
+	Sort     int    `json:"sort,optional"`
+	Status   int    `json:"status,optional"`
 }

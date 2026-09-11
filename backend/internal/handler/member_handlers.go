@@ -6,6 +6,7 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/ai"
 	"pet/backend/internal/logic/auth"
 	"pet/backend/internal/logic/pet"
 	"pet/backend/internal/svc"
@@ -270,6 +271,24 @@ func FavoriteList(sc *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 		resp, err := pet.FavoriteList(sc, memberID(r), &req)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}
+
+// ─────────────────────────── AI 客服 ───────────────────────────
+
+func AIAsk(sc *svc.ServiceContext) http.HandlerFunc {
+	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.AIAskReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		resp, err := ai.PetAIAsk(sc, memberID(r), &req)
 		if err != nil {
 			common.Err(w, err)
 			return

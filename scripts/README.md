@@ -53,6 +53,8 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/001_init.down.sql](sql/001_init.down.sql) | 回滚（按依赖逆序 DROP） |
 | [sql/002_seed.up.sql](sql/002_seed.up.sql) | 种子数据：管理员 `admin/admin123456`（bcrypt）+ 示例分类/品种/商品 |
 | [sql/002_seed.down.sql](sql/002_seed.down.sql) | 回滚种子数据 |
+| [sql/003_ai_knowledge.up.sql](sql/003_ai_knowledge.up.sql) | AI 客服知识库表 + 种子条目（平台通用 + 品种专属养护知识） |
+| [sql/003_ai_knowledge.down.sql](sql/003_ai_knowledge.down.sql) | 回滚知识库表 |
 
 说明：
 

@@ -221,3 +221,41 @@ export async function fetchMembers(params: {
 export async function updateMemberStatus(id: string, status: number) {
   await client.put(`/admin/members/${id}/status`, { status })
 }
+
+export interface KnowledgeRow {
+  id: string
+  breedId: string
+  breedName: string
+  title: string
+  keywords: string
+  content: string
+  sort: number
+  status: number
+  updatedAt: string
+}
+
+export async function fetchKnowledge(params: {
+  page?: number
+  pageSize?: number
+  breedId?: string
+  keyword?: string
+}): Promise<PageResp<KnowledgeRow>> {
+  return (await client.get('/admin/ai/knowledge', { params })) as any
+}
+
+export async function upsertKnowledge(payload: {
+  id?: string
+  breedId?: string
+  title: string
+  keywords?: string
+  content: string
+  sort?: number
+  status?: number
+}) {
+  if (payload.id) await client.put(`/admin/ai/knowledge/${payload.id}`, payload)
+  else await client.post('/admin/ai/knowledge', payload)
+}
+
+export async function deleteKnowledge(id: string) {
+  await client.delete(`/admin/ai/knowledge/${id}`)
+}

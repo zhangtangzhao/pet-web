@@ -45,6 +45,24 @@ export interface ProductDetail extends ProductCard {
   breed: { id: string; categoryId: string; name: string; cover: string }
   category: { id: string; name: string }
   isFavorite: boolean
+  aiEnabled?: boolean
+}
+
+export interface AIChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface AIKnowledgeRef {
+  title: string
+  content: string
+  isBreedSpecific: boolean
+}
+
+export interface AIAskResp {
+  answer: string
+  refs: AIKnowledgeRef[]
+  demo: boolean
 }
 
 export interface PageResp<T> {

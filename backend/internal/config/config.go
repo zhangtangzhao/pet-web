@@ -62,11 +62,26 @@ type Config struct {
 		SecretKey string `json:",optional"`
 		BaseURL   string `json:",optional"`
 	}
+
+	// AI 客服：OpenAI 兼容接口（DeepSeek/通义/智谱等均可），三者全非空即启用真实大模型
+	AI struct {
+		BaseURL            string `json:",optional"` // 如 https://api.deepseek.com/v1
+		ApiKey             string `json:",optional"`
+		Model              string `json:",optional"` // 如 deepseek-chat
+		TimeoutSeconds     int    `json:",default=60"`
+		AskIntervalSeconds int    `json:",default=5"`
+		DailyLimit         int    `json:",default=20"`
+	}
 }
 
 // IsProd 生产环境判定（go-zero Mode 取值 pro；兼容 prod）
 func (c Config) IsProd() bool {
 	return c.Mode == "pro" || c.Mode == "prod"
+}
+
+// AIEnabled 是否已接入真实大模型
+func (c Config) AIEnabled() bool {
+	return c.AI.BaseURL != "" && c.AI.ApiKey != "" && c.AI.Model != ""
 }
 
 // Validate 生产模式关键配置校验（配合 yaml ${VAR} 占位：环境变量缺失时不允许带病启动）

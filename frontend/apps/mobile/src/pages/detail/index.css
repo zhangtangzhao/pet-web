@@ -95,6 +95,39 @@
   font-size: 26px;
 }
 
+.ai-entry {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff7f2;
+  border: 1px solid #ffcfb8;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.ai-entry-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-entry-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #ff7a45;
+}
+
+.ai-entry-sub {
+  font-size: 22px;
+  color: #b8875f;
+}
+
+.ai-entry-arrow {
+  color: #ff7a45;
+  font-size: 32px;
+}
+
 .footer {
   display: flex;
   align-items: center;

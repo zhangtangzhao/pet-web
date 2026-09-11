@@ -21,3 +21,4 @@ scripts/deploy/config/pet-api.yaml
 .idea/
 .DS_Store
 .claude/
+*.tsbuildinfo

@@ -14,7 +14,8 @@ import (
 	"pet/backend/internal/types"
 )
 
-func genderText(g int) string {
+// GenderText 性别文案（导出供 ai 等模块复用）
+func GenderText(g int) string {
 	if g == 1 {
 		return "公"
 	}
@@ -24,7 +25,8 @@ func genderText(g int) string {
 	return "未知"
 }
 
-func ageText(birth *time.Time) string {
+// AgeText 出生日期换算年龄文案（导出供 ai 等模块复用）
+func AgeText(birth *time.Time) string {
 	if birth == nil {
 		return ""
 	}
@@ -207,9 +209,9 @@ func ProductDetail(sc *svc.ServiceContext, memberID int64, idStr string) (*types
 		DetailHTML: p.DetailHTML,
 		PetProfile: types.PetProfile{
 			Gender:      p.PetGender,
-			GenderText:  genderText(p.PetGender),
+			GenderText:  GenderText(p.PetGender),
 			BirthDate:   birth,
-			AgeText:     ageText(p.BirthDate),
+			AgeText:     AgeText(p.BirthDate),
 			VaccineDesc: p.VaccineDesc,
 			DewormDesc:  p.DewormDesc,
 			BodyType:    p.BodyType,
@@ -225,6 +227,7 @@ func ProductDetail(sc *svc.ServiceContext, memberID int64, idStr string) (*types
 		},
 		Category:   types.CategoryRef{ID: strconv.FormatInt(category.ID, 10), Name: category.Name},
 		IsFavorite: isFav,
+		AIEnabled:  sc.Config.AIEnabled() || !sc.Config.IsProd(),
 	}
 	return detail, nil
 }

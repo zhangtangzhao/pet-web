@@ -107,6 +107,15 @@ export default function Detail() {
               <Text>{profile.personality}</Text>
             </View>
           )}
+          {d.aiEnabled && (
+            <View className='ai-entry' onClick={() => Taro.navigateTo({ url: `/pages/ai-chat/index?id=${params.id}` })}>
+              <View className='ai-entry-main'>
+                <Text className='ai-entry-title'>AI 智能分析</Text>
+                <Text className='ai-entry-sub'>向 AI 顾问了解这只宠物的品种习性与养护要点</Text>
+              </View>
+              <Text className='ai-entry-arrow'>→</Text>
+            </View>
+          )}
         </View>
 
         {d.detailHtml && <View className='rich card'>{d.detailHtml}</View>}

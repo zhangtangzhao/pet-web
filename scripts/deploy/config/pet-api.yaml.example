@@ -56,6 +56,13 @@ COS:
   SecretID: "${COS_SECRET_ID}"
   SecretKey: "${COS_SECRET_KEY}"
 
+# AI 智能客服（OpenAI 兼容接口：DeepSeek/通义/智谱等均可）
+# 三项全配置即启用真实大模型；未配置时生产隐藏入口，非生产走演示模式（知识库+档案模板回答）
+AI:
+  BaseURL: "${AI_BASE_URL}"         # 如 https://api.deepseek.com/v1
+  ApiKey: "${AI_API_KEY}"
+  Model: "${AI_MODEL}"              # 如 deepseek-chat
+
 Log:
   ServiceName: pet-api
   Level: info

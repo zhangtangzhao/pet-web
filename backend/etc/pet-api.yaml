@@ -50,3 +50,11 @@ COS:
 Log:
   ServiceName: pet-api
   Level: info
+
+# AI 智能客服（OpenAI 兼容接口；三项全配置即启用真实大模型，未配置时非生产走演示模式）
+AI:
+  BaseURL: ""                       # 如 https://api.deepseek.com/v1
+  ApiKey: ""
+  Model: ""                         # 如 deepseek-chat
+  AskIntervalSeconds: 5
+  DailyLimit: 20
