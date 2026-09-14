@@ -145,6 +145,15 @@
   border-top: 1px solid #eee;
 }
 
+.ai-human {
+  flex-shrink: 0;
+  font-size: 24px;
+  color: #ff7a45;
+  border: 1px solid #ffcfb8;
+  border-radius: 28px;
+  padding: 12px 20px;
+}
+
 .ai-input {
   flex: 1;
   background: #f5f5f5;

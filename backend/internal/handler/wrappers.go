@@ -46,7 +46,11 @@ func withID(ctx context.Context, key ctxKey, id int64) context.Context {
 }
 
 func parseAs(r *http.Request, secret, typ string) (int64, bool) {
-	token := common.BearerToken(r)
+	return parseQueryAs(common.BearerToken(r), secret, typ)
+}
+
+// parseQueryAs 校验裸 token（WebSocket 升级请求无法携带 Authorization 头，走 query 参数）
+func parseQueryAs(token, secret, typ string) (int64, bool) {
 	if token == "" {
 		return 0, false
 	}

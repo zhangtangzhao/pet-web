@@ -117,6 +117,9 @@ export default function AiChat() {
       </ScrollView>
 
       <View className='ai-input-bar'>
+        <View className='ai-human' onClick={() => Taro.navigateTo({ url: '/pages/service-chat/index' })}>
+          转人工
+        </View>
         <Input
           className='ai-input'
           value={input}

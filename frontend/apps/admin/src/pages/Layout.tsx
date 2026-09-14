@@ -8,6 +8,7 @@ import {
   GiftOutlined,
   ProfileOutlined,
   TeamOutlined,
+  CustomerServiceOutlined,
   LogoutOutlined,
   KeyOutlined,
 } from '@ant-design/icons'
@@ -23,6 +24,7 @@ const items = [
   { key: '/marketing', icon: <GiftOutlined />, label: '营销管理' },
   { key: '/orders', icon: <ProfileOutlined />, label: '订单管理' },
   { key: '/members', icon: <TeamOutlined />, label: '会员管理' },
+  { key: '/support', icon: <CustomerServiceOutlined />, label: '人工客服' },
 ]
 
 export default function AdminLayout() {

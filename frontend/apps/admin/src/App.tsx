@@ -6,6 +6,7 @@ import Products from './pages/Products'
 import Catalog from './pages/Catalog'
 import Orders from './pages/Orders'
 import Members from './pages/Members'
+import Support from './pages/Support'
 import Knowledge from './pages/Knowledge'
 import Marketing from './pages/Marketing'
 
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="marketing" element={<Marketing />} />
         <Route path="orders" element={<Orders />} />
         <Route path="members" element={<Members />} />
+        <Route path="support" element={<Support />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

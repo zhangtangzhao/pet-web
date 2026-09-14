@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/config"
+	"pet/backend/internal/hub"
 	"pet/backend/internal/model"
 )
 
@@ -17,6 +18,7 @@ type ServiceContext struct {
 	Config config.Config
 	DB     *gorm.DB
 	Rdb    *redis.Client
+	Hub    *hub.Hub // 人工客服 WebSocket 连接注册表
 
 	payMtx    sync.Mutex
 	payClient *core.Client
@@ -41,5 +43,6 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config: c,
 		DB:     db,
 		Rdb:    rdb,
+		Hub:    hub.NewHub(),
 	}
 }

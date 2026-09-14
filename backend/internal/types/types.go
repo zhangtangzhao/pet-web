@@ -561,3 +561,44 @@ type CouponAdminListReq struct {
 	Status  int    `form:"status,optional"` // 模板状态筛选
 	Keyword string `form:"keyword,optional"`
 }
+
+// ─────────────────────────── 人工客服 ───────────────────────────
+
+type CsSendReq struct {
+	MsgType int    `json:"msgType,optional"` // 1文本 2图片，默认 1
+	Content string `json:"content"`
+}
+
+type CsMsgOut struct {
+	ID         string `json:"id"` // 雪花 ID 以字符串下发，避免 JS 精度丢失
+	SessionID  string `json:"sessionId"`
+	SenderRole int    `json:"senderRole"`
+	SenderID   string `json:"senderId"`
+	MsgType    int    `json:"msgType"`
+	Content    string `json:"content"`
+	CreatedAt  string `json:"createdAt"`
+}
+
+type CsHistoryReq struct {
+	Before int64 `form:"before,optional"` // 取 id < before 的消息（向上翻页）
+	After  int64 `form:"after,optional"`  // 取 id > after 的消息（断线补拉）
+	Limit  int   `form:"limit,optional"`  // 默认 20，最大 100
+}
+
+type CsHistoryResp struct {
+	List    []CsMsgOut `json:"list"`    // 按时间正序
+	HasMore bool       `json:"hasMore"` // before 模式下是否还有更早消息
+}
+
+type CsSessionItem struct {
+	ID              string `json:"id"`
+	MemberID        string `json:"memberId"`
+	Nickname        string `json:"nickname"`
+	Phone           string `json:"phone"`
+	Avatar          string `json:"avatar"`
+	Status          int    `json:"status"`
+	UnreadAdmin     int    `json:"unreadAdmin"`
+	LastMessageText string `json:"lastMessageText"`
+	LastMessageAt   string `json:"lastMessageAt"`
+	CreatedAt       string `json:"createdAt"`
+}

@@ -26,7 +26,7 @@
 | ------- | ---- |
 | 0 | 成功 |
 | 40xxx | 客户端错误：40100 未登录 / 40101 过期 / 40300 无权限 / 40400 资源不存在 |
-| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 / 41401 优惠券不可用 / 41402 未达用券门槛 / 41403 券已领完 / 41404 超过限领 / 41405 不在可领时段 / 41406 增值服务不可用 |
+| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 / 41401 优惠券不可用 / 41402 未达用券门槛 / 41403 券已领完 / 41404 超过限领 / 41405 不在可领时段 / 41406 增值服务不可用 / 41501 会话不存在（含越权访问他人会话） |
 | 50xxx | 服务端错误：50000 系统异常 / 50001 微信接口异常 / 50002 支付下单失败 / 50003 短信发送失败 / 50005 AI 服务不可用 |
 
 ### 1.3 通用约定
@@ -246,6 +246,29 @@
 
 建单入参扩展（`POST /api/orders`）：`serviceIds []string`（增值服务 ID）、`couponId string`（用户券 ID，空 = 不用券）；响应 `payAmount` 为折后实付。订单视图（用户端/平台端）新增 `totalAmount / discountAmount / serviceFee / couponInfo / serviceItems`（服务快照 JSON 字符串）。
 
+### 2.8 人工客服（已实现，实际路径前缀为 /api）
+
+模型：每会员一个会话（首条消息自动创建，已结束会话再来新消息自动重开）；文本（≤500 字）与图片（复用 COS 直传）消息；发送走 REST 落库，WebSocket 仅做服务端推送。
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/ws/cs?token=<accessToken>` | 建立 WS 长连接（token 走 query，WS 无法带 Authorization 头） |
+| POST | `/api/cs/messages` | 发送消息 `{msgType?: 1文本/2图片, content}`（会员自动定位本人会话） |
+| GET | `/api/cs/messages?before=&after=&limit=` | 历史消息游标分页：`before` 向上翻页取更早，`after` 断线补拉，均按时间正序返回 + `hasMore`（limit 默认 20 最大 100，无游标时取最新一页） |
+| POST | `/api/cs/read` | 已读（清零会员侧未读并广播） |
+| POST | `/api/upload-token` | 聊天图片 COS 直传凭证（目录固定 `chat`） |
+
+**WS 协议**：客户端唯一上行帧是 `{"type":"pong"}`（收到 `ping` 即回，服务端据此判活），其余均为服务端推送：
+
+```json
+{"type":"ping","ts":1694000000}                  // 服务端每 20s 推送
+{"type":"closing_warning","data":"连接即将断开,30s 内未恢复将自动断开"}  // 两阶段判死：>30s 无帧先预警，再等 30s 仍无帧则断开
+{"type":"new_message","data":{"id":"1757...","sessionId":"1756...","senderRole":1,"msgType":1,"content":"...","createdAt":"..."}}
+{"type":"session_update","data":{"sessionId":"1756...","status":1,"unreadAdmin":3,"unreadMember":0,"lastMessageText":"...","lastMessageAt":"..."}}
+```
+
+**弱网设计**（双端同语义）：指数退避（1s→30s 封顶）+ ±30% 抖动自动重连，网络恢复/页面可见立即重连；客户端 45s 无帧判死自愈；断线窗口消息不丢——客户端记录已见最大消息 ID，重连成功后 `?after=` 补拉缺口，全部消息按 ID 幂等去重；发送不受断连影响（REST），失败自动重试 3 次后标红供手动重发（用户端）。
+
 ---
 
 ## 3. 平台端接口（/admin/api/v1，PC）
@@ -318,6 +341,18 @@
 | PUT / DELETE | `/api/admin/marketing/services/:id` | 编辑 / 删除 |
 
 券模板入参：`{name, type(1满减/2折扣/3立减), thresholdAmount?, discountAmount?, discountPercent?, maxDiscountAmount?, totalCount?(0不限), perLimit?, newUserOnly?, pickupStart?, pickupEnd?, validStart?, validEnd?, status?}`，时段格式 `YYYY-MM-DD HH:mm:ss` 或 RFC3339，空 = 不限。
+
+### 3.8 人工客服工作台（已实现，实际路径前缀为 /api/admin）
+
+公共会话池：所有登录管理员可回复任意会话；`GET /api/ws/cs` 同一连接（管理员 token 即客服身份）。
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/cs/sessions` | 会话列表（进行中在前，按最后消息时间倒序，含会员昵称/手机号/头像摘要） |
+| GET | `/api/admin/cs/sessions/:id/messages?before=&after=&limit=` | 历史消息（游标分页，同 2.8） |
+| POST | `/api/admin/cs/sessions/:id/messages` | 回复 `{msgType?, content}` |
+| POST | `/api/admin/cs/sessions/:id/read` | 已读（清零客服侧未读并广播） |
+| POST | `/api/admin/cs/sessions/:id/close` | 结束会话（幂等；用户再发消息自动重开） |
 
 ---
 

@@ -14,7 +14,7 @@
 | ---- | ---- |
 | [Dockerfile.api](deploy/Dockerfile.api) | 后端多阶段构建：golang:1.25-alpine 构建 → alpine 运行时（非 root 用户，含时区/CA） |
 | [docker-compose.yml](deploy/docker-compose.yml) | 一期单机编排：nginx + api + postgres16 + redis7，含健康检查与数据卷 |
-| [nginx.conf](deploy/nginx.conf) | H5 / 管理端静态托管 + `/api`、`/admin/api` 反向代理 |
+| [nginx.conf](deploy/nginx.conf) | H5 / 管理端静态托管 + `/api`、`/admin/api` 反向代理（含客服 WebSocket `/api/ws/` 升级配置） |
 | [config/pet-api.yaml.example](deploy/config/pet-api.yaml.example) | 服务配置模板，敏感项全部为 `${VAR}` 占位（JWT/PG/Redis/微信登录/支付/短信/COS） |
 | [.env.example](deploy/.env.example) | 环境变量模板（全部密钥的唯一填写入口，勿提交） |
 
@@ -57,6 +57,8 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/003_ai_knowledge.down.sql](sql/003_ai_knowledge.down.sql) | 回滚知识库表 |
 | [sql/004_marketing.up.sql](sql/004_marketing.up.sql) | 营销表：增值服务 / 优惠券模板 / 用户券 + orders 优惠列 + 种子（服务项与 3 张券模板） |
 | [sql/004_marketing.down.sql](sql/004_marketing.down.sql) | 回滚营销表与 orders 优惠列 |
+| [sql/005_chat.up.sql](sql/005_chat.up.sql) | 人工客服表：cs_session（每会员一会话）/ cs_message（文本 / 图片消息）+ 索引 |
+| [sql/005_chat.down.sql](sql/005_chat.down.sql) | 回滚客服两表 |
 
 说明：
 

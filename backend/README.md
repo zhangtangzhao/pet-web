@@ -1,6 +1,6 @@
 # backend · pet-api 后端服务
 
-Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时承载用户端（小程序 / H5）与平台管理端全部业务域。单一部署单元，含 6 个业务域：`auth / pet / trade / favorite / ai / marketing`。
+Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时承载用户端（小程序 / H5）与平台管理端全部业务域。单一部署单元，含 7 个业务域：`auth / pet / trade / favorite / ai / marketing / chat`。
 
 ## 架构
 
@@ -13,6 +13,7 @@ Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时�
 | 缓存 | Redis 7（验证码、频控、图形验证码） |
 | 金额 | shopspring/decimal，落库 `NUMERIC(10,2)` |
 | ID | 雪花算法主键 + 前缀业务单号 |
+| 长连接 | coder/websocket（人工客服推送，进程内 Hub 连接注册表） |
 | 外部 | 微信登录（code2session / OAuth2）、微信支付 V3、腾讯云 COS、OpenAI 兼容大模型 |
 
 ### 模块结构
@@ -32,10 +33,12 @@ backend/
     │   ├── trade/      # 下单防超卖、微信支付 V3、回调幂等、超时关单、退款
     │   ├── marketing/  # 优惠券（满减/折扣/立减）、增值服务、金额计算
     │   ├── ai/         # AI 问宠：知识库 RAG + 宠物档案增强、频控
-    │   └── manage/     # 平台端：看板 / 商品 / 会员 / 图形验证码
+    │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 图形验证码
+    │   └── chat/       # 人工客服：会话 / 消息 / 未读 / 已读，发送走 REST、WS 仅推送
+    ├── hub/            # 客服 WebSocket 连接注册表：多端推送、心跳判死（30s 预警 + 30s 宽限）
     ├── middleware/     # JWT 鉴权等中间件
     ├── model/          # GORM 模型（表结构见 scripts/sql）
-    ├── svc/            # ServiceContext：DB / Redis / 微信 / AI 客户端
+    ├── svc/            # ServiceContext：DB / Redis / Hub / 微信 / AI 客户端
     ├── types/          # 请求 / 响应结构体（前后端契约，见 docs/04）
     └── common/         # 业务错误码、雪花 ID、业务单号
 ```
@@ -60,11 +63,12 @@ flowchart LR
 依赖：Go 1.25+、PostgreSQL 16、Redis 7（默认连 `127.0.0.1:5432` / `127.0.0.1:6379`，可在 `etc/pet-api.yaml` 调整）。
 
 ```bash
-# 1. 初始化数据库（在仓库根执行，共 4 个迁移）
+# 1. 初始化数据库（在仓库根执行，共 5 个迁移）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
 psql -U pet -d pet -f scripts/sql/004_marketing.up.sql
+psql -U pet -d pet -f scripts/sql/005_chat.up.sql
 
 # 2. 运行（默认读取 etc/pet-api.yaml，监听 :8888）
 go run .
@@ -114,3 +118,4 @@ docker compose logs -f api              # 看日志
 - **雪花节点**：单机默认 `Snowflake.Node: 1`，若多实例部署必须保证节点号唯一
 - **幂等**：微信支付回调以 `payment` 行状态 + 事务 CAS 保证重复通知安全；新增异步回调类逻辑请沿用该模式
 - **数据库迁移为手工 psql**，无 auto-migrate；新表 / 新列需在 `scripts/sql/` 增加 `00N_*.up/down.sql` 并同步 [docs/03-数据库设计](../docs/03-数据库设计.md)
+- **客服 WebSocket**：鉴权 token 走 query（会进访问日志），生产可对 `/api/ws/` 关闭 access log 或接受该风险；go-zero rest 超时对已升级的长连接无效，nginx 侧已配 `proxy_read_timeout 3600s`；小程序正式环境需 wss 合法域名（TLS 443）

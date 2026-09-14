@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => ({
       '/api': {
         target: 'http://127.0.0.1:8888',
         changeOrigin: true,
+        // 客服 WebSocket（/api/ws/cs）需要升级连接
+        ws: true,
       },
     },
   },

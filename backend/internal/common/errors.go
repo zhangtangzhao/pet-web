@@ -46,6 +46,8 @@ var (
 	ErrCouponNotInTime = NewErr(400, 41405, "不在优惠券可领取时段")
 	ErrServiceInvalid  = NewErr(400, 41406, "包含不可用的增值服务")
 
+	ErrCsSession = NewErr(404, 41501, "会话不存在")
+
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")
 	ErrPayConfig = NewErr(500, 50002, "支付未配置")

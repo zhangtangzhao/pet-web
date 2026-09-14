@@ -46,6 +46,11 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/coupons/usable", Handler: UsableCoupons(sc)},
 		{Method: "POST", Path: "/api/coupons/usable", Handler: UsableCoupons(sc)},
 		{Method: "POST", Path: "/api/coupons/:id/claim", Handler: ClaimCoupon(sc)},
+		{Method: "GET", Path: "/api/ws/cs", Handler: CsWS(sc)},
+		{Method: "POST", Path: "/api/cs/messages", Handler: CsMemberSend(sc)},
+		{Method: "GET", Path: "/api/cs/messages", Handler: CsMemberMessages(sc)},
+		{Method: "POST", Path: "/api/cs/read", Handler: CsMemberRead(sc)},
+		{Method: "POST", Path: "/api/upload-token", Handler: MemberUploadToken(sc)},
 	})
 
 	// ───────── 平台端 · 登录/刷新（无需 token）─────────
@@ -97,5 +102,11 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "PUT", Path: "/api/admin/marketing/coupons/:id", Handler: AdminCouponUpsert(sc)},
 		{Method: "DELETE", Path: "/api/admin/marketing/coupons/:id", Handler: AdminCouponDelete(sc)},
 		{Method: "POST", Path: "/api/admin/marketing/coupons/:id/issue", Handler: AdminCouponIssue(sc)},
+
+		{Method: "GET", Path: "/api/admin/cs/sessions", Handler: AdminCsSessions(sc)},
+		{Method: "GET", Path: "/api/admin/cs/sessions/:id/messages", Handler: AdminCsMessages(sc)},
+		{Method: "POST", Path: "/api/admin/cs/sessions/:id/messages", Handler: AdminCsMessages(sc)},
+		{Method: "POST", Path: "/api/admin/cs/sessions/:id/read", Handler: AdminCsRead(sc)},
+		{Method: "POST", Path: "/api/admin/cs/sessions/:id/close", Handler: AdminCsClose(sc)},
 	})
 }

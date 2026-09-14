@@ -155,3 +155,39 @@ export interface CreateOrderResult {
   h5PayUrl: string
 }
 
+
+// ─────────────────────────── 人工客服 ───────────────────────────
+
+export interface CsMsgOut {
+  id: string // 雪花 ID 字符串,避免 JS 精度丢失
+  sessionId: string
+  senderRole: number // 1会员 2客服
+  msgType: number // 1文本 2图片
+  content: string
+  createdAt: string
+}
+
+export interface CsHistoryResp {
+  list: CsMsgOut[]
+  hasMore: boolean
+}
+
+export interface CsSessionUpdate {
+  sessionId: string
+  status: number // 1进行中 2已结束
+  unreadAdmin: number
+  unreadMember: number
+  lastMessageText: string
+  lastMessageAt: string
+}
+
+export interface CsEvent {
+  type: 'ping' | 'closing_warning' | 'new_message' | 'session_update'
+  data?: unknown
+}
+
+export interface UploadTokenResp {
+  uploadUrl: string
+  fileUrl: string
+  method: string
+}

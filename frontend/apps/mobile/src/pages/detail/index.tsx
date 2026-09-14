@@ -127,6 +127,10 @@ export default function Detail() {
           <Text>{d.isFavorite ? '♥' : '♡'}</Text>
           <Text className='fav-text'>收藏</Text>
         </View>
+        <View className='fav' onClick={() => Taro.navigateTo({ url: '/pages/service-chat/index' })}>
+          <Text>💬</Text>
+          <Text className='fav-text'>客服</Text>
+        </View>
         <View className='btn-buy' onClick={!favLoading ? buy : undefined}>
           立即购买
         </View>
