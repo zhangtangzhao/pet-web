@@ -60,7 +60,7 @@ docker exec -i $(docker compose ps -q postgres) \
 
 说明：
 
-- 静态站点：构建后 `frontend/apps/mobile/dist`（H5）与 `frontend/apps/admin/dist`（管理端，需 `base=/admin/`）由 nginx 直接托管，本地开发阶段目录不存在时对应路由不可用属正常；
+- 静态站点：构建后 `frontend/apps/mobile/dist`（H5）与 `frontend/apps/admin/dist`（管理端，构建已内置 `base=/admin/`）由 nginx 直接托管，本地开发阶段目录不存在时对应路由不可用属正常；
 - API 调试：api/postgres/redis 端口均只绑定 `127.0.0.1`，生产对外仅暴露 nginx 的 80/443；
 - HTTPS：放开 compose 中 443 映射并挂载证书目录，或在云上由 LB/CDN 终结 TLS。
 
