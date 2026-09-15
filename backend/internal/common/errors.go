@@ -37,6 +37,8 @@ var (
 
 	ErrAIAskFrequency = NewErr(429, 41301, "提问太频繁，请稍后再试")
 	ErrAIAskDaily     = NewErr(429, 41302, "今日提问次数已达上限")
+	ErrAIRecFrequency = NewErr(429, 41303, "推荐太频繁，请稍后再试")
+	ErrAIRecDaily     = NewErr(429, 41304, "今日推荐次数已达上限")
 	ErrAIReferenced   = NewErr(400, 41209, "知识条目所属品种不存在")
 
 	ErrCouponUnusable  = NewErr(400, 41401, "优惠券不可用")

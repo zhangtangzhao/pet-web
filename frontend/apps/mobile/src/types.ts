@@ -257,3 +257,23 @@ export interface NotifyView {
 export interface NotifyListResp extends PageResp<NotifyView> {
   unread: number
 }
+
+export interface RecommendItem {
+  id: string
+  title: string
+  mainImage: string
+  price: string
+  originalPrice: string
+  breedName: string
+  petGender: number
+  favoriteCount: number
+  sales: number
+  status: number
+  score: number // 推荐分 0-100
+  reason: string // 推荐理由
+}
+
+export interface AIRecommendResp {
+  items: RecommendItem[]
+  source: 'ai' | 'rule' // ai=大模型推荐 rule=规则打分兜底
+}

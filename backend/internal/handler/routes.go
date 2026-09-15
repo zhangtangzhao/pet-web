@@ -50,6 +50,7 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/notify/list", Handler: NotifyList(sc)},
 		{Method: "POST", Path: "/api/notify/read", Handler: NotifyRead(sc)},
 		{Method: "POST", Path: "/api/ai/ask", Handler: AIAsk(sc)},
+		{Method: "POST", Path: "/api/ai/recommend", Handler: AIRecommend(sc)},
 		{Method: "GET", Path: "/api/coupons", Handler: MyCoupons(sc)},
 		{Method: "GET", Path: "/api/coupons/center", Handler: CouponCenter(sc)},
 		{Method: "GET", Path: "/api/coupons/usable", Handler: UsableCoupons(sc)},

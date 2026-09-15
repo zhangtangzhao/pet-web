@@ -24,12 +24,18 @@ export default function Home() {
   const goCoupons = () => Taro.navigateTo({ url: '/pages/coupon-center/index' })
   const goOrders = () => Taro.navigateTo({ url: '/pages/orders/index' })
   const goNotify = () => Taro.navigateTo({ url: '/pages/notify/index' })
+  const goRecommend = () => Taro.navigateTo({ url: '/pages/recommend/index' })
 
   return (
     <View className='home'>
       <View className='banner card'>
         <Text className='banner-title'>遇见你的毛孩子</Text>
         <Text className='banner-sub'>健康活体 · 平台保障 · 售后无忧</Text>
+        <View className='banner-coupon' onClick={goRecommend}>
+          <Text className='banner-coupon-icon'>🐾</Text>
+          <Text>智能选宠 · 说出你的条件，推荐 3 只</Text>
+          <Text className='banner-coupon-arrow'>→</Text>
+        </View>
         <View className='banner-coupon' onClick={goCoupons}>
           <Text className='banner-coupon-icon'>🎫</Text>
           <Text>领券中心 · 新人立省 30 元</Text>

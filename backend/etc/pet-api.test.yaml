@@ -47,6 +47,15 @@ COS:
   SecretKey: ""
   BaseURL: ""
 
+AI:
+  BaseURL: "" # 如 https://api.deepseek.com/v1；三项全配即启用真实大模型
+  ApiKey: ""
+  Model: "" # 如 deepseek-chat
+  AskIntervalSeconds: 5
+  DailyLimit: 20
+  RecommendIntervalSeconds: 10 # 智能选宠 LLM 推荐最小间隔（未配置大模型时规则打分不频控）
+  RecommendDailyLimit: 5
+
 Notify:
   MiniTmplCsReply: ""
   MiniTmplOrder: ""

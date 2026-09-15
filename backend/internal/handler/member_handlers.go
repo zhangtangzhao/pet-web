@@ -296,3 +296,19 @@ func AIAsk(sc *svc.ServiceContext) http.HandlerFunc {
 		common.OK(w, resp)
 	})
 }
+
+func AIRecommend(sc *svc.ServiceContext) http.HandlerFunc {
+	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.AIRecommendReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		resp, err := ai.PetAIRecommend(sc, memberID(r), &req)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}

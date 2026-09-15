@@ -58,10 +58,13 @@ COS:
 
 # AI 智能客服（OpenAI 兼容接口：DeepSeek/通义/智谱等均可）
 # 三项全配置即启用真实大模型；未配置时生产隐藏入口，非生产走演示模式（知识库+档案模板回答）
+# 智能选宠推荐：配置大模型时走 LLM 推荐（下两项频控生效），未配置时自动降级本地规则打分、不频控
 AI:
   BaseURL: "${AI_BASE_URL}"         # 如 https://api.deepseek.com/v1
   ApiKey: "${AI_API_KEY}"
   Model: "${AI_MODEL}"              # 如 deepseek-chat
+  RecommendIntervalSeconds: 10      # LLM 推荐最小间隔（秒）
+  RecommendDailyLimit: 5            # LLM 推荐每日限额（次/人）
 
 # 微信通知模板（客服回复离线提醒 + 订单事件 + 券到期提醒；未配置时通知降级为仅落库留痕）
 Notify:

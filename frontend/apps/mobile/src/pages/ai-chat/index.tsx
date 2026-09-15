@@ -81,6 +81,9 @@ export default function AiChat() {
                 {q}
               </View>
             ))}
+            <View className='ai-chip' onClick={() => Taro.navigateTo({ url: '/pages/recommend/index' })}>
+              🐾 不知道选哪只？智能选宠
+            </View>
           </View>
         )}
 

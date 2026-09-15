@@ -17,6 +17,7 @@ Taro 4 + React 18，**一套代码编译微信小程序与 H5 双端**。品牌�
 | 消息中心 | `pages/notify` | 站内消息列表（未读红点 / 已读置灰 / 全部已读），场景图标区分客服 / 订单 / 优惠券提醒 |
 | 领券中心 | `pages/coupon-center` | 领券中心 + 我的优惠券（可用 / 已用 / 已过期） |
 | AI 问宠 | `pages/ai-chat` | 基于知识库 + 宠物档案的智能客服会话 |
+| 智能选宠 | `pages/recommend` | 条件描述 + 快捷标签 → 推荐 3 只（推荐分 + 理由，跳详情） |
 | 在线客服 | `pages/service-chat` | 人工客服实时聊天：文本 / 图片，弱网自动重连 + 断线消息补拉（`src/ws.ts`） |
 | 收藏 | `pages/favorites` | 收藏列表 |
 | 登录 | `pages/login` | 手机号验证码 / 微信授权，支持 `redirect` 回跳 |

@@ -436,6 +436,21 @@ type AIAskResp struct {
 	Demo   bool             `json:"demo"` // 是否演示模式（未接入真实大模型）
 }
 
+type AIRecommendReq struct {
+	Requirement string `json:"requirement"` // 预算/要求/家庭情况/生活习惯等自由描述，≤500 字
+}
+
+type RecommendItem struct {
+	ProductCard
+	Score  int    `json:"score"`  // 推荐分 0-100
+	Reason string `json:"reason"` // 推荐理由（≤60 字）
+}
+
+type AIRecommendResp struct {
+	Items  []RecommendItem `json:"items"`  // 恰好 3 个（候选不足时按实际数量），按分数降序
+	Source string          `json:"source"` // ai=大模型推荐 rule=规则打分兜底
+}
+
 type KnowledgeListReq struct {
 	PageReq
 	BreedID string `form:"breedId,optional"`

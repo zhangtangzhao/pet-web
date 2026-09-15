@@ -58,6 +58,8 @@ AI:
   Model: ""                         # 如 deepseek-chat
   AskIntervalSeconds: 5
   DailyLimit: 20
+  RecommendIntervalSeconds: 10      # 智能选宠 LLM 推荐最小间隔（未配置大模型时规则打分不频控）
+  RecommendDailyLimit: 5
 
 # 微信通知模板（小程序订阅消息 / 公众号模板消息；未配置时通知降级为仅落库留痕）
 Notify:

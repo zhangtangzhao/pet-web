@@ -65,12 +65,14 @@ type Config struct {
 
 	// AI 客服：OpenAI 兼容接口（DeepSeek/通义/智谱等均可），三者全非空即启用真实大模型
 	AI struct {
-		BaseURL            string `json:",optional"` // 如 https://api.deepseek.com/v1
-		ApiKey             string `json:",optional"`
-		Model              string `json:",optional"` // 如 deepseek-chat
-		TimeoutSeconds     int    `json:",default=60"`
-		AskIntervalSeconds int    `json:",default=5"`
-		DailyLimit         int    `json:",default=20"`
+		BaseURL                 string `json:",optional"` // 如 https://api.deepseek.com/v1
+		ApiKey                  string `json:",optional"`
+		Model                   string `json:",optional"` // 如 deepseek-chat
+		TimeoutSeconds          int    `json:",default=60"`
+		AskIntervalSeconds      int    `json:",default=5"`
+		DailyLimit              int    `json:",default=20"`
+		RecommendIntervalSeconds int   `json:",default=10"` // 智能选宠 LLM 推荐最小间隔；≤0 回落 AskIntervalSeconds
+		RecommendDailyLimit      int   `json:",default=5"`  // 智能选宠 LLM 推荐每日限额；≤0 回落 DailyLimit
 	}
 
 	// 微信通知模板：小程序订阅消息 / 公众号模板消息；未配置时通知降级为仅落库留痕

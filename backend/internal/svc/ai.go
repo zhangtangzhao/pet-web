@@ -36,6 +36,11 @@ var aiHTTP = &http.Client{}
 
 // AIChat 调用 OpenAI 兼容 chat/completions，返回模型回复文本
 func (sc *ServiceContext) AIChat(ctx context.Context, messages []AIMessage) (string, error) {
+	return sc.AIChatWithTemperature(ctx, messages, 0.7)
+}
+
+// AIChatWithTemperature 同 AIChat，可指定采样温度（结构化 JSON 输出建议用低温度）
+func (sc *ServiceContext) AIChatWithTemperature(ctx context.Context, messages []AIMessage, temperature float64) (string, error) {
 	c := sc.Config.AI
 	if !sc.Config.AIEnabled() {
 		return "", common.ErrAIService
@@ -47,7 +52,7 @@ func (sc *ServiceContext) AIChat(ctx context.Context, messages []AIMessage) (str
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	body, _ := json.Marshal(aiChatRequest{Model: c.Model, Messages: messages, Temperature: 0.7})
+	body, _ := json.Marshal(aiChatRequest{Model: c.Model, Messages: messages, Temperature: temperature})
 	req, err := http.NewRequestWithContext(callCtx, http.MethodPost,
 		trimSlash(c.BaseURL)+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
