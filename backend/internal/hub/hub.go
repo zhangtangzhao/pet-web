@@ -99,6 +99,13 @@ func (h *Hub) Unregister(role string, id int64, c *Conn) {
 	}
 }
 
+// MemberOnline 判断会员是否有任一在线连接（用于离线时才投递微信通知）
+func (h *Hub) MemberOnline(id int64) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.members[id]) > 0
+}
+
 // PushMember 推送给指定会员的全部连接
 func (h *Hub) PushMember(id int64, v any) {
 	h.mu.RLock()

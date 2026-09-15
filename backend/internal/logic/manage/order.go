@@ -1,6 +1,8 @@
 package manage
 
 import (
+	"github.com/shopspring/decimal"
+
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/trade"
 	"pet/backend/internal/model"
@@ -48,7 +50,15 @@ func AdminRefund(sc *svc.ServiceContext, req *types.RefundReq) error {
 	if req.Reason == "" {
 		return common.NewErr(400, 40001, "请填写退款原因")
 	}
-	return trade.RefundOrder(sc, req.OrderNo, req.Reason, req.Amount)
+	var amount *decimal.Decimal
+	if req.Amount != "" {
+		d, err := decimal.NewFromString(req.Amount)
+		if err != nil {
+			return common.ErrParam
+		}
+		amount = &d
+	}
+	return trade.RefundOrder(sc, req.OrderNo, req.Reason, amount, common.NewBizNo("RF"))
 }
 
 // AdminOrderDetail 订单详情（平台端）

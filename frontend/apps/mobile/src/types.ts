@@ -91,6 +91,8 @@ export interface OrderView {
   contactPhone: string
   expireAt: string
   createdAt: string
+  reviewed?: boolean
+  aftersaleStatus?: number
   items: { productId: string; productTitle: string; productImage: string; breedName: string; price: string; quantity: number }[]
 }
 
@@ -190,4 +192,54 @@ export interface UploadTokenResp {
   uploadUrl: string
   fileUrl: string
   method: string
+}
+
+// ─────────────────────────── 订单评价 / 售后 / 通知 ───────────────────────────
+
+export interface ReviewView {
+  id: string // 雪花 ID 字符串，避免 JS 精度丢失
+  orderNo: string
+  memberId: string
+  nickname: string
+  avatar: string
+  productId: string
+  productTitle: string
+  rating: number
+  content: string
+  images: string[]
+  status: number
+  createdAt: string
+}
+
+export interface ReviewListResp {
+  list: ReviewView[]
+  hasMore: boolean
+}
+
+export interface ReviewSummaryResp {
+  avgRating: string
+  total: number
+  latest: ReviewView[]
+}
+
+export interface AfterSaleView {
+  id: string
+  afterSaleNo: string
+  orderNo: string
+  memberId: string
+  reason: string
+  refundAmount: string
+  status: number // 1待审核 2已同意 3已拒绝 4已撤销
+  statusText: string
+  adminNote: string
+  refundPaymentNo: string
+  auditAt: string
+  createdAt: string
+}
+
+export interface NotifyTmplResp {
+  miniTmplCsReply: string
+  miniTmplOrder: string
+  h5TmplCsReply: string
+  h5TmplOrder: string
 }

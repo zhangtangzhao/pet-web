@@ -7,9 +7,11 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
+	"github.com/zeromicro/go-zero/core/logx"
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -166,10 +168,11 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 	})
 }
 
-// RefundOrder 平台端发起退款
-// 简化：微信退款受理成功即落账（订单→已退款、退款流水→已退款）。
+// RefundOrder 发起退款（平台端整单退款 / 售后审核通过共用）。
+// outRefundNo 由调用方提供（微信按 out_refund_no 幂等，售后路径传 "RF"+售后单号保证重试安全）；
+// amount 为 nil 表示全额。简化：退款受理成功即落账（订单→已退款、退款流水→已退款）。
 // 生产强化项：接入退款结果回调，按微信最终状态落账。
-func RefundOrder(sc *svc.ServiceContext, orderNo, reason, amountStr string) error {
+func RefundOrder(sc *svc.ServiceContext, orderNo, reason string, amount *decimal.Decimal, outRefundNo string) error {
 	var o model.Order
 	if err := sc.DB.Where("order_no = ?", orderNo).First(&o).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -188,37 +191,45 @@ func RefundOrder(sc *svc.ServiceContext, orderNo, reason, amountStr string) erro
 		}
 		return err
 	}
-	totalFen := pay.Amount.Mul(decimal100()).IntPart()
-	refundFen := totalFen
-	if amountStr != "" {
-		d, err := decimal.NewFromString(amountStr)
-		if err != nil {
-			return common.ErrParam
-		}
-		refundFen = d.Mul(decimal100()).IntPart()
+	// 幂等短路：已有成功退款流水则视为已退款（重复审核/重复回调安全）
+	var exist model.Payment
+	if err := sc.DB.Where("order_no = ? AND pay_type = ? AND status = ?",
+		orderNo, model.PayTypeRefund, model.PayStatusRefund).First(&exist).Error; err == nil {
+		return nil
 	}
+	totalFen := pay.Amount.Mul(decimal100()).IntPart()
+	refundAmount := pay.Amount
+	if amount != nil {
+		refundAmount = *amount
+	}
+	refundFen := refundAmount.Mul(decimal100()).IntPart()
 	if refundFen <= 0 || refundFen > totalFen {
 		return common.ErrParam
 	}
 
-	outRefundNo := common.NewBizNo("RF")
-	refund, err := sc.Refund(context.Background(), orderNo, outRefundNo, reason, refundFen, totalFen)
-	if err != nil {
-		return err
+	// 开发演示：未配置商户号且非生产 → 直接落 DEMO 退款（不调微信）
+	demo := sc.Config.WeChatPay.MchID == "" && !sc.Config.IsProd()
+	var refundID string
+	if !demo {
+		refund, err := sc.Refund(context.Background(), orderNo, outRefundNo, reason, refundFen, totalFen)
+		if err != nil {
+			return err
+		}
+		if refund.RefundId != nil {
+			refundID = *refund.RefundId
+		}
+	} else {
+		refundID = "DEMO"
 	}
 	now := time.Now()
-	refundID := ""
-	if refund.RefundId != nil {
-		refundID = *refund.RefundId
-	}
-	return sc.DB.Transaction(func(tx *gorm.DB) error {
+	err := sc.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&model.Payment{
 			ID:            common.NewID(),
 			PaymentNo:     outRefundNo,
 			OrderID:       o.ID,
 			OrderNo:       orderNo,
 			MemberID:      o.MemberID,
-			Amount:        pay.Amount,
+			Amount:        refundAmount,
 			Channel:       pay.Channel,
 			PayType:       model.PayTypeRefund,
 			TransactionID: refundID,
@@ -231,4 +242,13 @@ func RefundOrder(sc *svc.ServiceContext, orderNo, reason, amountStr string) erro
 			Where("id = ? AND status IN ?", o.ID, []int{model.OrderPaid, model.OrderCompleted}).
 			Updates(map[string]any{"status": model.OrderRefunded, "cancel_reason": reason, "updated_at": now}).Error
 	})
+	if err != nil {
+		return err
+	}
+	// 退款到账通知（biz_key 幂等：售后与整单退款同单只投一次）
+	if err := notify.Enqueue(sc, o.MemberID, model.NotifySceneOrder,
+		"refund:"+orderNo, "退款已到账", "订单退款已原路退回", orderNo); err != nil {
+		logx.Errorf("退款通知入队失败 orderNo=%s: %v", orderNo, err)
+	}
+	return nil
 }

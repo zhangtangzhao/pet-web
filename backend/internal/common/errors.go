@@ -48,6 +48,15 @@ var (
 
 	ErrCsSession = NewErr(404, 41501, "会话不存在")
 
+	ErrReview      = NewErr(400, 41601, "该订单已评价过")
+	ErrReviewOrder = NewErr(400, 41602, "订单当前不可评价")
+
+	ErrAfterSale       = NewErr(404, 41701, "售后单不存在")
+	ErrAfterSaleActive = NewErr(400, 41702, "该订单已有进行中的售后")
+	ErrAfterSaleOrder  = NewErr(400, 41703, "订单当前不可申请售后")
+	ErrAfterSaleState  = NewErr(400, 41704, "售后状态不允许此操作")
+	ErrAfterSaleAudit  = NewErr(409, 41705, "审核状态已变化，请刷新后重试")
+
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")
 	ErrPayConfig = NewErr(500, 50002, "支付未配置")

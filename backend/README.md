@@ -1,6 +1,6 @@
 # backend · pet-api 后端服务
 
-Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时承载用户端（小程序 / H5）与平台管理端全部业务域。单一部署单元，含 7 个业务域：`auth / pet / trade / favorite / ai / marketing / chat`。
+Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时承载用户端（小程序 / H5）与平台管理端全部业务域。单一部署单元，含 10 个业务域：`auth / pet / trade / favorite / ai / marketing / chat / review / aftersale / notify`。
 
 ## 架构
 
@@ -20,7 +20,7 @@ Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时�
 
 ```
 backend/
-├── pet.go              # 入口：加载配置（支持 ${ENV} 占位展开）、雪花初始化、注册路由、启动超时关单扫描
+├── pet.go              # 入口：加载配置（支持 ${ENV} 占位展开）、雪花初始化、注册路由、启动超时关单扫描 + 通知投递器
 ├── etc/
 │   ├── pet-api.yaml    # 本地开发配置（明文 dev 值）
 │   └── pet-api.test.yaml
@@ -34,7 +34,10 @@ backend/
     │   ├── marketing/  # 优惠券（满减/折扣/立减）、增值服务、金额计算
     │   ├── ai/         # AI 问宠：知识库 RAG + 宠物档案增强、频控
     │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 图形验证码
-    │   └── chat/       # 人工客服：会话 / 消息 / 未读 / 已读，发送走 REST、WS 仅推送
+    │   ├── chat/       # 人工客服：会话 / 消息 / 未读 / 已读，发送走 REST、WS 仅推送
+    │   ├── review/     # 订单评价：一单一评（仅已完成单）、公开列表 / 评分摘要、管理端隐藏 / 删除
+    │   ├── aftersale/  # 售后：申请（默认全额）/ 撤销 / 审核（CAS + 可调金额退款，失败自动回滚重审）
+    │   └── notify/     # 微信通知投递队列：客服回复（离线）+ 订单事件，biz_key 幂等、失败重试、未配置模板降级
     ├── hub/            # 客服 WebSocket 连接注册表：多端推送、心跳判死（30s 预警 + 30s 宽限）
     ├── middleware/     # JWT 鉴权等中间件
     ├── model/          # GORM 模型（表结构见 scripts/sql）
@@ -56,19 +59,22 @@ flowchart LR
     L --> AI["OpenAI 兼容大模型"]
 ```
 
-后台任务：`trade.StartOrderCloser` 每分钟扫描超时未支付订单，事务内关单并回滚库存与优惠券。
+后台任务：`trade.StartOrderCloser` 每分钟扫描超时未支付订单，事务内关单并回滚库存与优惠券；`notify.StartNotifier` 每 10s 扫描通知投递队列（`FOR UPDATE SKIP LOCKED` 单行取件，多实例不重复投递）。
 
 ## 本地开发
 
 依赖：Go 1.25+、PostgreSQL 16、Redis 7（默认连 `127.0.0.1:5432` / `127.0.0.1:6379`，可在 `etc/pet-api.yaml` 调整）。
 
 ```bash
-# 1. 初始化数据库（在仓库根执行，共 5 个迁移）
+# 1. 初始化数据库（在仓库根执行，共 8 个迁移）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
 psql -U pet -d pet -f scripts/sql/004_marketing.up.sql
 psql -U pet -d pet -f scripts/sql/005_chat.up.sql
+psql -U pet -d pet -f scripts/sql/006_review.up.sql
+psql -U pet -d pet -f scripts/sql/007_after_sale.up.sql
+psql -U pet -d pet -f scripts/sql/008_notify.up.sql
 
 # 2. 运行（默认读取 etc/pet-api.yaml，监听 :8888）
 go run .
@@ -116,6 +122,6 @@ docker compose logs -f api              # 看日志
 - **金额一律走 decimal**：接口用元字符串（如 `"680.00"`），落库 `NUMERIC(10,2)`；实付金额唯一入口是 `order.PayAmount`，支付 / 回调 / 退款均由它派生，改动下单计算务必只动这一处
 - **两套配置文件互不影响**：本地用 `etc/pet-api.yaml`（明文），部署用 `config/pet-api.yaml`（占位）；改配置结构时两边（含 example）需同步
 - **雪花节点**：单机默认 `Snowflake.Node: 1`，若多实例部署必须保证节点号唯一
-- **幂等**：微信支付回调以 `payment` 行状态 + 事务 CAS 保证重复通知安全；新增异步回调类逻辑请沿用该模式
+- **幂等**：微信支付回调以 `payment` 行状态 + 事务 CAS 保证重复通知安全；退款以 `payment` 既有成功退款记录短路 + 确定性退款单号（`RF+售后单号`）保证幂等；新增异步回调类逻辑请沿用该模式
 - **数据库迁移为手工 psql**，无 auto-migrate；新表 / 新列需在 `scripts/sql/` 增加 `00N_*.up/down.sql` 并同步 [docs/03-数据库设计](../docs/03-数据库设计.md)
 - **客服 WebSocket**：鉴权 token 走 query（会进访问日志），生产可对 `/api/ws/` 关闭 access log 或接受该风险；go-zero rest 超时对已升级的长连接无效，nginx 侧已配 `proxy_read_timeout 3600s`；小程序正式环境需 wss 合法域名（TLS 443）

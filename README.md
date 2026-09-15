@@ -26,7 +26,11 @@
 - 分类 / 品种浏览，收藏与取消收藏
 - 确认下单（增值服务加购、优惠券选择、金额明细实时计算）
 - 领券中心 / 我的优惠券（可用、锁定、已使用、已过期状态一目了然）
+- 我的订单（去支付 / 确认收货 / 申请售后 / 撤销售后 / 去评价）
+- 订单评价体系：一单一评（星级 + 文字 + 图片），详情页评分摘要与全部评价弹层
+- 售后申请：已支付 / 已完成订单可发起退款（默认全额原路退回），进度与平台备注可见
 - 人工客服实时聊天（文本 / 图片，WebSocket 推送 + 弱网自动重连、断线消息补拉）
+- 微信订阅消息 / 公众号模板消息通知（客服回复 + 退款到账 / 关单 / 售后结果）
 
 **平台管理端（PC，React 18 + Ant Design 5）**
 
@@ -34,6 +38,7 @@
 - 数据看板（在售 / 今日订单 / 今日 GMV / 会员数）
 - 商品 CRUD（上下架、锁定 / 售出状态管控）、分类 / 品种管理
 - 订单管理（详情含优惠明细、退款）、会员管理（启用 / 禁用）
+- 售后管理（状态筛选、审核同意可调退款金额 / 拒绝须备注）、评价管理（隐藏 / 删除违规评价）
 - AI 知识库维护、营销管理（优惠券模板 / 增值服务 / 定向发放）
 - 人工客服工作台（公共会话池、未读角标、双向实时收发、结束 / 自动重开会话）
 
@@ -48,6 +53,8 @@
 - 微信支付 V3（JSAPI 下单、支付回调验签幂等、超时自动关单、退款）
 - 订单状态机 + 数据库原子占位防超卖（同一活体仅一单可锁）
 - 营销：优惠券（满减 / 折扣 / 立减，领券中心 + 管理端定向发放 + 注册赠送）与订单增值服务，券锁定防并发复用、关单自动回滚
+- 售后退款走确定性退款单号幂等（`RF+售后单号`），审核 CAS 防并发、失败自动回滚重审
+- 通知投递队列：biz_key 幂等 + `SKIP LOCKED` 取件 + 失败重试 / 未配置模板自动降级
 - 敏感信息脱敏、错误码规范化、雪花 ID 主键
 
 ## 架构总览
@@ -84,6 +91,10 @@ psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
 psql -U pet -d pet -f scripts/sql/004_marketing.up.sql
+psql -U pet -d pet -f scripts/sql/005_chat.up.sql
+psql -U pet -d pet -f scripts/sql/006_review.up.sql
+psql -U pet -d pet -f scripts/sql/007_after_sale.up.sql
+psql -U pet -d pet -f scripts/sql/008_notify.up.sql
 
 # 2. 后端（配置 backend/etc/pet-api.yaml，dev 模板开箱即用）→ :8888
 cd backend && go run .
@@ -110,7 +121,7 @@ cp .env.example .env                                  # 填入全部密钥（勿
 docker compose up -d --build
 
 # 初始化数据库
-for f in 001_init 002_seed 003_ai_knowledge 004_marketing; do
+for f in 001_init 002_seed 003_ai_knowledge 004_marketing 005_chat 006_review 007_after_sale 008_notify; do
   docker exec -i $(docker compose ps -q postgres) \
     psql -U pet -d pet -v ON_ERROR_STOP=1 < ../sql/$f.up.sql
 done
@@ -137,7 +148,8 @@ done
 | `SMS_PROVIDER` | aliyun / tencent，留空不发真实短信 | 空 |
 | `SMS_TEST_CODE` | 测试公共验证码（仅非生产生效） | `888888` |
 | `COS_BUCKET` / `COS_REGION` / `COS_SECRET_ID` / `COS_SECRET_KEY` | 腾讯云 COS 直传 | 无 |
-| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | AI 问宠大模型（OpenAI 兼容接口，三项齐备启用；未配置时非生产为演示模式） | 无 | |
+| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | AI 问宠大模型（OpenAI 兼容接口，三项齐备启用；未配置时非生产为演示模式） | 无 |
+| `WX_MINI_TMPL_CS_REPLY` / `WX_MINI_TMPL_ORDER` / `WX_H5_TMPL_CS_REPLY` / `WX_H5_TMPL_ORDER` | 微信通知模板 ID（订阅/模板消息，未配置自动降级不发） | 无 |
 
 > 微信登录 / 支付、COS 直传、真实短信通道需填入对应密钥后联调。
 
@@ -149,7 +161,7 @@ pet/
 │   ├── apps/mobile    # Taro：微信小程序 + H5 一套代码
 │   ├── apps/admin     # PC 平台管理端（React 19 + antd 5）
 │   └── packages/      # @pet/api / @pet/utils / @pet/ui
-├── backend/     # Go 后端：go-zero 单体服务 pet-api（auth/pet/favorite/trade/manage/ai/marketing）
+├── backend/     # Go 后端：go-zero 单体服务 pet-api（auth/pet/favorite/trade/manage/ai/marketing/chat/review/aftersale/notify）
 ├── scripts/     # sql/（迁移·种子）、deploy/（Docker·Nginx）、dev/（本地辅助）
 └── docs/        # 技术方案文档
 ```
@@ -160,8 +172,8 @@ pet/
 | ---- | ---- |
 | [01-技术选型](docs/01-技术选型.md) | Go vs Java、Taro vs uni-app 评估结论与依赖清单 |
 | [02-系统架构](docs/02-系统架构.md) | 总体架构图、登录/支付时序图、订单状态机、部署架构 |
-| [03-数据库设计](docs/03-数据库设计.md) | ER 图、15 张表 DDL（商品/交易/AI 知识库/营销）、防超卖事务、索引策略 |
-| [04-API接口设计](docs/04-API接口设计.md) | 路由域、错误码、用户端/平台端全量接口、安全清单 |
+| [03-数据库设计](docs/03-数据库设计.md) | ER 图、20 张表 DDL（商品/交易/AI 知识库/营销/客服/评价/售后/通知）、防超卖事务、索引策略 |
+| [04-API接口设计](docs/04-API接口设计.md) | 路由域、错误码、用户端/平台端全量接口、订阅消息说明、安全清单 |
 | [05-前端设计](docs/05-前端设计.md) | Monorepo 结构、页面信息架构、UI 设计 Token |
 
 ## 路线图
@@ -172,6 +184,7 @@ pet/
 | M2 商品域 | 分类/品种/商品 CRUD、COS 直传、浏览收藏 | ✅ 完成（COS 待真实密钥联调） |
 | M3 交易域 | 下单防超卖、微信支付、回调幂等、超时关单、退款 | ✅ 完成（支付待商户号联调） |
 | M3.5 AI + 营销 | AI 问宠（知识库 RAG）、优惠券（满减/折扣/立减）与订单增值服务 | ✅ 完成（实库验证） |
+| M3.6 评价 + 售后 + 通知 | 订单评价（一单一评）、用户侧售后（审核可调金额退款）、微信订阅/模板消息通知队列 | ✅ 完成（实库验证） |
 | M4 上线 | Docker 编排、监控告警、小程序审核发布 | ⏳ 编排就绪，监控待接入 |
 
 ## 参与贡献

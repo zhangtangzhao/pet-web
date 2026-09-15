@@ -6,6 +6,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"gorm.io/gorm"
 
+	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 )
@@ -75,6 +76,10 @@ func CloseExpiredOrders(sc *svc.ServiceContext) {
 			logx.Errorf("关闭订单 %s 失败: %v", orders[i].OrderNo, err)
 		} else {
 			logx.Infof("订单 %s 超时关闭", orders[i].OrderNo)
+			if err := notify.Enqueue(sc, orders[i].MemberID, model.NotifySceneOrder,
+				"close:"+orders[i].OrderNo, "订单已关闭", "订单超时未支付已自动关闭", orders[i].OrderNo); err != nil {
+				logx.Errorf("关单通知入队失败 orderNo=%s: %v", orders[i].OrderNo, err)
+			}
 		}
 	}
 }

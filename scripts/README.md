@@ -59,6 +59,12 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/004_marketing.down.sql](sql/004_marketing.down.sql) | 回滚营销表与 orders 优惠列 |
 | [sql/005_chat.up.sql](sql/005_chat.up.sql) | 人工客服表：cs_session（每会员一会话）/ cs_message（文本 / 图片消息）+ 索引 |
 | [sql/005_chat.down.sql](sql/005_chat.down.sql) | 回滚客服两表 |
+| [sql/006_review.up.sql](sql/006_review.up.sql) | 订单评价表 order_review（一单一评唯一约束 + 评分 CHECK + 商品/会员索引） |
+| [sql/006_review.down.sql](sql/006_review.down.sql) | 回滚评价表 |
+| [sql/007_after_sale.up.sql](sql/007_after_sale.up.sql) | 售后表 after_sale（进行中部分唯一索引 + 状态/会员索引） |
+| [sql/007_after_sale.down.sql](sql/007_after_sale.down.sql) | 回滚售后表 |
+| [sql/008_notify.up.sql](sql/008_notify.up.sql) | 通知投递队列 notification（biz_key 幂等唯一 + 待投递部分索引） |
+| [sql/008_notify.down.sql](sql/008_notify.down.sql) | 回滚通知表 |
 
 说明：
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -10,6 +11,7 @@ import (
 	"pet/backend/internal/common"
 	"pet/backend/internal/config"
 	"pet/backend/internal/handler"
+	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/logic/trade"
 	"pet/backend/internal/svc"
 )
@@ -37,6 +39,9 @@ func main() {
 
 	// 超时未支付订单自动关闭（每分钟扫描）
 	go trade.StartOrderCloser(ctx)
+
+	// 微信通知投递器（客服回复离线提醒 + 订单事件，每 10s 扫描）
+	go notify.StartNotifier(context.Background(), ctx)
 
 	logx.Infof("pet-api 启动于 %s:%d (mode=%s)", c.Host, c.Port, c.Mode)
 	server.Start()

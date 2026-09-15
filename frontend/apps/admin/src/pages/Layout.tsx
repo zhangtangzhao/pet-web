@@ -9,6 +9,8 @@ import {
   ProfileOutlined,
   TeamOutlined,
   CustomerServiceOutlined,
+  StarOutlined,
+  FileDoneOutlined,
   LogoutOutlined,
   KeyOutlined,
 } from '@ant-design/icons'
@@ -23,6 +25,8 @@ const items = [
   { key: '/knowledge', icon: <RobotOutlined />, label: 'AI 知识库' },
   { key: '/marketing', icon: <GiftOutlined />, label: '营销管理' },
   { key: '/orders', icon: <ProfileOutlined />, label: '订单管理' },
+  { key: '/aftersale', icon: <FileDoneOutlined />, label: '售后管理' },
+  { key: '/reviews', icon: <StarOutlined />, label: '评价管理' },
   { key: '/members', icon: <TeamOutlined />, label: '会员管理' },
   { key: '/support', icon: <CustomerServiceOutlined />, label: '人工客服' },
 ]

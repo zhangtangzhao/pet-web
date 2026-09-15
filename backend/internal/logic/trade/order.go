@@ -294,8 +294,30 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 		return []*types.OrderView{}, nil
 	}
 	orderIDs := make([]int64, 0, len(orders))
+	orderNos := make([]string, 0, len(orders))
 	for _, o := range orders {
 		orderIDs = append(orderIDs, o.ID)
+		orderNos = append(orderNos, o.OrderNo)
+	}
+	// 入口态：已评价 / 最新售后状态
+	reviewedSet := map[string]struct{}{}
+	var reviewed []model.OrderReview
+	if err := sc.DB.Select("order_no").Where("order_no IN ?", orderNos).Find(&reviewed).Error; err != nil {
+		return nil, err
+	}
+	for _, r := range reviewed {
+		reviewedSet[r.OrderNo] = struct{}{}
+	}
+	aftersaleMap := map[string]int{}
+	var afters []model.AfterSale
+	if err := sc.DB.Select("order_no", "status").Where("order_no IN ?", orderNos).
+		Order("id DESC").Find(&afters).Error; err != nil {
+		return nil, err
+	}
+	for _, a := range afters {
+		if _, ok := aftersaleMap[a.OrderNo]; !ok { // id DESC，首次出现即最新
+			aftersaleMap[a.OrderNo] = a.Status
+		}
 	}
 	var items []model.OrderItem
 	if err := sc.DB.Where("order_id IN ?", orderIDs).Find(&items).Error; err != nil {
@@ -314,22 +336,25 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 	}
 	views := make([]*types.OrderView, 0, len(orders))
 	for _, o := range orders {
+		_, isReviewed := reviewedSet[o.OrderNo]
 		v := &types.OrderView{
-			OrderNo:        o.OrderNo,
-			Status:         o.Status,
-			StatusText:     model.OrderStatusText(o.Status),
-			TotalAmount:    o.TotalAmount.StringFixed(2),
-			DiscountAmount: o.DiscountAmount.StringFixed(2),
-			ServiceFee:     o.ServiceFee.StringFixed(2),
-			PayAmount:      o.PayAmount.StringFixed(2),
-			CouponInfo:     o.CouponInfo,
-			ServiceItems:   o.ServiceItems,
-			ContactName:    o.ContactName,
-			ContactPhone:   o.ContactPhone,
-			Remark:         o.Remark,
-			ExpireAt:       o.ExpireAt.Format(time.RFC3339),
-			CreatedAt:      o.CreatedAt.Format(time.RFC3339),
-			Items:          itemMap[o.ID],
+			OrderNo:         o.OrderNo,
+			Status:          o.Status,
+			StatusText:      model.OrderStatusText(o.Status),
+			TotalAmount:     o.TotalAmount.StringFixed(2),
+			DiscountAmount:  o.DiscountAmount.StringFixed(2),
+			ServiceFee:      o.ServiceFee.StringFixed(2),
+			PayAmount:       o.PayAmount.StringFixed(2),
+			CouponInfo:      o.CouponInfo,
+			ServiceItems:    o.ServiceItems,
+			ContactName:     o.ContactName,
+			ContactPhone:    o.ContactPhone,
+			Remark:          o.Remark,
+			ExpireAt:        o.ExpireAt.Format(time.RFC3339),
+			CreatedAt:       o.CreatedAt.Format(time.RFC3339),
+			Items:           itemMap[o.ID],
+			Reviewed:        isReviewed,
+			AftersaleStatus: aftersaleMap[o.OrderNo],
 		}
 		if v.Items == nil {
 			v.Items = []types.OrderItemView{}

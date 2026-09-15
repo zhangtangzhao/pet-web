@@ -75,6 +75,10 @@ services:
       AI_BASE_URL: ${AI_BASE_URL}
       AI_API_KEY: ${AI_API_KEY}
       AI_MODEL: ${AI_MODEL}
+      WX_MINI_TMPL_CS_REPLY: ${WX_MINI_TMPL_CS_REPLY}
+      WX_MINI_TMPL_ORDER: ${WX_MINI_TMPL_ORDER}
+      WX_H5_TMPL_CS_REPLY: ${WX_H5_TMPL_CS_REPLY}
+      WX_H5_TMPL_ORDER: ${WX_H5_TMPL_ORDER}
     depends_on:
       postgres:
         condition: service_healthy

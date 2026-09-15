@@ -355,3 +355,64 @@ export async function upsertService(payload: {
 export async function deleteService(id: string) {
   await client.delete(`/admin/marketing/services/${id}`)
 }
+
+// ───────── 评价 / 售后 ─────────
+
+export interface ReviewRow {
+  id: string
+  orderNo: string
+  memberId: string
+  nickname: string
+  avatar: string
+  productId: string
+  productTitle: string
+  rating: number
+  content: string
+  images: string[]
+  status: number
+  createdAt: string
+}
+
+export async function fetchReviews(params: {
+  cursor?: string
+  limit?: number
+}): Promise<{ list: ReviewRow[]; hasMore: boolean }> {
+  return (await client.get('/admin/reviews', { params })) as any
+}
+
+export async function updateReviewStatus(id: string, status: number) {
+  await client.put(`/admin/reviews/${id}/status`, { status })
+}
+
+export async function deleteReview(id: string) {
+  await client.delete(`/admin/reviews/${id}`)
+}
+
+export interface AfterSaleRow {
+  id: string
+  afterSaleNo: string
+  orderNo: string
+  memberId: string
+  nickname: string
+  phone: string
+  reason: string
+  refundAmount: string
+  status: number
+  statusText: string
+  adminNote: string
+  refundPaymentNo: string
+  auditAt: string
+  createdAt: string
+}
+
+export async function fetchAfterSales(params: {
+  page?: number
+  pageSize?: number
+  status?: number
+}): Promise<PageResp<AfterSaleRow>> {
+  return (await client.get('/admin/aftersales', { params })) as any
+}
+
+export async function auditAfterSale(afterSaleNo: string, agree: boolean, amount?: string, note?: string) {
+  await client.post(`/admin/aftersales/${afterSaleNo}/audit`, { agree, amount, note })
+}

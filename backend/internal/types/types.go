@@ -200,22 +200,24 @@ type OrderItemView struct {
 }
 
 type OrderView struct {
-	OrderNo        string          `json:"orderNo"`
-	Status         int             `json:"status"`
-	StatusText     string          `json:"statusText"`
-	TotalAmount    string          `json:"totalAmount"`
-	DiscountAmount string          `json:"discountAmount"`
-	ServiceFee     string          `json:"serviceFee"`
-	PayAmount      string          `json:"payAmount"`
-	CouponInfo     string          `json:"couponInfo"`
-	ServiceItems   string          `json:"serviceItems"` // 服务快照 JSON [{id,name,price}]
-	ContactName    string          `json:"contactName"`
-	ContactPhone   string          `json:"contactPhone"`
-	Remark         string          `json:"remark"`
-	ExpireAt       string          `json:"expireAt"`
-	PaidAt         string          `json:"paidAt"`
-	CreatedAt      string          `json:"createdAt"`
-	Items          []OrderItemView `json:"items"`
+	OrderNo         string          `json:"orderNo"`
+	Status          int             `json:"status"`
+	StatusText      string          `json:"statusText"`
+	TotalAmount     string          `json:"totalAmount"`
+	DiscountAmount  string          `json:"discountAmount"`
+	ServiceFee      string          `json:"serviceFee"`
+	PayAmount       string          `json:"payAmount"`
+	CouponInfo      string          `json:"couponInfo"`
+	ServiceItems    string          `json:"serviceItems"` // 服务快照 JSON [{id,name,price}]
+	ContactName     string          `json:"contactName"`
+	ContactPhone    string          `json:"contactPhone"`
+	Remark          string          `json:"remark"`
+	ExpireAt        string          `json:"expireAt"`
+	PaidAt          string          `json:"paidAt"`
+	CreatedAt       string          `json:"createdAt"`
+	Items           []OrderItemView `json:"items"`
+	Reviewed        bool            `json:"reviewed"`        // 已评价（status=30 入口态）
+	AftersaleStatus int             `json:"aftersaleStatus"` // 最新售后单状态，0=无售后
 }
 
 type OrderNoPathReq struct {
@@ -601,4 +603,100 @@ type CsSessionItem struct {
 	LastMessageText string `json:"lastMessageText"`
 	LastMessageAt   string `json:"lastMessageAt"`
 	CreatedAt       string `json:"createdAt"`
+}
+
+// ─────────────────────────── 订单评价 ───────────────────────────
+
+type ReviewCreateReq struct {
+	OrderNo string   `json:"orderNo"`
+	Rating  int      `json:"rating"`
+	Content string   `json:"content,optional"`
+	Images  []string `json:"images,optional"`
+}
+
+type ReviewView struct {
+	ID           string   `json:"id"`
+	OrderNo      string   `json:"orderNo"`
+	MemberID     string   `json:"memberId"`
+	Nickname     string   `json:"nickname"`
+	Avatar       string   `json:"avatar"`
+	ProductID    string   `json:"productId"`
+	ProductTitle string   `json:"productTitle"`
+	Rating       int      `json:"rating"`
+	Content      string   `json:"content"`
+	Images       []string `json:"images"`
+	Status       int      `json:"status"`
+	CreatedAt    string   `json:"createdAt"`
+}
+
+type ReviewListReq struct {
+	Cursor string `form:"cursor,optional"`
+	Limit  int    `form:"limit,optional"`
+}
+
+type ReviewListResp struct {
+	List    []ReviewView `json:"list"`
+	HasMore bool         `json:"hasMore"`
+}
+
+type ReviewSummaryResp struct {
+	AvgRating string       `json:"avgRating"`
+	Total     int64        `json:"total"`
+	Latest    []ReviewView `json:"latest"`
+}
+
+type ReviewStatusReq struct {
+	Status int `json:"status"`
+}
+
+// ─────────────────────────── 售后 ───────────────────────────
+
+type AfterSaleApplyReq struct {
+	OrderNo string `json:"orderNo"`
+	Reason  string `json:"reason"`
+}
+
+type AfterSaleView struct {
+	ID              string `json:"id"`
+	AfterSaleNo     string `json:"afterSaleNo"`
+	OrderNo         string `json:"orderNo"`
+	MemberID        string `json:"memberId"`
+	Nickname        string `json:"nickname"`
+	Phone           string `json:"phone"`
+	Reason          string `json:"reason"`
+	RefundAmount    string `json:"refundAmount"`
+	Status          int    `json:"status"`
+	StatusText      string `json:"statusText"`
+	AdminNote       string `json:"adminNote"`
+	RefundPaymentNo string `json:"refundPaymentNo"`
+	AuditAt         string `json:"auditAt"`
+	CreatedAt       string `json:"createdAt"`
+}
+
+type AfterSaleOrderReq struct {
+	OrderNo string `form:"orderNo"`
+}
+
+type AfterSaleNoPathReq struct {
+	AfterSaleNo string `path:"afterSaleNo"`
+}
+
+type AfterSaleAdminListReq struct {
+	PageReq
+	Status int `form:"status,optional"` // 0=全部
+}
+
+type AfterSaleAuditReq struct {
+	Agree  bool   `json:"agree"`
+	Amount string `json:"amount,optional"` // 同意时可调，默认全额
+	Note   string `json:"note,optional"`   // 拒绝时必填
+}
+
+// ─────────────────────────── 微信通知 ───────────────────────────
+
+type NotifyTmplResp struct {
+	MiniTmplCsReply string `json:"miniTmplCsReply"`
+	MiniTmplOrder   string `json:"miniTmplOrder"`
+	H5TmplCsReply   string `json:"h5TmplCsReply"`
+	H5TmplOrder     string `json:"h5TmplOrder"`
 }

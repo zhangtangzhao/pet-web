@@ -6,10 +6,12 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/zeromicro/go-zero/core/logx"
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/hub"
+	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -110,6 +112,14 @@ func Send(sc *svc.ServiceContext, senderRole int, actorID, sessionID int64, req 
 	}
 	sc.Hub.PushMember(s.MemberID, hubEvent("new_message", out))
 	sc.Hub.PushAdmins(hubEvent("new_message", out))
+
+	// 客服回复且会员不在线 → 入队微信通知（在线者已实时收到，不打扰）
+	if senderRole == model.CsRoleAdmin && !sc.Hub.MemberOnline(s.MemberID) {
+		if err := notify.Enqueue(sc, s.MemberID, model.NotifySceneCsReply,
+			"cs:"+strconv.FormatInt(msg.ID, 10), "客服回复", preview, ""); err != nil {
+			logx.Errorf("客服回复通知入队失败 msgID=%d: %v", msg.ID, err)
+		}
+	}
 	return out, nil
 }
 

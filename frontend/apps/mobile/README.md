@@ -8,9 +8,12 @@ Taro 4 + React 18，**一套代码编译微信小程序与 H5 双端**。品牌�
 
 | 页面 | 路径 | 说明 |
 | ---- | ---- | ---- |
-| 首页 | `pages/index` | 分类导航、精选商品、领券中心入口 |
-| 详情 | `pages/detail` | 图片轮播 / 视频、宠物档案、AI 问宠、立即购买 |
+| 首页 | `pages/index` | 分类导航、精选商品、领券中心与我的订单入口 |
+| 详情 | `pages/detail` | 图片轮播 / 视频、宠物档案、AI 问宠、用户评价区（评分摘要 + 全部评价半屏弹层）、立即购买 |
 | 确认下单 | `pages/checkout` | 增值服务多选、优惠券选择、金额明细实时计算 |
+| 我的订单 | `pages/orders` | 状态 chips；去支付 / 确认收货 / 申请售后 / 撤销售后 / 去评价（小程序端点击内同步请求订阅消息授权） |
+| 订单评价 | `pages/order-review` | 星级 + 文字 + 图片（COS 直传，≤9 张），一单一评 |
+| 售后服务 | `pages/after-sale` | 发起退款申请（默认全额原路退回）/ 状态进度与撤销 |
 | 领券中心 | `pages/coupon-center` | 领券中心 + 我的优惠券（可用 / 已用 / 已过期） |
 | AI 问宠 | `pages/ai-chat` | 基于知识库 + 宠物档案的智能客服会话 |
 | 在线客服 | `pages/service-chat` | 人工客服实时聊天：文本 / 图片，弱网自动重连 + 断线消息补拉（`src/ws.ts`） |
@@ -34,6 +37,7 @@ config/index.ts      # Taro 编译配置：H5 publicPath、router(browser)、dev
 - **路由**：小程序原生页面栈；H5 为 browser 模式（`config/index.ts` → `h5.router.mode`），nginx `try_files` 兜底 `index.html`
 - **登录**：小程序走 `code2session`；H5 走公众号 OAuth2。未登录访问受限页统一 `redirectTo` 登录页并带 `redirect` 参数
 - **支付**：下单后小程序用返回的 `payParams` 调 `Taro.requestPayment`；H5 用 `h5PayUrl` 跳转
+- **订阅消息**：小程序端模板 ID 进页时经 `GET /api/notify/tmpl` 预取，必须在用户**点击回调内同步**调 `Taro.requestSubscribeMessage`；H5 公众号模板消息无需订阅动作
 
 ## 本地开发
 

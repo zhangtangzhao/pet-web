@@ -21,6 +21,8 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/breeds", Handler: Breeds(sc)},
 		{Method: "GET", Path: "/api/products", Handler: ProductList(sc)},
 		{Method: "GET", Path: "/api/products/:id", Handler: ProductDetail(sc)},
+		{Method: "GET", Path: "/api/products/:id/reviews", Handler: ProductReviews(sc)},
+		{Method: "GET", Path: "/api/products/:id/review-summary", Handler: ProductReviewSummary(sc)},
 		{Method: "GET", Path: "/api/services", Handler: ServiceList(sc)},
 		{Method: "POST", Path: "/api/pay/notify/wx", Handler: WxPayNotify(sc)},
 	})
@@ -39,7 +41,12 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/orders/:orderNo/cancel", Handler: CancelOrder(sc)},
 		{Method: "POST", Path: "/api/orders/:orderNo/confirm", Handler: ConfirmOrder(sc)},
 		{Method: "POST", Path: "/api/orders/:orderNo/prepay", Handler: Prepay(sc)},
+		{Method: "POST", Path: "/api/orders/:orderNo/review", Handler: OrderReview(sc)},
 		{Method: "GET", Path: "/api/payments/:paymentNo/status", Handler: PaymentStatus(sc)},
+		{Method: "POST", Path: "/api/aftersale", Handler: AfterSaleApply(sc)},
+		{Method: "GET", Path: "/api/aftersale", Handler: AfterSaleByOrder(sc)},
+		{Method: "POST", Path: "/api/aftersale/:afterSaleNo/cancel", Handler: AfterSaleCancel(sc)},
+		{Method: "GET", Path: "/api/notify/tmpl", Handler: NotifyTmpl(sc)},
 		{Method: "POST", Path: "/api/ai/ask", Handler: AIAsk(sc)},
 		{Method: "GET", Path: "/api/coupons", Handler: MyCoupons(sc)},
 		{Method: "GET", Path: "/api/coupons/center", Handler: CouponCenter(sc)},
@@ -108,5 +115,11 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/admin/cs/sessions/:id/messages", Handler: AdminCsMessages(sc)},
 		{Method: "POST", Path: "/api/admin/cs/sessions/:id/read", Handler: AdminCsRead(sc)},
 		{Method: "POST", Path: "/api/admin/cs/sessions/:id/close", Handler: AdminCsClose(sc)},
+
+		{Method: "GET", Path: "/api/admin/reviews", Handler: AdminReviews(sc)},
+		{Method: "PUT", Path: "/api/admin/reviews/:id/status", Handler: AdminReviewStatus(sc)},
+		{Method: "DELETE", Path: "/api/admin/reviews/:id", Handler: AdminReviewDelete(sc)},
+		{Method: "GET", Path: "/api/admin/aftersales", Handler: AdminAfterSales(sc)},
+		{Method: "POST", Path: "/api/admin/aftersales/:afterSaleNo/audit", Handler: AdminAfterSaleAudit(sc)},
 	})
 }

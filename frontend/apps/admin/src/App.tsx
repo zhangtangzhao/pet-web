@@ -9,6 +9,8 @@ import Members from './pages/Members'
 import Support from './pages/Support'
 import Knowledge from './pages/Knowledge'
 import Marketing from './pages/Marketing'
+import Reviews from './pages/Reviews'
+import AfterSale from './pages/AfterSale'
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="knowledge" element={<Knowledge />} />
         <Route path="marketing" element={<Marketing />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="reviews" element={<Reviews />} />
+        <Route path="aftersale" element={<AfterSale />} />
         <Route path="members" element={<Members />} />
         <Route path="support" element={<Support />} />
       </Route>

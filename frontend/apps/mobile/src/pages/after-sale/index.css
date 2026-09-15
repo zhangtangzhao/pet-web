@@ -1,0 +1,115 @@
+.as {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.as-card {
+  margin-bottom: 24px;
+}
+
+.as-title {
+  font-size: 32px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.as-desc {
+  font-size: 26px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+.as-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.as-tag {
+  font-size: 26px;
+  padding: 6px 20px;
+  border-radius: 999px;
+}
+
+.as-tag-pending {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.as-tag-ok {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.as-tag-refused {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.as-tag-cancel {
+  background: #fafafa;
+  color: #999;
+}
+
+.as-no {
+  font-size: 24px;
+  color: #999;
+}
+
+.as-row {
+  display: flex;
+  padding: 12px 0;
+  font-size: 26px;
+}
+
+.as-label {
+  width: 160px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.as-value {
+  flex: 1;
+  color: #333;
+  word-break: break-all;
+}
+
+.as-textarea {
+  width: 100%;
+  min-height: 220px;
+  background: #f7f7f7;
+  border-radius: 16px;
+  padding: 20px;
+  font-size: 28px;
+  box-sizing: border-box;
+  margin-top: 20px;
+}
+
+.as-submit {
+  margin-top: 28px;
+  background: #ff7a45;
+  color: #fff;
+  text-align: center;
+  border-radius: 999px;
+  padding: 22px 0;
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.as-submit-off {
+  opacity: 0.6;
+}
+
+.as-cancel {
+  margin-top: 28px;
+  border: 1px solid #ddd;
+  color: #666;
+  text-align: center;
+  border-radius: 999px;
+  padding: 18px 0;
+  font-size: 28px;
+}

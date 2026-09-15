@@ -2,13 +2,45 @@ import { useEffect, useState } from 'react'
 import { Image, ScrollView, Swiper, SwiperItem, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { del, get, post } from '../../request'
-import { ProductDetail } from '../../types'
+import { ProductDetail, ReviewListResp, ReviewSummaryResp, ReviewView } from '../../types'
 import './index.css'
+
+function ReviewItem({ r }: { r: ReviewView }) {
+  return (
+    <View className='rvs-item'>
+      <View className='rvs-item-head'>
+        <Image src={r.avatar} className='rvs-avatar' />
+        <Text className='rvs-name'>{r.nickname || '匿名用户'}</Text>
+        <Text className='rvs-item-stars'>{'★'.repeat(r.rating)}</Text>
+      </View>
+      {r.content && <Text className='rvs-content'>{r.content}</Text>}
+      {r.images.length > 0 && (
+        <View className='rvs-imgs'>
+          {r.images.map((u) => (
+            <Image
+              key={u}
+              src={u}
+              mode='aspectFill'
+              className='rvs-img'
+              onClick={() => Taro.previewImage({ urls: r.images, current: u })}
+            />
+          ))}
+        </View>
+      )}
+      <Text className='rvs-time'>{r.createdAt.slice(0, 16).replace('T', ' ')}</Text>
+    </View>
+  )
+}
 
 export default function Detail() {
   const { params } = useRouter()
   const [d, setD] = useState<ProductDetail>()
   const [favLoading, setFavLoading] = useState(false)
+  const [summary, setSummary] = useState<ReviewSummaryResp>()
+  const [rvOpen, setRvOpen] = useState(false)
+  const [rvList, setRvList] = useState<ReviewView[]>([])
+  const [rvCursor, setRvCursor] = useState('')
+  const [rvHasMore, setRvHasMore] = useState(false)
 
   const load = () =>
     get<ProductDetail>(`/products/${params.id}`)
@@ -17,7 +49,25 @@ export default function Detail() {
 
   useEffect(() => {
     load()
+    get<ReviewSummaryResp>(`/products/${params.id}/review-summary`)
+      .then(setSummary)
+      .catch(() => {})
   }, [params.id])
+
+  const openReviews = () => {
+    setRvOpen(true)
+    if (rvList.length === 0) loadReviews('')
+  }
+
+  const loadReviews = (cursor: string) => {
+    get<ReviewListResp>(`/products/${params.id}/reviews?limit=10${cursor ? `&cursor=${cursor}` : ''}`)
+      .then((r) => {
+        setRvList((prev) => (cursor ? [...prev, ...r.list] : r.list))
+        setRvHasMore(r.hasMore)
+        setRvCursor(r.list.length ? r.list[r.list.length - 1].id : cursor)
+      })
+      .catch(() => {})
+  }
 
   const toggleFav = async () => {
     setFavLoading(true)
@@ -118,9 +168,55 @@ export default function Detail() {
           )}
         </View>
 
+        {summary && summary.total > 0 && (
+          <View className='reviews card'>
+            <View className='rvs-head' onClick={openReviews}>
+              <Text className='rvs-title'>用户评价（{summary.total}）</Text>
+              <Text className='rvs-more'>全部评价 ›</Text>
+            </View>
+            <View className='rvs-score'>
+              <Text className='rvs-avg'>{summary.avgRating}</Text>
+              <Text className='rvs-stars'>{'★'.repeat(Math.round(Number(summary.avgRating)))}</Text>
+            </View>
+            {summary.latest.map((r) => (
+              <ReviewItem key={r.id} r={r} />
+            ))}
+          </View>
+        )}
+
         {d.detailHtml && <View className='rich card'>{d.detailHtml}</View>}
         <View className='detail-bottom-space' />
       </ScrollView>
+
+      {rvOpen && (
+        <View className='rvs-sheet'>
+          <View className='rvs-sheet-mask' onClick={() => setRvOpen(false)} />
+          <View className='rvs-sheet-body'>
+            <View className='rvs-sheet-head'>
+              <Text className='rvs-sheet-title'>全部评价（{summary?.total ?? 0}）</Text>
+              <Text className='rvs-sheet-close' onClick={() => setRvOpen(false)}>
+                ✕
+              </Text>
+            </View>
+            <ScrollView
+              scrollY
+              className='rvs-sheet-scroll'
+              onScrollToLower={() => rvHasMore && loadReviews(rvCursor)}
+            >
+              {rvList.map((r) => (
+                <ReviewItem key={r.id} r={r} />
+              ))}
+              {rvHasMore ? (
+                <View className='rvs-load' onClick={() => loadReviews(rvCursor)}>
+                  加载更多
+                </View>
+              ) : (
+                <View className='rvs-end'>没有更多了</View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      )}
 
       <View className='footer'>
         <View className={`fav ${d.isFavorite ? 'fav-on' : ''}`} onClick={toggleFav}>

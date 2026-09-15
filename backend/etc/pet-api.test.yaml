@@ -47,6 +47,12 @@ COS:
   SecretKey: ""
   BaseURL: ""
 
+Notify:
+  MiniTmplCsReply: ""
+  MiniTmplOrder: ""
+  H5TmplCsReply: ""
+  H5TmplOrder: ""
+
 Log:
   ServiceName: pet-api
   Level: info

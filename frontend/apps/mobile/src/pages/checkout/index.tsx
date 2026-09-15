@@ -86,8 +86,12 @@ export default function Checkout() {
       Taro.showModal({
         title: '订单已创建',
         content: `订单号 ${r.orderNo}，实付 ¥${r.payAmount}。微信支付待商户号联调后开放。`,
-        showCancel: false,
-        success: () => Taro.redirectTo({ url: '/pages/index/index' }),
+        cancelText: '返回首页',
+        confirmText: '查看订单',
+        success: (m) => {
+          if (m.confirm) Taro.redirectTo({ url: '/pages/orders/index' })
+          else Taro.redirectTo({ url: '/pages/index/index' })
+        },
       })
     } catch (e: any) {
       Taro.showToast({ title: e.message, icon: 'none' })

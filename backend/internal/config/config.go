@@ -72,6 +72,14 @@ type Config struct {
 		AskIntervalSeconds int    `json:",default=5"`
 		DailyLimit         int    `json:",default=20"`
 	}
+
+	// 微信通知模板：小程序订阅消息 / 公众号模板消息；未配置时通知降级为仅落库留痕
+	Notify struct {
+		MiniTmplCsReply string `json:",optional"`
+		MiniTmplOrder   string `json:",optional"`
+		H5TmplCsReply   string `json:",optional"`
+		H5TmplOrder     string `json:",optional"`
+	}
 }
 
 // IsProd 生产环境判定（go-zero Mode 取值 pro；兼容 prod）

@@ -63,6 +63,13 @@ AI:
   ApiKey: "${AI_API_KEY}"
   Model: "${AI_MODEL}"              # 如 deepseek-chat
 
+# 微信通知模板（客服回复离线提醒 + 订单事件；未配置时通知降级为仅落库留痕）
+Notify:
+  MiniTmplCsReply: "${WX_MINI_TMPL_CS_REPLY}"   # 小程序订阅消息模板 ID
+  MiniTmplOrder: "${WX_MINI_TMPL_ORDER}"
+  H5TmplCsReply: "${WX_H5_TMPL_CS_REPLY}"       # 公众号模板消息 ID
+  H5TmplOrder: "${WX_H5_TMPL_ORDER}"
+
 Log:
   ServiceName: pet-api
   Level: info
