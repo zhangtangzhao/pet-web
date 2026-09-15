@@ -11,6 +11,7 @@ export default defineAppConfig({
     'pages/service-chat/index',
     'pages/checkout/index',
     'pages/orders/index',
+    'pages/order-detail/index',
     'pages/order-review/index',
     'pages/after-sale/index',
     'pages/notify/index',

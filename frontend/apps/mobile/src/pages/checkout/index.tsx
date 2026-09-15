@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Image, Input, Text, View } from '@tarojs/components'
+import { Image, Input, Text, Textarea, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { get, getToken, post } from '../../request'
 import {
   CreateOrderResult,
   ProductDetail,
   ServiceItemView,
+  ShipMethod,
   UsableCouponView,
 } from '../../types'
 import './index.css'
@@ -24,6 +25,9 @@ export default function Checkout() {
   const [coupons, setCoupons] = useState<UsableCouponView[]>([])
   const [couponId, setCouponId] = useState('')
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [shipMethods, setShipMethods] = useState<ShipMethod[]>([])
+  const [shipMethodId, setShipMethodId] = useState('')
+  const [address, setAddress] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -39,6 +43,12 @@ export default function Checkout() {
       .then(setD)
       .catch((e) => Taro.showToast({ title: e.message, icon: 'none' }))
     get<ServiceItemView[]>('/services').then(setServices).catch(() => {})
+    get<ShipMethod[]>('/ship/methods')
+      .then((list) => {
+        setShipMethods(list ?? [])
+        setShipMethodId((cur) => (list?.some((m) => m.id === cur) ? cur : (list?.[0]?.id ?? '')))
+      })
+      .catch(() => {})
   }, [params.id])
 
   // 勾选服务变化后重新拉取可用券（门槛含服务费）
@@ -66,12 +76,23 @@ export default function Checkout() {
   const total = goodsPrice + serviceFee
   const coupon = coupons.find((c) => c.id === couponId)
   const discount = coupon ? Number(coupon.discount) : 0
-  const pay = Math.max(total - discount, 0.01)
+  const shipMethod = shipMethods.find((m) => m.id === shipMethodId)
+  const shipFee = shipMethod ? Number(shipMethod.fee) : 0
+  // 与后端一致：券抵扣商品+服务费（保底 0.01），运费不参与折扣
+  const pay = Math.max(total - discount, 0.01) + shipFee
 
   const submit = async () => {
     if (submitting) return
     if (!name || !phone) {
       Taro.showToast({ title: '请填写联系人和手机号', icon: 'none' })
+      return
+    }
+    if (!shipMethodId) {
+      Taro.showToast({ title: '请选择配送方式', icon: 'none' })
+      return
+    }
+    if (shipMethod?.kind === 2 && !address.trim()) {
+      Taro.showToast({ title: '请填写收货地址', icon: 'none' })
       return
     }
     setSubmitting(true)
@@ -80,6 +101,8 @@ export default function Checkout() {
         productId: params.id,
         serviceIds: pickedSvc,
         couponId,
+        shipMethodId,
+        shipAddress: address.trim(),
         contactName: name,
         contactPhone: phone,
       })
@@ -89,8 +112,9 @@ export default function Checkout() {
         cancelText: '返回首页',
         confirmText: '查看订单',
         success: (m) => {
-          if (m.confirm) Taro.redirectTo({ url: '/pages/orders/index' })
-          else Taro.redirectTo({ url: '/pages/index/index' })
+          Taro.redirectTo({
+            url: m.confirm ? `/pages/order-detail/index?orderNo=${r.orderNo}` : '/pages/index/index',
+          })
         },
       })
     } catch (e: any) {
@@ -142,6 +166,37 @@ export default function Checkout() {
         </View>
       )}
 
+      {shipMethods.length > 0 && (
+        <View className='co-card card'>
+          <View className='co-sec-title'>配送方式</View>
+          <View className='co-ship'>
+            {shipMethods.map((m) => {
+              const on = m.id === shipMethodId
+              return (
+                <View className={`co-ship-item ${on ? 'co-ship-item-on' : ''}`} key={m.id} onClick={() => setShipMethodId(m.id)}>
+                  <View className='co-ship-main'>
+                    <Text className='co-ship-name'>{m.name}</Text>
+                    <Text className='co-ship-desc'>{m.description}</Text>
+                  </View>
+                  <Text className='co-ship-fee'>{Number(m.fee) > 0 ? `¥${Number(m.fee).toFixed(2)}` : '免运费'}</Text>
+                </View>
+              )
+            })}
+          </View>
+          {shipMethod?.kind === 2 && (
+            <View className='co-addr'>
+              <Textarea
+                className='co-addr-input'
+                placeholder='请填写收货地址（含城市 / 到达机场或门牌号）'
+                maxlength={255}
+                value={address}
+                onInput={(e) => setAddress(e.detail.value)}
+              />
+            </View>
+          )}
+        </View>
+      )}
+
       <View className='co-card card'>
         <View className='co-coupon' onClick={() => setSheetOpen(true)}>
           <Text className='co-coupon-left'>优惠券</Text>
@@ -160,6 +215,12 @@ export default function Checkout() {
           <View className='co-sum-row'>
             <Text>增值服务</Text>
             <Text>¥{serviceFee.toFixed(2)}</Text>
+          </View>
+        )}
+        {shipFee > 0 && (
+          <View className='co-sum-row'>
+            <Text>运费（{shipMethod?.name}）</Text>
+            <Text>¥{shipFee.toFixed(2)}</Text>
           </View>
         )}
         {discount > 0 && (

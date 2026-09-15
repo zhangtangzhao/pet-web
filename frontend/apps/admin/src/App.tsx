@@ -12,6 +12,7 @@ import Marketing from './pages/Marketing'
 import Reviews from './pages/Reviews'
 import AfterSale from './pages/AfterSale'
 import Banners from './pages/Banners'
+import ShipMethods from './pages/ShipMethods'
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="knowledge" element={<Knowledge />} />
         <Route path="marketing" element={<Marketing />} />
         <Route path="banner" element={<Banners />} />
+        <Route path="shipping" element={<ShipMethods />} />
         <Route path="orders" element={<Orders />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="aftersale" element={<AfterSale />} />

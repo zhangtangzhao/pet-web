@@ -31,6 +31,17 @@ func CreateOrder(sc *svc.ServiceContext) http.HandlerFunc {
 	})
 }
 
+func ShipMethods(sc *svc.ServiceContext) http.HandlerFunc {
+	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		list, err := trade.ListMethods(sc)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, list)
+	})
+}
+
 func OrderList(sc *svc.ServiceContext) http.HandlerFunc {
 	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
 		var req types.OrderListReq

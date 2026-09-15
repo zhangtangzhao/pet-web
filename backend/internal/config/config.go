@@ -86,7 +86,8 @@ type Config struct {
 	}
 
 	Trade struct {
-		AutoConfirmDays int `json:",default=7"` // 已支付订单 N 天后自动确认完成；≤0 关闭
+		AutoConfirmDays   int `json:",default=7"`  // 已支付订单 N 天后自动确认完成；≤0 关闭
+		PayTimeoutMinutes int `json:",default=15"` // 待支付订单 N 分钟后自动关单；≤0 取 15
 	}
 }
 

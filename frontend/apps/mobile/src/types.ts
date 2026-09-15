@@ -97,16 +97,34 @@ export interface OrderView {
   totalAmount: string
   discountAmount: string
   serviceFee: string
+  shipFee: string
   payAmount: string
   couponInfo: string
   serviceItems: string
   contactName: string
   contactPhone: string
+  remark: string
+  shipMethod: string
+  shipAddress: string
+  shipStatus: number // 0待配送 1配送中 2已送达
+  shipNo: string
   expireAt: string
   createdAt: string
+  paidAt?: string
+  shippedAt?: string
+  deliveredAt?: string
+  completedAt?: string
   reviewed?: boolean
   aftersaleStatus?: number
   items: { productId: string; productTitle: string; productImage: string; breedName: string; price: string; quantity: number }[]
+}
+
+export interface ShipMethod {
+  id: string
+  name: string
+  kind: number // 1自提 2托运配送
+  description: string
+  fee: string
 }
 
 // ───────── 营销 ─────────

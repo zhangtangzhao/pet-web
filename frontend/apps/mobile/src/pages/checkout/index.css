@@ -113,6 +113,64 @@
   margin-left: 8px;
 }
 
+/* 配送方式 */
+.co-ship {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.co-ship-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 2px solid #eee;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.co-ship-item-on {
+  border-color: #ff7a45;
+  background: #fff7f2;
+}
+
+.co-ship-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.co-ship-name {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.co-ship-desc {
+  font-size: 22px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.co-ship-fee {
+  font-size: 26px;
+  color: #ff7a45;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.co-addr {
+  margin-top: 16px;
+}
+
+.co-addr-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 18px 20px;
+  font-size: 26px;
+  min-height: 120px;
+}
+
 .co-coupon {
   display: flex;
   align-items: center;

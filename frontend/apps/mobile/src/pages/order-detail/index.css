@@ -1,0 +1,229 @@
+.odt {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+  background: #f5f5f5;
+}
+
+/* 状态卡 */
+.odt-hero {
+  border-radius: 16rpx;
+  padding: 36rpx 32rpx;
+  background: linear-gradient(135deg, #ff7a45, #ff9c6e);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.odt-hero-status {
+  font-size: 38rpx;
+  font-weight: bold;
+}
+.odt-hero-tip {
+  font-size: 24rpx;
+  opacity: 0.92;
+}
+.odt-hero-40,
+.odt-hero-45,
+.odt-hero-60 {
+  background: #8c8c8c;
+}
+
+/* 卡片 */
+.odt-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-top: 24rpx;
+}
+.odt-card-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #262626;
+  margin-bottom: 16rpx;
+}
+
+/* 时间线 */
+.odt-timeline {
+  display: flex;
+  flex-direction: column;
+}
+.odt-node {
+  display: flex;
+  flex-direction: row;
+}
+.odt-node-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40rpx;
+}
+.odt-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: #d9d9d9;
+  margin-top: 6rpx;
+  flex-shrink: 0;
+}
+.odt-dot-on {
+  background: #ff7a45;
+}
+.odt-dot-cur {
+  box-shadow: 0 0 0 8rpx rgba(255, 122, 69, 0.18);
+}
+.odt-line {
+  width: 3rpx;
+  flex: 1;
+  background: #eee;
+  min-height: 40rpx;
+}
+.odt-node-main {
+  display: flex;
+  flex-direction: column;
+  padding: 0 16rpx 32rpx 0;
+}
+.odt-node:last-child .odt-node-main {
+  padding-bottom: 4rpx;
+}
+.odt-node-label {
+  font-size: 26rpx;
+  color: #8c8c8c;
+}
+.odt-node-label-on {
+  color: #262626;
+  font-weight: 500;
+}
+.odt-node-time {
+  font-size: 22rpx;
+  color: #bfbfbf;
+  margin-top: 4rpx;
+}
+
+.odt-reason {
+  font-size: 26rpx;
+  color: #8c8c8c;
+}
+
+/* 商品 */
+.odt-prod {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 20rpx;
+}
+.odt-img {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 12rpx;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  flex-shrink: 0;
+}
+.odt-prod-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  flex: 1;
+  min-width: 0;
+}
+.odt-title {
+  font-size: 28rpx;
+  color: #262626;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.odt-breed {
+  font-size: 24rpx;
+  color: #8c8c8c;
+}
+
+/* 金额 */
+.odt-amt-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  font-size: 26rpx;
+  color: #595959;
+  padding: 8rpx 0;
+}
+.odt-amt-discount {
+  color: #ff4d4f;
+}
+.odt-amt-pay {
+  border-top: 1rpx solid #f0f0f0;
+  margin-top: 8rpx;
+  padding-top: 16rpx;
+  color: #262626;
+  font-weight: bold;
+}
+.odt-amt-pay-num {
+  color: #fa541c;
+  font-size: 32rpx;
+}
+
+/* 键值行 */
+.odt-kv {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  padding: 6rpx 0;
+}
+.odt-kv-label {
+  font-size: 26rpx;
+  color: #8c8c8c;
+  width: 140rpx;
+  flex-shrink: 0;
+}
+.odt-kv-value {
+  font-size: 26rpx;
+  color: #262626;
+  flex: 1;
+  word-break: break-all;
+}
+
+/* 售后入口 */
+.odt-as {
+  border: 1rpx solid #ffd8bf;
+}
+
+/* 操作区 */
+.odt-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+.odt-btn {
+  padding: 14rpx 32rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #d9d9d9;
+  font-size: 26rpx;
+  color: #595959;
+  background: #fff;
+}
+.odt-btn-primary {
+  background: linear-gradient(135deg, #ff7a45, #ff9c6e);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 500;
+}
+.odt-btn-disabled {
+  color: #bfbfbf;
+  background: #f5f5f5;
+  border-color: transparent;
+}
+
+.odt-back {
+  margin-top: 28rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #8c8c8c;
+  padding: 20rpx 0 40rpx;
+}

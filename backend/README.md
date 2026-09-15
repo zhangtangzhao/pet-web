@@ -30,7 +30,7 @@ backend/
     ├── logic/          # 业务逻辑（按域分包）
     │   ├── auth/       # 短信 / 微信登录，双端独立 JWT + RefreshToken 轮换
     │   ├── pet/        # 分类 / 品种 / 商品 / 收藏 / 首页
-    │   ├── trade/      # 下单防超卖、微信支付 V3、回调幂等、超时关单、退款
+    │   ├── trade/      # 下单防超卖、微信支付 V3、回调幂等、超时关单（PayTimeoutMinutes 可调）、退款、配送方式 / 托运发货送达
     │   ├── marketing/  # 优惠券（满减/折扣/立减）、增值服务、金额计算、首页 Banner 运营位管理
     │   ├── ai/         # AI 问宠（知识库 RAG + 档案增强、频控）+ 智能选宠推荐（LLM 结构化推荐，未配置降级规则打分）
     │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 图形验证码
@@ -66,7 +66,7 @@ flowchart LR
 依赖：Go 1.25+、PostgreSQL 16、Redis 7（默认连 `127.0.0.1:5432` / `127.0.0.1:6379`，可在 `etc/pet-api.yaml` 调整）。
 
 ```bash
-# 1. 初始化数据库（在仓库根执行，共 10 个迁移）
+# 1. 初始化数据库（在仓库根执行，共 11 个迁移）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
@@ -77,6 +77,7 @@ psql -U pet -d pet -f scripts/sql/007_after_sale.up.sql
 psql -U pet -d pet -f scripts/sql/008_notify.up.sql
 psql -U pet -d pet -f scripts/sql/010_banner.up.sql
 psql -U pet -d pet -f scripts/sql/011_review_reply.up.sql
+psql -U pet -d pet -f scripts/sql/012_delivery.up.sql
 
 # 2. 运行（默认读取 etc/pet-api.yaml，监听 :8888）
 go run .

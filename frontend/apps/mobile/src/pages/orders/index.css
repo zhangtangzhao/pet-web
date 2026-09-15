@@ -101,6 +101,21 @@
   color: #999;
 }
 
+.od-left {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+}
+
+.od-left-text {
+  font-size: 24px;
+  color: #ff7a45;
+}
+
+.od-left-expired {
+  color: #999;
+}
+
 .od-foot {
   display: flex;
   justify-content: flex-end;

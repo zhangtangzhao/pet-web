@@ -3,6 +3,7 @@ package trade
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -15,7 +16,13 @@ import (
 	"pet/backend/internal/types"
 )
 
-const orderPayTTL = 30 * time.Minute
+func payTTL(sc *svc.ServiceContext) time.Duration {
+	minutes := sc.Config.Trade.PayTimeoutMinutes
+	if minutes <= 0 {
+		minutes = 15
+	}
+	return time.Duration(minutes) * time.Minute
+}
 
 func parseID(s string) (int64, error) {
 	id, err := strconv.ParseInt(s, 10, 64)
@@ -100,7 +107,7 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		return nil, err
 	}
 
-	// 金额计算：total = 商品价 + 服务费；pay = total - 券抵扣（保底 0.01，微信不支持 0 元单）
+	// 金额计算：total = 商品价 + 服务费；pay = total - 券抵扣（保底 0.01）+ 运费（券不抵运费）
 	couponID, err := strconvSingle(req.CouponID)
 	if err != nil {
 		releaseProduct(sc.DB, productID)
@@ -131,10 +138,34 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		discount = marketing.CalcDiscount(&tpl, base)
 		couponName = tpl.Name
 	}
+
+	// 配送方式：必须启用；托运配送类必填收货地址
+	shipMethodID, err := parseID(req.ShipMethodID)
+	if err != nil {
+		releaseProduct(sc.DB, productID)
+		return nil, err
+	}
+	var sm model.ShipMethod
+	if err := sc.DB.Where("id = ? AND status = ?", shipMethodID, model.ShipMethodOn).First(&sm).Error; err != nil {
+		releaseProduct(sc.DB, productID)
+		return nil, common.NewErr(400, 40002, "配送方式不可用")
+	}
+	shipAddress := strings.TrimSpace(req.ShipAddress)
+	if sm.Kind == model.KindShip {
+		if shipAddress == "" {
+			releaseProduct(sc.DB, productID)
+			return nil, common.NewErr(400, 40003, "请填写收货地址")
+		}
+	}
+	if rs := []rune(shipAddress); len(rs) > 255 {
+		shipAddress = string(rs[:255])
+	}
+
 	payAmount := base.Sub(discount)
 	if payAmount.LessThan(decimal.NewFromFloat(0.01)) {
 		payAmount = decimal.NewFromFloat(0.01)
 	}
+	payAmount = payAmount.Add(sm.Fee)
 
 	now := time.Now()
 	order := model.Order{
@@ -152,7 +183,11 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		ContactName:    req.ContactName,
 		ContactPhone:   req.ContactPhone,
 		Remark:         req.Remark,
-		ExpireAt:       now.Add(orderPayTTL),
+		ShipMethodID:   sm.ID,
+		ShipMethodName: sm.Name,
+		ShipFee:        sm.Fee,
+		ShipAddress:    shipAddress,
+		ExpireAt:       now.Add(payTTL(sc)),
 	}
 	item := model.OrderItem{
 		ID:           common.NewID(),
@@ -344,12 +379,17 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 			TotalAmount:     o.TotalAmount.StringFixed(2),
 			DiscountAmount:  o.DiscountAmount.StringFixed(2),
 			ServiceFee:      o.ServiceFee.StringFixed(2),
+			ShipFee:         o.ShipFee.StringFixed(2),
 			PayAmount:       o.PayAmount.StringFixed(2),
 			CouponInfo:      o.CouponInfo,
 			ServiceItems:    o.ServiceItems,
 			ContactName:     o.ContactName,
 			ContactPhone:    o.ContactPhone,
 			Remark:          o.Remark,
+			ShipMethod:      o.ShipMethodName,
+			ShipAddress:     o.ShipAddress,
+			ShipStatus:      o.ShipStatus,
+			ShipNo:          o.ShipNo,
 			ExpireAt:        o.ExpireAt.Format(time.RFC3339),
 			CreatedAt:       o.CreatedAt.Format(time.RFC3339),
 			Items:           itemMap[o.ID],
@@ -361,6 +401,15 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 		}
 		if o.PaidAt != nil {
 			v.PaidAt = o.PaidAt.Format(time.RFC3339)
+		}
+		if o.ShippedAt != nil {
+			v.ShippedAt = o.ShippedAt.Format(time.RFC3339)
+		}
+		if o.DeliveredAt != nil {
+			v.DeliveredAt = o.DeliveredAt.Format(time.RFC3339)
+		}
+		if o.CompletedAt != nil {
+			v.CompletedAt = o.CompletedAt.Format(time.RFC3339)
 		}
 		views = append(views, v)
 	}

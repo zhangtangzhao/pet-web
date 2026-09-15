@@ -37,6 +37,23 @@ func OrderStatusText(s int) string {
 	return "未知"
 }
 
+// 配送子状态（订单状态机不变）
+const (
+	ShipPending   = 0 // 待配送
+	ShipTransit   = 1 // 配送中
+	ShipDelivered = 2 // 已送达
+)
+
+func ShipStatusText(s int) string {
+	switch s {
+	case ShipTransit:
+		return "配送中"
+	case ShipDelivered:
+		return "已送达"
+	}
+	return "待配送"
+}
+
 // 支付流水
 const (
 	PayChannelMini    = 1 // 小程序 JSAPI
@@ -71,6 +88,14 @@ type Order struct {
 	ContactName    string          `json:"contactName"`
 	ContactPhone   string          `json:"contactPhone"`
 	Remark         string          `json:"remark"`
+	ShipMethodID   int64           `json:"-"`
+	ShipMethodName string          `json:"-"`
+	ShipFee        decimal.Decimal `gorm:"type:numeric(10,2)" json:"-"`
+	ShipAddress    string          `json:"-"`
+	ShipStatus     int             `json:"-"`
+	ShipNo         string          `json:"-"`
+	ShippedAt      *time.Time      `json:"-"`
+	DeliveredAt    *time.Time      `json:"-"`
 	PaidAt         *time.Time      `json:"paidAt"`
 	CompletedAt    *time.Time      `json:"completedAt"`
 	CanceledAt     *time.Time      `json:"canceledAt"`

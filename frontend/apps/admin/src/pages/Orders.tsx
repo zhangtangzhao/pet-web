@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Descriptions, Drawer, Form, Input, InputNumber, message, Modal, Table, Tag } from 'antd'
+import { Button, Descriptions, Drawer, Form, Input, InputNumber, message, Modal, Popconfirm, Table, Tag } from 'antd'
 import { PageResp } from '../api/client'
-import { fetchOrders, OrderView, refundOrder } from '../api/admin'
+import { deliverOrder, fetchOrders, OrderView, refundOrder, shipOrder } from '../api/admin'
 
 const STATUS_TAG: Record<number, string> = {
   10: 'gold',
@@ -13,6 +13,8 @@ const STATUS_TAG: Record<number, string> = {
   60: 'red',
 }
 
+const SHIP_TEXT: Record<number, string> = { 0: '待配送', 1: '配送中', 2: '已送达' }
+
 export default function Orders() {
   const [data, setData] = useState<PageResp<OrderView>>({ total: 0, list: [] })
   const [query, setQuery] = useState({ page: 1, pageSize: 10, status: 0, orderNo: '', keyword: '' })
@@ -20,6 +22,8 @@ export default function Orders() {
   const [detail, setDetail] = useState<OrderView>()
   const [refundTarget, setRefundTarget] = useState<OrderView>()
   const [refundForm] = Form.useForm()
+  const [shipTarget, setShipTarget] = useState<OrderView>()
+  const [shipForm] = Form.useForm()
 
   const load = useCallback(
     async (q = query) => {
@@ -46,6 +50,31 @@ export default function Orders() {
       await refundOrder(refundTarget.orderNo, v.reason, v.amount != null ? String(v.amount) : undefined)
       message.success('退款已受理')
       setRefundTarget(undefined)
+      load()
+    } catch (e: any) {
+      message.error(e.message)
+    }
+  }
+
+  const submitShip = async () => {
+    const v = await shipForm.validateFields()
+    if (!shipTarget) return
+    try {
+      await shipOrder(shipTarget.orderNo, v.shipNo.trim())
+      message.success('已发货')
+      setShipTarget(undefined)
+      setDetail(undefined)
+      load()
+    } catch (e: any) {
+      message.error(e.message)
+    }
+  }
+
+  const submitDeliver = async (orderNo: string) => {
+    try {
+      await deliverOrder(orderNo)
+      message.success('已标记送达')
+      setDetail(undefined)
       load()
     } catch (e: any) {
       message.error(e.message)
@@ -150,11 +179,47 @@ export default function Orders() {
                 {detail.contactName} {detail.contactPhone}
               </Descriptions.Item>
               <Descriptions.Item label="备注">{detail.remark || '-'}</Descriptions.Item>
+              <Descriptions.Item label="配送方式">
+                {detail.shipMethod || '-'}
+                {Number(detail.shipFee) > 0 ? `（运费 ¥${detail.shipFee}）` : ''}
+              </Descriptions.Item>
+              {detail.shipAddress && <Descriptions.Item label="收货地址">{detail.shipAddress}</Descriptions.Item>}
+              <Descriptions.Item label="配送状态">{SHIP_TEXT[detail.shipStatus] ?? '-'}</Descriptions.Item>
+              {detail.shipNo && <Descriptions.Item label="运单号">{detail.shipNo}</Descriptions.Item>}
               <Descriptions.Item label="下单时间">{detail.createdAt?.replace('T', ' ').slice(0, 19)}</Descriptions.Item>
               {detail.paidAt && (
                 <Descriptions.Item label="支付时间">{detail.paidAt.replace('T', ' ').slice(0, 19)}</Descriptions.Item>
               )}
+              {detail.shippedAt && (
+                <Descriptions.Item label="发货时间">{detail.shippedAt.replace('T', ' ').slice(0, 19)}</Descriptions.Item>
+              )}
+              {detail.deliveredAt && (
+                <Descriptions.Item label="送达时间">{detail.deliveredAt.replace('T', ' ').slice(0, 19)}</Descriptions.Item>
+              )}
             </Descriptions>
+            {detail.status === 20 && (
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                {detail.shipStatus === 0 && (
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => {
+                      shipForm.resetFields()
+                      setShipTarget(detail)
+                    }}
+                  >
+                    发货
+                  </Button>
+                )}
+                {detail.shipStatus === 1 && (
+                  <Popconfirm title="确认已送达？" onConfirm={() => submitDeliver(detail.orderNo)}>
+                    <Button type="primary" size="small">
+                      标记送达
+                    </Button>
+                  </Popconfirm>
+                )}
+              </div>
+            )}
             <Table
               style={{ marginTop: 16 }}
               rowKey="productId"
@@ -204,6 +269,19 @@ export default function Orders() {
               addonAfter="元"
               placeholder={`默认全额 ¥${refundTarget?.payAmount ?? ''}`}
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Modal
+        title={`发货 · ${shipTarget?.orderNo ?? ''}`}
+        open={!!shipTarget}
+        onOk={submitShip}
+        onCancel={() => setShipTarget(undefined)}
+        destroyOnClose
+      >
+        <Form form={shipForm} layout="vertical">
+          <Form.Item name="shipNo" label="运单号" rules={[{ required: true, message: '请填写运单号' }]}>
+            <Input placeholder="托运单号 / 专车运单号" maxLength={64} />
           </Form.Item>
         </Form>
       </Modal>

@@ -197,8 +197,10 @@ type BannerStatusReq struct {
 
 type CreateOrderReq struct {
 	ProductID    string   `json:"productId"`
-	ServiceIDs   []string `json:"serviceIds,optional"` // 增值服务
-	CouponID     string   `json:"couponId,optional"`   // 用户券 ID，空 = 不用券
+	ServiceIDs   []string `json:"serviceIds,optional"`  // 增值服务
+	CouponID     string   `json:"couponId,optional"`    // 用户券 ID，空 = 不用券
+	ShipMethodID string   `json:"shipMethodId"`         // 配送方式
+	ShipAddress  string   `json:"shipAddress,optional"` // 收货地址（托运配送类必填）
 	ContactName  string   `json:"contactName"`
 	ContactPhone string   `json:"contactPhone"`
 	Remark       string   `json:"remark,optional"`
@@ -241,18 +243,55 @@ type OrderView struct {
 	TotalAmount     string          `json:"totalAmount"`
 	DiscountAmount  string          `json:"discountAmount"`
 	ServiceFee      string          `json:"serviceFee"`
+	ShipFee         string          `json:"shipFee"`
 	PayAmount       string          `json:"payAmount"`
 	CouponInfo      string          `json:"couponInfo"`
 	ServiceItems    string          `json:"serviceItems"` // 服务快照 JSON [{id,name,price}]
 	ContactName     string          `json:"contactName"`
 	ContactPhone    string          `json:"contactPhone"`
 	Remark          string          `json:"remark"`
+	ShipMethod      string          `json:"shipMethod"` // 配送方式名快照
+	ShipAddress     string          `json:"shipAddress"`
+	ShipStatus      int             `json:"shipStatus"` // 0待配送 1配送中 2已送达
+	ShipNo          string          `json:"shipNo"`
 	ExpireAt        string          `json:"expireAt"`
 	PaidAt          string          `json:"paidAt"`
+	ShippedAt       string          `json:"shippedAt,optional"`
+	DeliveredAt     string          `json:"deliveredAt,optional"`
+	CompletedAt     string          `json:"completedAt,optional"`
 	CreatedAt       string          `json:"createdAt"`
 	Items           []OrderItemView `json:"items"`
 	Reviewed        bool            `json:"reviewed"`        // 已评价（status=30 入口态）
 	AftersaleStatus int             `json:"aftersaleStatus"` // 最新售后单状态，0=无售后
+}
+
+type ShipMethodView struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Kind        int    `json:"kind"` // 1自提 2托运配送
+	Description string `json:"description"`
+	Fee         string `json:"fee"`
+	Sort        int    `json:"sort"`
+	Status      int    `json:"status"`
+	CreatedAt   string `json:"createdAt"`
+}
+
+type ShipMethodListReq struct {
+	PageReq
+}
+
+type ShipMethodUpsertReq struct {
+	ID          string `json:"id,optional"`
+	Name        string `json:"name"`
+	Kind        int    `json:"kind"`
+	Description string `json:"description,optional"`
+	Fee         string `json:"fee"`
+	Sort        int    `json:"sort,optional"`
+	Status      int    `json:"status,optional"`
+}
+
+type ShipReq struct {
+	ShipNo string `json:"shipNo"`
 }
 
 type OrderNoPathReq struct {

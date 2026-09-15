@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import Taro, { usePullDownRefresh, useRouter } from '@tarojs/taro'
-import { get, getToken, post } from '../../request'
+import { askSubscribe, cancelAfterSale, cancelOrder, confirmOrder, goAfterSale, goReview, payOrder, prefetchTmplIds } from '../../orderActions'
+import { get, getToken } from '../../request'
 import { OrderView, PageResp } from '../../types'
 import './index.css'
 
@@ -15,6 +16,14 @@ const CHIPS = [
 
 const AS_TEXT: Record<number, string> = { 1: '售后待审核', 2: '售后已同意', 3: '售后被拒绝', 4: '售后已撤销' }
 
+const fmtLeft = (expireAt: string, now: number) => {
+  const sec = Math.floor((new Date(expireAt).getTime() - now) / 1000)
+  if (sec <= 0) return '已超时'
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return m > 0 ? `${m}分${String(s).padStart(2, '0')}秒内支付` : `${s}秒内支付`
+}
+
 export default function Orders() {
   const { params } = useRouter()
   const [chip, setChip] = useState(Number(params.status) || 0)
@@ -22,21 +31,18 @@ export default function Orders() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [tmplIds, setTmplIds] = useState<string[]>([])
+  const [now, setNow] = useState(Date.now())
+
+  // 待支付剩余时间小字：单一定时器驱动整页重渲染
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000)
+    return () => clearInterval(t)
+  }, [])
 
   // 小程序订阅消息模板：进页预取，用户点击时同步唤起授权
   useEffect(() => {
-    if (process.env.TARO_ENV !== 'weapp') return
-    get<{ miniTmplOrder: string }>('/notify/tmpl')
-      .then((t) => setTmplIds([t.miniTmplOrder].filter(Boolean)))
-      .catch(() => {})
+    prefetchTmplIds()
   }, [])
-
-  const askSubscribe = () => {
-    if (process.env.TARO_ENV !== 'weapp' || tmplIds.length === 0) return
-    // entityIds 为 Taro 类型定义中 alipay 专有必填项，weapp 运行时忽略
-    Taro.requestSubscribeMessage({ tmplIds, entityIds: [] }).catch(() => {})
-  }
 
   const load = useCallback(
     async (nextChip: number, nextPage: number, append: boolean) => {
@@ -82,77 +88,14 @@ export default function Orders() {
     load(chip, next, true)
   }
 
-  const confirmOrder = (o: OrderView) => {
-    Taro.showModal({
-      title: '确认收货',
-      content: '确认已完成交易？确认后可对订单进行评价。',
-      success: (r) => {
-        if (!r.confirm) return
-        post(`/orders/${o.orderNo}/confirm`)
-          .then(() => {
-            Taro.showToast({ title: '交易已完成', icon: 'success' })
-            load(chip, 1, false)
-          })
-          .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
-      },
-    })
+  const reload = () => load(chip, 1, false)
+
+  const stop = (fn: () => void) => (e: { stopPropagation: () => void }) => {
+    e.stopPropagation()
+    fn()
   }
 
-  const payOrder = (o: OrderView) => {
-    post(`/orders/${o.orderNo}/prepay`)
-      .then((r: any) => {
-        const p = r?.payParams
-        if (!p) {
-          Taro.showToast({ title: '微信支付待商户号联调后开放', icon: 'none' })
-          return
-        }
-        Taro.requestPayment({
-          timeStamp: p.timeStamp,
-          nonceStr: p.nonceStr,
-          package: p.package,
-          signType: p.signType,
-          paySign: p.paySign,
-          success: () => load(chip, 1, false),
-        }).catch(() => {})
-      })
-      .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
-  }
-
-  const cancelOrder = (o: OrderView) => {
-    Taro.showModal({
-      title: '取消订单',
-      content: '确定取消该订单吗？',
-      success: (r) => {
-        if (!r.confirm) return
-        post(`/orders/${o.orderNo}/cancel`)
-          .then(() => {
-            Taro.showToast({ title: '已取消', icon: 'success' })
-            load(chip, 1, false)
-          })
-          .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
-      },
-    })
-  }
-
-  const cancelAfterSale = (o: OrderView) => {
-    Taro.showModal({
-      title: '撤销售后',
-      content: '确定撤销该售后申请吗？',
-      success: (r) => {
-        if (!r.confirm) return
-        get<{ afterSaleNo: string }>(`/aftersale?orderNo=${o.orderNo}`)
-          .then((a) => post(`/aftersale/${a.afterSaleNo}/cancel`))
-          .then(() => {
-            Taro.showToast({ title: '已撤销', icon: 'success' })
-            load(chip, 1, false)
-          })
-          .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
-      },
-    })
-  }
-
-  const goReview = (o: OrderView) => Taro.navigateTo({ url: `/pages/order-review/index?orderNo=${o.orderNo}` })
-  const goAfterSale = (o: OrderView) => Taro.navigateTo({ url: `/pages/after-sale/index?orderNo=${o.orderNo}` })
+  const goDetail = (o: OrderView) => Taro.navigateTo({ url: `/pages/order-detail/index?orderNo=${o.orderNo}` }).catch(() => {})
 
   const renderActions = (o: OrderView) => {
     const asPending = o.aftersaleStatus === 1
@@ -160,26 +103,26 @@ export default function Orders() {
       <View className='od-actions'>
         {o.status === 10 && (
           <>
-            <View className='od-btn' onClick={() => cancelOrder(o)}>
+            <View className='od-btn' onClick={stop(() => cancelOrder(o.orderNo, reload))}>
               取消订单
             </View>
-            <View className='od-btn od-btn-primary' onClick={() => payOrder(o)}>
+            <View className='od-btn od-btn-primary' onClick={stop(() => payOrder(o.orderNo, reload))}>
               去支付
             </View>
           </>
         )}
         {o.status === 20 && (
           <>
-            <View className='od-btn' onClick={() => confirmOrder(o)}>
+            <View className='od-btn' onClick={stop(() => confirmOrder(o.orderNo, reload))}>
               确认收货
             </View>
             {(o.aftersaleStatus ?? 0) === 0 && (
               <View
                 className='od-btn'
-                onClick={() => {
+                onClick={stop(() => {
                   askSubscribe()
-                  goAfterSale(o)
-                }}
+                  goAfterSale(o.orderNo)
+                })}
               >
                 申请售后
               </View>
@@ -191,17 +134,17 @@ export default function Orders() {
             {o.reviewed ? (
               <View className='od-btn od-btn-disabled'>已评价</View>
             ) : (
-              <View className='od-btn od-btn-primary' onClick={() => goReview(o)}>
+              <View className='od-btn od-btn-primary' onClick={stop(() => goReview(o.orderNo))}>
                 去评价
               </View>
             )}
             {(o.aftersaleStatus ?? 0) === 0 && (
               <View
                 className='od-btn'
-                onClick={() => {
+                onClick={stop(() => {
                   askSubscribe()
-                  goAfterSale(o)
-                }}
+                  goAfterSale(o.orderNo)
+                })}
               >
                 申请售后
               </View>
@@ -209,7 +152,7 @@ export default function Orders() {
           </>
         )}
         {asPending && (
-          <View className='od-btn' onClick={() => cancelAfterSale(o)}>
+          <View className='od-btn' onClick={stop(() => cancelAfterSale(o.orderNo, reload))}>
             撤销售后
           </View>
         )}
@@ -229,7 +172,7 @@ export default function Orders() {
 
       {list.length === 0 && !loading && <View className='od-empty'>暂无订单，去逛逛吧～</View>}
       {list.map((o) => (
-        <View className='od-item card' key={o.orderNo}>
+        <View className='od-item card' key={o.orderNo} onClick={() => goDetail(o)}>
           <View className='od-head'>
             <Text className='od-no'>{o.orderNo}</Text>
             <Text className={`od-status od-status-${o.status}`}>{o.statusText}</Text>
@@ -248,6 +191,13 @@ export default function Orders() {
               <Text className='price'>¥{it.price}</Text>
             </View>
           ))}
+          {o.status === 10 && (
+            <View className='od-left'>
+              <Text className={`od-left-text ${o.expireAt && new Date(o.expireAt).getTime() <= now ? 'od-left-expired' : ''}`}>
+                {o.expireAt ? fmtLeft(o.expireAt, now) : ''}
+              </Text>
+            </View>
+          )}
           <View className='od-foot'>
             <Text className='od-pay'>
               实付 <Text className='od-pay-num'>¥{o.payAmount}</Text>

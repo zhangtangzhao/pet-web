@@ -7,6 +7,7 @@ import (
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/manage"
+	"pet/backend/internal/logic/trade"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
 )
@@ -340,7 +341,128 @@ func AdminRefund(sc *svc.ServiceContext) http.HandlerFunc {
 			common.Err(w, err)
 			return
 		}
+		var path types.OrderNoPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		req.OrderNo = path.OrderNo
 		if err := manage.AdminRefund(sc, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+func AdminShip(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.OrderNoPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		var req types.ShipReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := trade.AdminShip(sc, path.OrderNo, req.ShipNo); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+func AdminDeliver(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.OrderNoPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		if err := trade.AdminDeliver(sc, path.OrderNo); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+func AdminShipMethodList(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.ShipMethodListReq
+		if err := httpx.ParseForm(r, &req); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		resp, err := manage.AdminShipMethodList(sc, &req)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}
+
+func AdminShipMethodUpsert(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.ShipMethodUpsertReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err == nil && path.ID != "" {
+			req.ID = path.ID
+		}
+		if err := manage.AdminShipMethodUpsert(sc, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+func AdminShipMethodStatus(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		id, err := parseID64(path.ID)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		var req types.BannerStatusReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := manage.AdminShipMethodStatus(sc, id, req.Status); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+func AdminShipMethodDelete(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		id, err := parseID64(path.ID)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := manage.AdminShipMethodDelete(sc, id); err != nil {
 			common.Err(w, err)
 			return
 		}

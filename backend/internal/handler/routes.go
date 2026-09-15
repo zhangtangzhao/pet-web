@@ -43,6 +43,7 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/orders/:orderNo/confirm", Handler: ConfirmOrder(sc)},
 		{Method: "POST", Path: "/api/orders/:orderNo/prepay", Handler: Prepay(sc)},
 		{Method: "POST", Path: "/api/orders/:orderNo/review", Handler: OrderReview(sc)},
+		{Method: "GET", Path: "/api/ship/methods", Handler: ShipMethods(sc)},
 		{Method: "GET", Path: "/api/payments/:paymentNo/status", Handler: PaymentStatus(sc)},
 		{Method: "POST", Path: "/api/aftersale", Handler: AfterSaleApply(sc)},
 		{Method: "GET", Path: "/api/aftersale", Handler: AfterSaleByOrder(sc)},
@@ -96,6 +97,14 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/admin/orders", Handler: AdminOrderList(sc)},
 		{Method: "GET", Path: "/api/admin/orders/:orderNo", Handler: AdminOrderDetail(sc)},
 		{Method: "POST", Path: "/api/admin/orders/:orderNo/refund", Handler: AdminRefund(sc)},
+		{Method: "POST", Path: "/api/admin/orders/:orderNo/ship", Handler: AdminShip(sc)},
+		{Method: "POST", Path: "/api/admin/orders/:orderNo/deliver", Handler: AdminDeliver(sc)},
+
+		{Method: "GET", Path: "/api/admin/ship-methods", Handler: AdminShipMethodList(sc)},
+		{Method: "POST", Path: "/api/admin/ship-methods", Handler: AdminShipMethodUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/ship-methods/:id", Handler: AdminShipMethodUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/ship-methods/:id/status", Handler: AdminShipMethodStatus(sc)},
+		{Method: "DELETE", Path: "/api/admin/ship-methods/:id", Handler: AdminShipMethodDelete(sc)},
 
 		{Method: "GET", Path: "/api/admin/members", Handler: AdminMemberList(sc)},
 		{Method: "PUT", Path: "/api/admin/members/:id/status", Handler: AdminMemberStatus(sc)},

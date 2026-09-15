@@ -165,6 +165,8 @@
 | POST | `/api/v1/orders/:orderNo/confirm` | 确认收货/完成（已支付→已完成） |
 
 > 已实现订单视图新增 `reviewed`（是否已评价）与 `aftersaleStatus`（最新售后状态，0=无售后；1待审核 2已同意 3已拒绝 4已撤销），供订单列表/详情回显「去评价 / 申请售后 / 撤销售后」入口态。
+>
+> 迁移 012 起订单视图附带配送字段：`shipMethod`（方式名快照）、`shipFee`、`shipAddress`、`shipStatus`（0待配送 1配送中 2已送达）、`shipNo`、`shippedAt` / `deliveredAt` / `completedAt`（有值才返回）；下单请求新增 `shipMethodId`（必填）与 `shipAddress`（托运方式 kind=2 必填，≤255）。实付公式：`max(商品价+服务费-券抵扣, 0.01) + 运费`，运费不参与券抵扣；待支付关单时长 `Trade.PayTimeoutMinutes`（默认 15 分钟，`expireAt` 随之）。
 | POST | `/api/v1/payments/wechat/prepay` | 待支付单重新拉起支付 `{orderNo}` → 支付参数 |
 | GET | `/api/v1/payments/:paymentNo/status` | 轮询支付结果（前端支付后 2s 间隔轮询） |
 | POST | `/api/v1/payment/notify` | **微信回调**（无鉴权，验签；不走统一响应格式） |
@@ -176,6 +178,8 @@
 // Request
 {
   "productId": "1943256789000000001",
+  "shipMethodId": "7002",
+  "shipAddress": "上海市浦东新区 …（kind=2 托运必填）",
   "contactName": "张三",
   "contactPhone": "13800000000",
   "remark": "希望周末自提"
@@ -196,6 +200,12 @@
   "h5PayUrl": ""   // H5 支付时返回 mweb_url，小程序端为空
 }
 ```
+
+### 2.5.1 配送方式（已实现，实际路径前缀为 /api，迁移 012）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/ship/methods` | 可用配送方式（仅启用，`sort ASC`）：`{id, name, kind(1自提/2托运配送), description, fee}` |
 
 ### 2.6 AI 智能客服（已实现，实际路径前缀为 /api）
 
@@ -376,7 +386,11 @@
 | GET | `/admin/api/v1/orders` | 订单列表（状态/时间/订单号/会员筛选，支持导出） |
 | GET | `/admin/api/v1/orders/:orderNo` | 订单详情（含支付流水） |
 | POST | `/admin/api/v1/orders/:orderNo/refund` | 发起退款 `{reason, amount}`（已支付/已完成） |
+| POST | `/admin/api/v1/orders/:orderNo/ship` | 托运发货 `{shipNo}`（必填，≤64；仅已支付且待配送，自提单拒绝；重复发货幂等拒绝） |
+| POST | `/admin/api/v1/orders/:orderNo/deliver` | 标记送达（仅配送中；落 `deliveredAt`） |
 | GET | `/admin/api/v1/orders/export` | 订单导出 Excel |
+
+> 发货 / 送达均按 `ship_status` CAS 推进并触发订阅消息（`ship:{orderNo}` / `deliver:{orderNo}` 幂等）；退款含运费全额原路退，无需单独处理。
 
 ### 3.5 会员管理
 
@@ -448,6 +462,18 @@
 | PUT | `/api/admin/banners/:id` | 编辑（可覆盖更新） |
 | PUT | `/api/admin/banners/:id/status` | 上架/下架 `{status: 1/0}` |
 | DELETE | `/api/admin/banners/:id` | 删除 |
+
+### 3.12 配送方式管理（已实现，实际路径前缀为 /api/admin，迁移 012）
+
+配送方式（`ship_method`）：用户下单选择，订单快照方式名与运费；停用后用户端不可见，历史订单不受影响。
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/ship-methods?page=&pageSize=` | 列表（含停用，`sort ASC`） |
+| POST | `/api/admin/ship-methods` | 新建 `{name(≤32必填), kind(1自提/2托运配送必选), fee(≥0), description?, sort?, status?}` |
+| PUT | `/api/admin/ship-methods/:id` | 编辑（改价只影响新订单） |
+| PUT | `/api/admin/ship-methods/:id/status` | 启用/停用 `{status: 1/0}` |
+| DELETE | `/api/admin/ship-methods/:id` | 删除（历史订单靠快照回显） |
 
 ---
 

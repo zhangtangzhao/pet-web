@@ -59,6 +59,14 @@ export interface OrderView {
   contactName: string
   contactPhone: string
   remark: string
+  shipMethod: string
+  shipFee: string
+  shipAddress: string
+  shipStatus: number
+  shipNo: string
+  shippedAt: string
+  deliveredAt: string
+  completedAt: string
   expireAt: string
   paidAt: string
   createdAt: string
@@ -211,6 +219,14 @@ export async function fetchOrders(params: {
 
 export async function refundOrder(orderNo: string, reason: string, amount?: string) {
   await client.post(`/admin/orders/${orderNo}/refund`, { reason, amount })
+}
+
+export async function shipOrder(orderNo: string, shipNo: string) {
+  await client.post(`/admin/orders/${orderNo}/ship`, { shipNo })
+}
+
+export async function deliverOrder(orderNo: string) {
+  await client.post(`/admin/orders/${orderNo}/deliver`)
 }
 
 export async function fetchMembers(params: {
@@ -464,4 +480,45 @@ export async function updateBannerStatus(id: string, status: number) {
 
 export async function deleteBanner(id: string) {
   await client.delete(`/admin/banners/${id}`)
+}
+
+// ───────── 配送方式 / 托运 ─────────
+
+export interface ShipMethodRow {
+  id: string
+  name: string
+  kind: number
+  description: string
+  fee: string
+  sort: number
+  status: number
+  createdAt: string
+}
+
+export async function fetchShipMethods(params: { page?: number; pageSize?: number }): Promise<PageResp<ShipMethodRow>> {
+  return (await client.get('/admin/ship-methods', { params })) as any
+}
+
+export async function upsertShipMethod(payload: {
+  id?: string
+  name: string
+  kind: number
+  description?: string
+  fee?: string
+  sort?: number
+  status?: number
+}) {
+  if (payload.id) {
+    await client.put(`/admin/ship-methods/${payload.id}`, payload)
+  } else {
+    await client.post('/admin/ship-methods', payload)
+  }
+}
+
+export async function updateShipMethodStatus(id: string, status: number) {
+  await client.put(`/admin/ship-methods/${id}/status`, { status })
+}
+
+export async function deleteShipMethod(id: string) {
+  await client.delete(`/admin/ship-methods/${id}`)
 }
