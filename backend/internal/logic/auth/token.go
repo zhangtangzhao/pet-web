@@ -59,6 +59,7 @@ func MemberView(sc *svc.ServiceContext, m *model.Member, isNew bool) types.Membe
 		Gender:    m.Gender,
 		HasWxBind: wxCnt > 0,
 		IsNew:     isNew,
+		CreatedAt: m.CreatedAt.Format(time.RFC3339),
 	}
 }
 

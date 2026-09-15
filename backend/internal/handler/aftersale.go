@@ -45,6 +45,23 @@ func AfterSaleByOrder(sc *svc.ServiceContext) http.HandlerFunc {
 	})
 }
 
+// AfterSaleMyList GET /api/aftersale/list —— 我的售后单列表（分页）
+func AfterSaleMyList(sc *svc.ServiceContext) http.HandlerFunc {
+	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.PageReq
+		if err := httpx.ParseForm(r, &req); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		resp, err := aftersale.MyList(sc, memberID(r), req)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}
+
 // AfterSaleCancel POST /api/aftersale/:afterSaleNo/cancel —— 会员撤销（仅待审核）
 func AfterSaleCancel(sc *svc.ServiceContext) http.HandlerFunc {
 	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {

@@ -255,6 +255,26 @@
   border-radius: 12px;
 }
 
+.rvs-reply {
+  margin-top: 16px;
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.rvs-reply-tag {
+  color: #ff7a45;
+  font-size: 24px;
+  font-weight: 600;
+  margin-right: 12px;
+}
+
+.rvs-reply-text {
+  font-size: 24px;
+  color: #666;
+  word-break: break-all;
+}
+
 .rvs-time {
   display: block;
   margin-top: 10px;

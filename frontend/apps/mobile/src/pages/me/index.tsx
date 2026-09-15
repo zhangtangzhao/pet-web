@@ -1,0 +1,96 @@
+import { useEffect, useState } from 'react'
+import { Image, Text, View } from '@tarojs/components'
+import Taro from '@tarojs/taro'
+import { clearTokens, get, getToken, post } from '../../request'
+import './index.css'
+
+interface MemberInfo {
+  id: string
+  nickname: string
+  avatar: string
+  phone: string
+  gender: number
+  hasWxBind: boolean
+  createdAt: string
+}
+
+const ENTRIES: { icon: string; label: string; url: string }[] = [
+  { icon: '📦', label: '我的订单', url: '/pages/orders/index' },
+  { icon: '⭐', label: '我的评价', url: '/pages/my-reviews/index' },
+  { icon: '🛠', label: '我的售后', url: '/pages/my-aftersales/index' },
+  { icon: '🎫', label: '我的优惠券', url: '/pages/coupon-center/index' },
+  { icon: '❤️', label: '我的收藏', url: '/pages/favorites/index' },
+  { icon: '🔔', label: '消息中心', url: '/pages/notify/index' },
+  { icon: '🐾', label: '智能选宠', url: '/pages/recommend/index' },
+  { icon: '💬', label: '联系客服', url: '/pages/service-chat/index' },
+]
+
+const fmtDate = (s: string) => (s ? s.slice(0, 10) : '')
+
+export default function Me() {
+  const [member, setMember] = useState<MemberInfo>()
+
+  useEffect(() => {
+    if (!getToken()) {
+      Taro.redirectTo({
+        url: `/pages/login/index?redirect=${encodeURIComponent('/pages/me/index')}`,
+      }).catch(() => {})
+      return
+    }
+    get<MemberInfo>('/member/profile')
+      .then(setMember)
+      .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
+  }, [])
+
+  const goEntry = (url: string) => Taro.navigateTo({ url }).catch(() => {})
+
+  const logout = () => {
+    Taro.showModal({
+      title: '退出登录',
+      content: '确定退出当前账号吗？',
+      success: (r) => {
+        if (!r.confirm) return
+        // 无论服务端吊销是否成功，本地一律登出
+        post('/auth/logout', { refreshToken: Taro.getStorageSync('pet_refresh') }).catch(() => {})
+        clearTokens()
+        Taro.showToast({ title: '已退出登录', icon: 'success' })
+        setTimeout(() => Taro.reLaunch({ url: '/pages/index/index' }), 600)
+      },
+    })
+  }
+
+  return (
+    <View className='me'>
+      <View className='me-head'>
+        <View className='me-avatar'>
+          {member?.avatar ? (
+            <Image className='me-avatar-img' src={member.avatar} mode='aspectFill' />
+          ) : (
+            <Text>🐾</Text>
+          )}
+        </View>
+        <View>
+          <View className='me-nickname'>{member?.nickname || '宠物爱好者'}</View>
+          <View className='me-sub'>
+            <Text>{member?.phone || '未绑定手机号'}</Text>
+            {member?.createdAt && <Text>{fmtDate(member.createdAt)} 加入</Text>}
+          </View>
+        </View>
+      </View>
+
+      <View className='me-entries'>
+        {ENTRIES.map((e) => (
+          <View className='me-entry' key={e.url} onClick={() => goEntry(e.url)}>
+            <Text className='me-entry-icon'>{e.icon}</Text>
+            <Text className='me-entry-label'>{e.label}</Text>
+            <Text className='me-entry-arrow'>›</Text>
+          </View>
+        ))}
+      </View>
+
+      <View className='me-logout' onClick={logout}>
+        退出登录
+      </View>
+    </View>
+  )
+}

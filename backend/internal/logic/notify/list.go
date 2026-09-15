@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"pet/backend/internal/common"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -63,4 +64,26 @@ func ReadAll(sc *svc.ServiceContext, memberID int64) error {
 	return sc.DB.Model(&model.Notification{}).
 		Where("member_id = ? AND read_at IS NULL", memberID).
 		Update("read_at", time.Now()).Error
+}
+
+// ReadOne 单条已读：幂等；不存在或非本人返回 ErrNotFound（不泄露他人消息）
+func ReadOne(sc *svc.ServiceContext, memberID, id int64) error {
+	res := sc.DB.Model(&model.Notification{}).
+		Where("id = ? AND member_id = ? AND read_at IS NULL", id, memberID).
+		Update("read_at", time.Now())
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected > 0 {
+		return nil
+	}
+	var cnt int64
+	if err := sc.DB.Model(&model.Notification{}).
+		Where("id = ? AND member_id = ?", id, memberID).Count(&cnt).Error; err != nil {
+		return err
+	}
+	if cnt == 0 {
+		return common.ErrNotFound
+	}
+	return nil // 已读过，幂等
 }

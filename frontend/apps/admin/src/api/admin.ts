@@ -371,6 +371,8 @@ export interface ReviewRow {
   images: string[]
   status: number
   createdAt: string
+  reply?: string
+  repliedAt?: string
 }
 
 export async function fetchReviews(params: {
@@ -382,6 +384,10 @@ export async function fetchReviews(params: {
 
 export async function updateReviewStatus(id: string, status: number) {
   await client.put(`/admin/reviews/${id}/status`, { status })
+}
+
+export async function replyReview(id: string, reply: string) {
+  await client.post(`/admin/reviews/${id}/reply`, { reply })
 }
 
 export async function deleteReview(id: string) {
@@ -415,4 +421,47 @@ export async function fetchAfterSales(params: {
 
 export async function auditAfterSale(afterSaleNo: string, agree: boolean, amount?: string, note?: string) {
   await client.post(`/admin/aftersales/${afterSaleNo}/audit`, { agree, amount, note })
+}
+
+// ───────── Banner 运营位 ─────────
+
+export interface BannerRow {
+  id: string
+  title: string
+  subTitle: string
+  icon: string
+  jumpType: string
+  target: string
+  sort: number
+  status: number
+  createdAt: string
+}
+
+export async function fetchBanners(params: { page?: number; pageSize?: number }): Promise<PageResp<BannerRow>> {
+  return (await client.get('/admin/banners', { params })) as any
+}
+
+export async function upsertBanner(payload: {
+  id?: string
+  title: string
+  subTitle?: string
+  icon?: string
+  jumpType: string
+  target?: string
+  sort?: number
+  status?: number
+}) {
+  if (payload.id) {
+    await client.put(`/admin/banners/${payload.id}`, payload)
+  } else {
+    await client.post('/admin/banners', payload)
+  }
+}
+
+export async function updateBannerStatus(id: string, status: number) {
+  await client.put(`/admin/banners/${id}/status`, { status })
+}
+
+export async function deleteBanner(id: string) {
+  await client.delete(`/admin/banners/${id}`)
 }

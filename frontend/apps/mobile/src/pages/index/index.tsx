@@ -2,8 +2,24 @@ import { useEffect, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { get } from '../../request'
-import { HomeResp, ProductCard } from '../../types'
+import { BannerView, HomeResp, ProductCard } from '../../types'
 import './index.css'
+
+// banner jump_type → 跳转（与后端 jumpTypes 白名单、管理端选项一一对应）
+const BANNER_NAV: Record<string, (target: string) => void> = {
+  me: () => Taro.navigateTo({ url: '/pages/me/index' }).catch(() => {}),
+  recommend: () => Taro.navigateTo({ url: '/pages/recommend/index' }).catch(() => {}),
+  coupon: () => Taro.navigateTo({ url: '/pages/coupon-center/index' }).catch(() => {}),
+  orders: () => Taro.navigateTo({ url: '/pages/orders/index' }).catch(() => {}),
+  notify: () => Taro.navigateTo({ url: '/pages/notify/index' }).catch(() => {}),
+  favorites: () => Taro.navigateTo({ url: '/pages/favorites/index' }).catch(() => {}),
+  product: (t) => Taro.navigateTo({ url: `/pages/detail/index?id=${t}` }).catch(() => {}),
+  category: (t) => Taro.navigateTo({ url: `/pages/list/index?categoryId=${t}` }).catch(() => {}),
+  search: (t) => Taro.navigateTo({ url: `/pages/list/index?keyword=${encodeURIComponent(t)}` }).catch(() => {}),
+  custom: (t) => {
+    if (t.startsWith('/pages/')) Taro.navigateTo({ url: t }).catch(() => {})
+  },
+}
 
 export default function Home() {
   const [data, setData] = useState<HomeResp>()
@@ -21,41 +37,38 @@ export default function Home() {
   usePullDownRefresh(load)
 
   const goDetail = (p: ProductCard) => Taro.navigateTo({ url: `/pages/detail/index?id=${p.id}` })
-  const goCoupons = () => Taro.navigateTo({ url: '/pages/coupon-center/index' })
-  const goOrders = () => Taro.navigateTo({ url: '/pages/orders/index' })
-  const goNotify = () => Taro.navigateTo({ url: '/pages/notify/index' })
-  const goRecommend = () => Taro.navigateTo({ url: '/pages/recommend/index' })
+  const goList = (categoryId?: string) =>
+    Taro.navigateTo({ url: categoryId ? `/pages/list/index?categoryId=${categoryId}` : '/pages/list/index' })
+  const openBanner = (b: BannerView) => BANNER_NAV[b.jumpType]?.(b.target)
 
   return (
     <View className='home'>
       <View className='banner card'>
         <Text className='banner-title'>遇见你的毛孩子</Text>
         <Text className='banner-sub'>健康活体 · 平台保障 · 售后无忧</Text>
-        <View className='banner-coupon' onClick={goRecommend}>
-          <Text className='banner-coupon-icon'>🐾</Text>
-          <Text>智能选宠 · 说出你的条件，推荐 3 只</Text>
-          <Text className='banner-coupon-arrow'>→</Text>
+        <View className='banner-search' onClick={() => goList()}>
+          <Text className='banner-search-icon'>🔍</Text>
+          <Text className='banner-search-text'>搜索心仪的宠物</Text>
         </View>
-        <View className='banner-coupon' onClick={goCoupons}>
-          <Text className='banner-coupon-icon'>🎫</Text>
-          <Text>领券中心 · 新人立省 30 元</Text>
-          <Text className='banner-coupon-arrow'>→</Text>
-        </View>
-        <View className='banner-coupon' onClick={goOrders}>
-          <Text className='banner-coupon-icon'>📦</Text>
-          <Text>我的订单 · 支付/收货/评价/售后</Text>
-          <Text className='banner-coupon-arrow'>→</Text>
-        </View>
-        <View className='banner-coupon' onClick={goNotify}>
-          <Text className='banner-coupon-icon'>🔔</Text>
-          <Text>消息中心 · 订单/客服/优惠券提醒</Text>
-          <Text className='banner-coupon-arrow'>→</Text>
-        </View>
+        {(data?.banners ?? []).map((b) => (
+          <View className='banner-coupon' key={b.id} onClick={() => openBanner(b)}>
+            {b.icon.startsWith('http') ? (
+              <Image className='banner-coupon-img' src={b.icon} mode='aspectFill' />
+            ) : (
+              <Text className='banner-coupon-icon'>{b.icon || '🐾'}</Text>
+            )}
+            <Text>
+              {b.title}
+              {b.subTitle ? ` · ${b.subTitle}` : ''}
+            </Text>
+            <Text className='banner-coupon-arrow'>→</Text>
+          </View>
+        ))}
       </View>
 
       <View className='cats'>
         {(data?.categories ?? []).map((c) => (
-          <View className='cat' key={c.id}>
+          <View className='cat' key={c.id} onClick={() => goList(c.id)}>
             <View className='cat-icon'>{c.name.slice(0, 1)}</View>
             <Text className='cat-name'>{c.name}</Text>
           </View>

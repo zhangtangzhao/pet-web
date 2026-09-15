@@ -108,6 +108,25 @@
   font-size: 22px;
 }
 
+.banner-search {
+  margin-top: 24px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner-search-icon {
+  font-size: 26px;
+}
+
+.banner-search-text {
+  color: #999;
+  font-size: 26px;
+}
+
 .banner-coupon {
   margin-top: 24px;
   background: rgba(255, 255, 255, 0.22);
@@ -121,6 +140,12 @@
 
 .banner-coupon-icon {
   font-size: 26px;
+}
+
+.banner-coupon-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
 }
 
 .banner-coupon-arrow {

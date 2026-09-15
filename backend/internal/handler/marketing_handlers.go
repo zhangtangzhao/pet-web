@@ -237,3 +237,85 @@ func AdminCouponIssue(sc *svc.ServiceContext) http.HandlerFunc {
 		common.OK(w, map[string]int{"issued": issued, "failed": failed})
 	})
 }
+
+// ─────────────────────────── 平台端 · Banner 运营位 ───────────────────────────
+
+func AdminBannerList(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.BannerListReq
+		if err := httpx.ParseForm(r, &req); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		resp, err := marketing.AdminBannerList(sc, &req)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}
+
+func AdminBannerUpsert(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.BannerUpsertReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err == nil && path.ID != "" {
+			req.ID = path.ID
+		}
+		if err := marketing.AdminBannerUpsert(sc, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+func AdminBannerStatus(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		id, err := parseID64(path.ID)
+		if err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		var req types.BannerStatusReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := marketing.AdminBannerStatus(sc, id, req.Status); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+func AdminBannerDelete(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		id, err := parseID64(path.ID)
+		if err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		if err := marketing.AdminBannerDelete(sc, id); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}

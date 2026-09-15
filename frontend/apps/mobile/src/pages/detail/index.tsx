@@ -27,6 +27,12 @@ function ReviewItem({ r }: { r: ReviewView }) {
           ))}
         </View>
       )}
+      {r.reply && (
+        <View className='rvs-reply'>
+          <Text className='rvs-reply-tag'>商家回复</Text>
+          <Text className='rvs-reply-text'>{r.reply}</Text>
+        </View>
+      )}
       <Text className='rvs-time'>{r.createdAt.slice(0, 16).replace('T', ' ')}</Text>
     </View>
   )

@@ -94,7 +94,7 @@
 
 | 方法 | 路径 | 说明 |
 | ---- | ---- | ---- |
-| GET | `/api/v1/home` | 首页聚合：轮播位、分类入口、热销推荐 |
+| GET | `/api/v1/home` | 首页聚合：运营位 banners、分类入口、热销推荐 |
 | GET | `/api/v1/categories` | 宠物分类列表（含启用品种数） |
 | GET | `/api/v1/breeds?categoryId=` | 品种列表（支持按分类过滤） |
 
@@ -299,13 +299,14 @@
 
 ### 2.9 订单评价（已实现，实际路径前缀为 /api）
 
-规则：仅「已完成(status=30)」订单可评，一单一评（`order_no` 唯一）；星级 1-5 + 文字（≤500 字）+ 图片（≤9 张，COS 直传）。管理端隐藏/删除后公开侧不可见。订单/详情视图带 `reviewed` 标记回显入口态。
+规则：仅「已完成(status=30)」订单可评，一单一评（`order_no` 唯一）；星级 1-5 + 文字（≤500 字）+ 图片（≤9 张，COS 直传）。管理端隐藏/删除后公开侧不可见；官方回复（`reply`/`repliedAt`）由管理端维护并随评价视图下发，用户端评价区展示「商家回复」。订单/详情视图带 `reviewed` 标记回显入口态。
 
 | 方法 | 路径 | 说明 |
 | ---- | ---- | ---- |
 | POST | `/api/orders/:orderNo/review` | 创建评价 `{orderNo, rating(1-5), content?, images?[]}`（41601 已评过 / 41602 不可评） |
 | GET | `/api/products/:id/reviews?cursor=&limit=` | 公开评价列表（仅 status=1，游标 id 倒序，含会员昵称/头像） |
 | GET | `/api/products/:id/review-summary` | 评分摘要 `{avgRating:"5.0", total, latest[3]}`（隐藏的不计入） |
+| GET | `/api/member/reviews?cursor=&limit=` | 我的评价（本人全部，含被隐藏的，游标分页） |
 
 ### 2.10 售后申请（已实现，实际路径前缀为 /api）
 
@@ -315,6 +316,7 @@
 | ---- | ---- | ---- |
 | POST | `/api/aftersale` | 发起 `{orderNo, reason(≤500字)}`（41703 订单不可售后 / 41702 已有进行中） |
 | GET | `/api/aftersale?orderNo=` | 查订单当前售后（本人，最新一条；无则 `data:null`） |
+| GET | `/api/aftersale/list?page=&pageSize=` | 我的售后单列表（分页 id 倒序，size≤50 默认 10） |
 | POST | `/api/aftersale/:afterSaleNo/cancel` | 撤销（仅本人待审核单；41701 不存在/越权 / 41704 状态不允许） |
 
 售后单状态：`1待审核 2已同意 3已拒绝 4已撤销`（`statusText` 同步返回）。
@@ -328,6 +330,7 @@
 | GET | `/api/notify/tmpl` | 返回双端模板 ID 配置 `{miniTmplCsReply, miniTmplOrder, h5TmplCsReply, h5TmplOrder}`（未配置为空串） |
 | GET | `/api/notify/list?page=&pageSize=` | 站内消息中心：分页 `id DESC` + `unread` 未读数；`scene` 1客服回复/2订单/3优惠券，`readAt` 空即未读 |
 | POST | `/api/notify/read` | 全部已读（未读行 `read_at=now`） |
+| POST | `/api/notify/:id/read` | 单条已读（幂等；非本人/不存在返回 40400） |
 
 > 小程序端必须在**用户点击回调内同步**调用 `wx.requestSubscribeMessage`（Taro 同名 API）订阅，模板 ID 从本接口预取（进入页面时缓存）；H5 端公众号模板消息无需订阅动作。已支付订单超过 `Trade.AutoConfirmDays`（默认 7 天，配置 ≤0 关闭）天未确认将自动完成并产生「订单已确认完成」通知。
 
@@ -422,6 +425,7 @@
 | ---- | ---- | ---- |
 | GET | `/api/admin/reviews?cursor=&limit=` | 全量评价（含隐藏，游标 id 倒序） |
 | PUT | `/api/admin/reviews/:id/status` | 显示/隐藏 `{status: 1显示 0隐藏}` |
+| POST | `/api/admin/reviews/:id/reply` | 官方回复 `{reply}`（≤200 字，可重复提交覆盖，`replied_at` 刷新） |
 | DELETE | `/api/admin/reviews/:id` | 删除违规评价 |
 
 ### 3.10 售后管理（已实现，实际路径前缀为 /api/admin）
@@ -432,6 +436,18 @@
 | POST | `/api/admin/aftersales/:afterSaleNo/audit` | 审核 `{agree, amount?, note?}`：同意可调退款金额（默认申请金额，≤实付）；**拒绝时 note 必填**；41705 审核冲突（已被并发处理/撤销） |
 
 > 同意即触发原路退款（demo/微信见支付模块）；退款失败自动回滚审核状态为待审核，可修正后重试。
+
+### 3.11 Banner 运营位管理（已实现，实际路径前缀为 /api/admin）
+
+首页运营位（`pet_banner`，迁移 010）：管理端配置，`GET /api/home` 数据驱动下发（仅上架，`sort ASC`）。`jump_type` 白名单：`me / recommend / coupon / orders / notify / favorites / product / category / search / custom`；`target` 仅 product（商品 ID）/ category（分类 ID）/ search（关键词）/ custom（`/pages/` 前缀路径）时有效。
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/banners?page=&pageSize=` | 列表（含下架，id 倒序） |
+| POST | `/api/admin/banners` | 新建 `{title(≤32必填), subTitle?, icon?, jumpType(白名单), target?, sort?, status?}` |
+| PUT | `/api/admin/banners/:id` | 编辑（可覆盖更新） |
+| PUT | `/api/admin/banners/:id/status` | 上架/下架 `{status: 1/0}` |
+| DELETE | `/api/admin/banners/:id` | 删除 |
 
 ---
 

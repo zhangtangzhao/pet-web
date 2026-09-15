@@ -23,23 +23,25 @@
 
 - 手机号 + 短信验证码登录，微信授权登录（小程序 code2session / 公众号 H5 OAuth2，unionid 归并）
 - 宠物商品列表 / 详情（图片轮播 + 视频播放 + 宠物档案：品种、年龄、疫苗等）
-- 分类 / 品种浏览，收藏与取消收藏
+- 分类 / 品种浏览，收藏与取消收藏；商品搜索列表页（关键词 + 分类 + 排序）
 - 确认下单（增值服务加购、优惠券选择、金额明细实时计算）
 - 领券中心 / 我的优惠券（可用、锁定、已使用、已过期状态一目了然）
 - 我的订单（去支付 / 确认收货 / 申请售后 / 撤销售后 / 去评价）
-- 订单评价体系：一单一评（星级 + 文字 + 图片），详情页评分摘要与全部评价弹层
+- 「我的」个人中心：我的评价 / 我的售后 / 我的优惠券 / 收藏 / 消息等统一入口 + 退出登录
+- 订单评价体系：一单一评（星级 + 文字 + 图片），详情页评分摘要与全部评价弹层，商家回复展示
 - 售后申请：已支付 / 已完成订单可发起退款（默认全额原路退回），进度与平台备注可见
 - 人工客服实时聊天（文本 / 图片，WebSocket 推送 + 弱网自动重连、断线消息补拉）
 - 微信订阅消息 / 公众号模板消息通知（客服回复 + 退款到账 / 关单 / 售后结果）
-- 站内消息中心：通知列表（未读角标 / 全部已读）、优惠券到期自动提醒（3 天内到期恰好提醒一次）
+- 站内消息中心：通知列表（未读角标 / 单条已读 / 全部已读 / 下拉刷新）、优惠券到期自动提醒（3 天内到期恰好提醒一次）
 
 **平台管理端（PC，React 18 + Ant Design 5）**
 
 - 图形验证码登录，双端独立 JWT（30 分钟自动刷新轮换）
 - 数据看板（在售 / 今日订单 / 今日 GMV / 会员数）
 - 商品 CRUD（上下架、锁定 / 售出状态管控）、分类 / 品种管理
+- 首页 Banner 运营位管理（跳转类型白名单 + 参数联动输入，移动端首页数据驱动渲染）
 - 订单管理（详情含优惠明细、退款）、会员管理（启用 / 禁用）
-- 售后管理（状态筛选、审核同意可调退款金额 / 拒绝须备注）、评价管理（隐藏 / 删除违规评价）
+- 售后管理（状态筛选、审核同意可调退款金额 / 拒绝须备注）、评价管理（隐藏 / 删除违规评价 / 官方回复）
 - AI 知识库维护、营销管理（优惠券模板 / 增值服务 / 定向发放）
 - 人工客服工作台（公共会话池、未读角标、双向实时收发、结束 / 自动重开会话）
 
@@ -97,6 +99,8 @@ psql -U pet -d pet -f scripts/sql/005_chat.up.sql
 psql -U pet -d pet -f scripts/sql/006_review.up.sql
 psql -U pet -d pet -f scripts/sql/007_after_sale.up.sql
 psql -U pet -d pet -f scripts/sql/008_notify.up.sql
+psql -U pet -d pet -f scripts/sql/010_banner.up.sql
+psql -U pet -d pet -f scripts/sql/011_review_reply.up.sql
 
 # 2. 后端（配置 backend/etc/pet-api.yaml，dev 模板开箱即用）→ :8888
 cd backend && go run .
@@ -123,7 +127,7 @@ cp .env.example .env                                  # 填入全部密钥（勿
 docker compose up -d --build
 
 # 初始化数据库
-for f in 001_init 002_seed 003_ai_knowledge 004_marketing 005_chat 006_review 007_after_sale 008_notify; do
+for f in 001_init 002_seed 003_ai_knowledge 004_marketing 005_chat 006_review 007_after_sale 008_notify 010_banner 011_review_reply; do
   docker exec -i $(docker compose ps -q postgres) \
     psql -U pet -d pet -v ON_ERROR_STOP=1 < ../sql/$f.up.sql
 done
@@ -174,7 +178,7 @@ pet/
 | ---- | ---- |
 | [01-技术选型](docs/01-技术选型.md) | Go vs Java、Taro vs uni-app 评估结论与依赖清单 |
 | [02-系统架构](docs/02-系统架构.md) | 总体架构图、登录/支付时序图、订单状态机、部署架构 |
-| [03-数据库设计](docs/03-数据库设计.md) | ER 图、20 张表 DDL（商品/交易/AI 知识库/营销/客服/评价/售后/通知）、防超卖事务、索引策略 |
+| [03-数据库设计](docs/03-数据库设计.md) | ER 图、21 张表 DDL（商品/交易/AI 知识库/营销/客服/评价/售后/通知/运营位）、防超卖事务、索引策略 |
 | [04-API接口设计](docs/04-API接口设计.md) | 路由域、错误码、用户端/平台端全量接口、订阅消息说明、安全清单 |
 | [05-前端设计](docs/05-前端设计.md) | Monorepo 结构、页面信息架构、UI 设计 Token |
 

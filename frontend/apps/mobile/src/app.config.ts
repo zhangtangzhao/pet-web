@@ -2,6 +2,10 @@ export default defineAppConfig({
   pages: [
     'pages/index/index',
     'pages/detail/index',
+    'pages/list/index',
+    'pages/me/index',
+    'pages/my-reviews/index',
+    'pages/my-aftersales/index',
     'pages/ai-chat/index',
     'pages/recommend/index',
     'pages/service-chat/index',

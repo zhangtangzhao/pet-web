@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Text, View } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { get, getToken, post } from '../../request'
 import { NotifyListResp, NotifyView } from '../../types'
 import './index.css'
@@ -45,6 +45,10 @@ export default function NotifyPage() {
     load(next, true)
   }
 
+  usePullDownRefresh(() => {
+    load(1, false).finally(() => Taro.stopPullDownRefresh())
+  })
+
   const readAll = () => {
     if (unread === 0) return
     post('/notify/read')
@@ -57,6 +61,12 @@ export default function NotifyPage() {
   }
 
   const open = (n: NotifyView) => {
+    if (!n.readAt) {
+      // 乐观更新：先消红点，失败回滚重查
+      setList((prev) => prev.map((x) => (x.id === n.id ? { ...x, readAt: x.readAt || 'now' } : x)))
+      setUnread((u) => Math.max(0, u - 1))
+      post(`/notify/${n.id}/read`).catch(() => load(1, false))
+    }
     if (n.orderNo) Taro.navigateTo({ url: '/pages/orders/index' }).catch(() => {})
   }
 

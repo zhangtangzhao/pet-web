@@ -83,6 +83,23 @@ func OrderReview(sc *svc.ServiceContext) http.HandlerFunc {
 	})
 }
 
+// MemberReviews GET /api/member/reviews —— 我的评价列表（本人，含被隐藏的）
+func MemberReviews(sc *svc.ServiceContext) http.HandlerFunc {
+	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.ReviewListReq
+		if err := httpx.ParseForm(r, &req); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		resp, err := review.ListByMember(sc, memberID(r), req.Cursor, req.Limit)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}
+
 // ─────────────────────────── 平台端 ───────────────────────────
 
 // AdminReviews GET /api/admin/reviews —— 评价列表（含隐藏）
@@ -116,6 +133,27 @@ func AdminReviewStatus(sc *svc.ServiceContext) http.HandlerFunc {
 			return
 		}
 		if err := review.AdminSetStatus(sc, id, req.Status); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+// AdminReviewReply POST /api/admin/reviews/:id/reply —— 官方回复（可覆盖更新）
+func AdminReviewReply(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		id, err := parseCsPath(r)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		var req types.ReviewReplyReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := review.AdminReply(sc, id, req.Reply); err != nil {
 			common.Err(w, err)
 			return
 		}

@@ -18,6 +18,7 @@ import (
 const (
 	maxContentRunes = 500
 	maxImages       = 9
+	maxReplyRunes   = 200
 	defaultLimit    = 10
 	maxLimit        = 50
 )
@@ -31,7 +32,7 @@ type reviewRow struct {
 func view(r reviewRow) types.ReviewView {
 	images := []string{}
 	_ = json.Unmarshal([]byte(r.Images), &images)
-	return types.ReviewView{
+	v := types.ReviewView{
 		ID:           strconvI64(r.ID),
 		OrderNo:      r.OrderNo,
 		MemberID:     strconvI64(r.MemberID),
@@ -44,7 +45,12 @@ func view(r reviewRow) types.ReviewView {
 		Images:       images,
 		Status:       r.Status,
 		CreatedAt:    r.CreatedAt.Format(time.RFC3339),
+		Reply:        r.Reply,
 	}
+	if r.RepliedAt != nil {
+		v.RepliedAt = r.RepliedAt.Format(time.RFC3339)
+	}
+	return v
 }
 
 // Create 会员提交评价：订单归属 + 已完成 + 未评过 + 内容校验
@@ -134,6 +140,24 @@ func ListByProduct(sc *svc.ServiceContext, productID int64, cursor string, limit
 	return &types.ReviewListResp{List: list, HasMore: hasMore}, nil
 }
 
+// ListByMember 我的评价列表（本人全部，含被隐藏的）
+func ListByMember(sc *svc.ServiceContext, memberID int64, cursor string, limit int) (*types.ReviewListResp, error) {
+	limit = normLimit(limit)
+	q := sc.DB.Table("order_review r").
+		Select("r.*, m.nickname AS nickname, m.avatar AS avatar").
+		Joins("LEFT JOIN member m ON m.id = r.member_id").
+		Where("r.member_id = ?", memberID)
+	rows, hasMore, err := pageRows(q, cursor, limit)
+	if err != nil {
+		return nil, err
+	}
+	list := make([]types.ReviewView, 0, len(rows))
+	for _, r := range rows {
+		list = append(list, view(r))
+	}
+	return &types.ReviewListResp{List: list, HasMore: hasMore}, nil
+}
+
 // ProductReviewSummary 详情页评价摘要（评分均值 + 总数 + 最新 3 条）
 func ProductReviewSummary(sc *svc.ServiceContext, productID int64) (*types.ReviewSummaryResp, error) {
 	var agg struct {
@@ -185,6 +209,23 @@ func AdminSetStatus(sc *svc.ServiceContext, id int64, status int) error {
 		return common.ErrParam
 	}
 	res := sc.DB.Model(&model.OrderReview{}).Where("id = ?", id).Update("status", status)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return common.ErrNotFound
+	}
+	return nil
+}
+
+// AdminReply 平台端官方回复（可重复调用覆盖，replied_at 刷新）
+func AdminReply(sc *svc.ServiceContext, id int64, reply string) error {
+	reply = trimSpace(reply)
+	if reply == "" || utf8.RuneCountInString(reply) > maxReplyRunes {
+		return common.ErrParam
+	}
+	res := sc.DB.Model(&model.OrderReview{}).Where("id = ?", id).
+		Updates(map[string]any{"reply": reply, "replied_at": time.Now()})
 	if res.Error != nil {
 		return res.Error
 	}

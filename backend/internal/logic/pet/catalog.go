@@ -3,6 +3,8 @@ package pet
 import (
 	"strconv"
 
+	"github.com/zeromicro/go-zero/core/logx"
+
 	"pet/backend/internal/common"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
@@ -77,7 +79,7 @@ func Breeds(sc *svc.ServiceContext, categoryID string) ([]types.BreedItem, error
 	return list, nil
 }
 
-// Home 首页聚合：分类入口 + 热销推荐（轮播位一期由 Home 硬编码占位，后台配置二期）
+// Home 首页聚合：运营位 banner + 分类入口 + 热销推荐
 func Home(sc *svc.ServiceContext) (*types.HomeResp, error) {
 	cats, err := Categories(sc)
 	if err != nil {
@@ -92,5 +94,11 @@ func Home(sc *svc.ServiceContext) (*types.HomeResp, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &types.HomeResp{Categories: cats, Hot: hot}, nil
+	// banner 读取失败不阻塞首页
+	banners, err := ListBanners(sc)
+	if err != nil {
+		logx.Errorf("home banners: %v", err)
+		banners = []types.BannerView{}
+	}
+	return &types.HomeResp{Categories: cats, Hot: hot, Banners: banners}, nil
 }

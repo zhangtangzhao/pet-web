@@ -18,9 +18,22 @@ export interface ProductCard {
   status: number
 }
 
+export interface BannerView {
+  id: string
+  title: string
+  subTitle: string
+  icon: string // emoji 或图片 URL
+  jumpType: string
+  target: string
+  sort: number
+  status: number
+  createdAt: string
+}
+
 export interface HomeResp {
   categories: CategoryItem[]
   hot: ProductCard[]
+  banners?: BannerView[]
 }
 
 export interface PetProfile {
@@ -209,6 +222,8 @@ export interface ReviewView {
   images: string[]
   status: number
   createdAt: string
+  reply?: string // 商家回复
+  repliedAt?: string
 }
 
 export interface ReviewListResp {

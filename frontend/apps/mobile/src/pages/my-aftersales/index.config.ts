@@ -1,0 +1,4 @@
+export default definePageConfig({
+  navigationBarTitleText: '我的售后',
+  enablePullDownRefresh: true,
+})

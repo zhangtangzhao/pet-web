@@ -59,6 +59,7 @@ type MemberInfo struct {
 	Gender    int    `json:"gender"`
 	HasWxBind bool   `json:"hasWxBind"`
 	IsNew     bool   `json:"isNew"`
+	CreatedAt string `json:"createdAt"`
 }
 
 type LoginResp struct {
@@ -156,6 +157,40 @@ type FavoriteListReq struct {
 type HomeResp struct {
 	Categories []CategoryItem `json:"categories"`
 	Hot        []ProductCard  `json:"hot"`
+	Banners    []BannerView   `json:"banners"`
+}
+
+// ─────────────────────────── 运营位 banner ───────────────────────────
+
+type BannerView struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	SubTitle  string `json:"subTitle"`
+	Icon      string `json:"icon"`
+	JumpType  string `json:"jumpType"`
+	Target    string `json:"target"`
+	Sort      int    `json:"sort"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type BannerUpsertReq struct {
+	ID       string `json:"id,optional"`
+	Title    string `json:"title"`
+	SubTitle string `json:"subTitle,optional"`
+	Icon     string `json:"icon,optional"`
+	JumpType string `json:"jumpType"`
+	Target   string `json:"target,optional"`
+	Sort     int    `json:"sort,optional"`
+	Status   int    `json:"status,optional"`
+}
+
+type BannerListReq struct {
+	PageReq
+}
+
+type BannerStatusReq struct {
+	Status int `json:"status"`
 }
 
 // ─────────────────────────── 用户端 · 订单支付 ───────────────────────────
@@ -642,6 +677,8 @@ type ReviewView struct {
 	Images       []string `json:"images"`
 	Status       int      `json:"status"`
 	CreatedAt    string   `json:"createdAt"`
+	Reply        string   `json:"reply"`
+	RepliedAt    string   `json:"repliedAt,optional"`
 }
 
 type ReviewListReq struct {
@@ -662,6 +699,10 @@ type ReviewSummaryResp struct {
 
 type ReviewStatusReq struct {
 	Status int `json:"status"`
+}
+
+type ReviewReplyReq struct {
+	Reply string `json:"reply"`
 }
 
 // ─────────────────────────── 售后 ───────────────────────────

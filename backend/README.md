@@ -31,13 +31,13 @@ backend/
     │   ├── auth/       # 短信 / 微信登录，双端独立 JWT + RefreshToken 轮换
     │   ├── pet/        # 分类 / 品种 / 商品 / 收藏 / 首页
     │   ├── trade/      # 下单防超卖、微信支付 V3、回调幂等、超时关单、退款
-    │   ├── marketing/  # 优惠券（满减/折扣/立减）、增值服务、金额计算
+    │   ├── marketing/  # 优惠券（满减/折扣/立减）、增值服务、金额计算、首页 Banner 运营位管理
     │   ├── ai/         # AI 问宠（知识库 RAG + 档案增强、频控）+ 智能选宠推荐（LLM 结构化推荐，未配置降级规则打分）
     │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 图形验证码
     │   ├── chat/       # 人工客服：会话 / 消息 / 未读 / 已读，发送走 REST、WS 仅推送
-    │   ├── review/     # 订单评价：一单一评（仅已完成单）、公开列表 / 评分摘要、管理端隐藏 / 删除
-    │   ├── aftersale/  # 售后：申请（默认全额）/ 撤销 / 审核（CAS + 可调金额退款，失败自动回滚重审）
-    │   └── notify/     # 通知：微信投递队列（客服回复/订单事件，biz_key 幂等、失败重试、未配置模板降级）+ 站内消息中心列表 / 全部已读
+    │   ├── review/     # 订单评价：一单一评（仅已完成单）、公开列表 / 评分摘要 / 我的评价、管理端隐藏 / 删除 / 官方回复
+    │   ├── aftersale/  # 售后：申请（默认全额）/ 我的售后列表 / 撤销 / 审核（CAS + 可调金额退款，失败自动回滚重审）
+    │   └── notify/     # 通知：微信投递队列（客服回复/订单事件，biz_key 幂等、失败重试、未配置模板降级）+ 站内消息中心列表 / 单条已读 / 全部已读
     ├── hub/            # 客服 WebSocket 连接注册表：多端推送、心跳判死（30s 预警 + 30s 宽限）
     ├── middleware/     # JWT 鉴权等中间件
     ├── model/          # GORM 模型（表结构见 scripts/sql）
@@ -66,7 +66,7 @@ flowchart LR
 依赖：Go 1.25+、PostgreSQL 16、Redis 7（默认连 `127.0.0.1:5432` / `127.0.0.1:6379`，可在 `etc/pet-api.yaml` 调整）。
 
 ```bash
-# 1. 初始化数据库（在仓库根执行，共 8 个迁移）
+# 1. 初始化数据库（在仓库根执行，共 10 个迁移）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
@@ -75,6 +75,8 @@ psql -U pet -d pet -f scripts/sql/005_chat.up.sql
 psql -U pet -d pet -f scripts/sql/006_review.up.sql
 psql -U pet -d pet -f scripts/sql/007_after_sale.up.sql
 psql -U pet -d pet -f scripts/sql/008_notify.up.sql
+psql -U pet -d pet -f scripts/sql/010_banner.up.sql
+psql -U pet -d pet -f scripts/sql/011_review_reply.up.sql
 
 # 2. 运行（默认读取 etc/pet-api.yaml，监听 :8888）
 go run .

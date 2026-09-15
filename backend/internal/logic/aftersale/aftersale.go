@@ -99,17 +99,29 @@ func Cancel(sc *svc.ServiceContext, memberID int64, afterSaleNo string) error {
 	return nil
 }
 
-// MyList 我的售后单列表
-func MyList(sc *svc.ServiceContext, memberID int64) ([]types.AfterSaleView, error) {
+// MyList 我的售后单列表（分页）
+func MyList(sc *svc.ServiceContext, memberID int64, pageReq types.PageReq) (*types.PageResp, error) {
+	page, size := pageReq.Page, pageReq.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 || size > 50 {
+		size = 10
+	}
+	q := sc.DB.Model(&model.AfterSale{}).Where("member_id = ?", memberID)
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, err
+	}
 	var rows []model.AfterSale
-	if err := sc.DB.Where("member_id = ?", memberID).Order("id DESC").Limit(100).Find(&rows).Error; err != nil {
+	if err := q.Order("id DESC").Offset((page - 1) * size).Limit(size).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	list := make([]types.AfterSaleView, 0, len(rows))
 	for _, r := range rows {
 		list = append(list, *view(r, "", ""))
 	}
-	return list, nil
+	return &types.PageResp{Total: total, List: list}, nil
 }
 
 // GetByOrder 查询订单的售后单（本人，取最新一条）
