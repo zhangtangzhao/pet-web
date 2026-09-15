@@ -50,8 +50,13 @@ COS:
 Notify:
   MiniTmplCsReply: ""
   MiniTmplOrder: ""
+  MiniTmplCoupon: ""
   H5TmplCsReply: ""
   H5TmplOrder: ""
+  H5TmplCoupon: ""
+
+Trade:
+  AutoConfirmDays: 7 # 已支付订单 N 天后自动确认完成；≤0 关闭
 
 Log:
   ServiceName: pet-api

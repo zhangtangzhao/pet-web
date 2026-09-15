@@ -7,7 +7,8 @@ import (
 // 通知场景
 const (
 	NotifySceneCsReply = 1 // 客服回复（离线提醒）
-	NotifySceneOrder   = 2 // 订单状态（退款到账/超时关单/售后结果）
+	NotifySceneOrder   = 2 // 订单状态（退款到账/超时关单/售后结果/自动确认）
+	NotifySceneCoupon  = 3 // 优惠券提醒（到期提醒）
 )
 
 // 投递状态
@@ -26,18 +27,19 @@ const (
 )
 
 type Notification struct {
-	ID        int64     `gorm:"primaryKey" json:"id"`
-	MemberID  int64     `json:"memberId"`
-	Scene     int       `json:"scene"`
-	BizKey    string    `json:"bizKey"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	OrderNo   string    `json:"orderNo"`
-	Status    int       `json:"status"`
-	Retry     int       `json:"retry"`
-	Channel   int       `json:"channel"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID        int64      `gorm:"primaryKey" json:"id"`
+	MemberID  int64      `json:"memberId"`
+	Scene     int        `json:"scene"`
+	BizKey    string     `json:"bizKey"`
+	Title     string     `json:"title"`
+	Content   string     `json:"content"`
+	OrderNo   string     `json:"orderNo"`
+	Status    int        `json:"status"`
+	Retry     int        `json:"retry"`
+	Channel   int        `json:"channel"`
+	ReadAt    *time.Time `json:"readAt"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
 }
 
 func (Notification) TableName() string { return "notification" }

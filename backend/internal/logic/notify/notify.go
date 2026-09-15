@@ -112,6 +112,8 @@ func deliver(ctx context.Context, sc *svc.ServiceContext, n *model.Notification)
 	miniTmpl, h5Tmpl := cfg.MiniTmplOrder, cfg.H5TmplOrder
 	if n.Scene == model.NotifySceneCsReply {
 		miniTmpl, h5Tmpl = cfg.MiniTmplCsReply, cfg.H5TmplCsReply
+	} else if n.Scene == model.NotifySceneCoupon {
+		miniTmpl, h5Tmpl = cfg.MiniTmplCoupon, cfg.H5TmplCoupon
 	}
 	if miniTmpl == "" && h5Tmpl == "" {
 		logx.Infof("notify: 模板未配置，降级落库 bizKey=%s scene=%d", n.BizKey, n.Scene)

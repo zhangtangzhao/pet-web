@@ -700,3 +700,18 @@ type NotifyTmplResp struct {
 	H5TmplCsReply   string `json:"h5TmplCsReply"`
 	H5TmplOrder     string `json:"h5TmplOrder"`
 }
+
+type NotifyView struct {
+	ID        string `json:"id"` // 字符串 ID，避免 JS 精度丢失
+	Scene     int    `json:"scene"` // 1客服回复 2订单 3优惠券
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	OrderNo   string `json:"orderNo"`
+	ReadAt    string `json:"readAt,optional"` // 空=未读
+	CreatedAt string `json:"createdAt"`
+}
+
+type NotifyListResp struct {
+	PageResp
+	Unread int `json:"unread"`
+}

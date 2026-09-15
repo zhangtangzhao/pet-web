@@ -11,6 +11,7 @@ import (
 	"pet/backend/internal/common"
 	"pet/backend/internal/config"
 	"pet/backend/internal/handler"
+	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/logic/trade"
 	"pet/backend/internal/svc"
@@ -42,6 +43,9 @@ func main() {
 
 	// 微信通知投递器（客服回复离线提醒 + 订单事件，每 10s 扫描）
 	go notify.StartNotifier(context.Background(), ctx)
+
+	// 优惠券到期提醒（启动即跑一轮，之后每 30 分钟）
+	go marketing.StartCouponReminders(context.Background(), ctx)
 
 	logx.Infof("pet-api 启动于 %s:%d (mode=%s)", c.Host, c.Port, c.Mode)
 	server.Start()

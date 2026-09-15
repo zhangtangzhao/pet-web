@@ -84,11 +84,51 @@ func CloseExpiredOrders(sc *svc.ServiceContext) {
 	}
 }
 
-// StartOrderCloser 启动超时关单定时任务（每分钟）
+// AutoConfirmOrders 扫描超时未确认的已支付订单，自动确认完成（镜像用户侧 ConfirmOrder 的 CAS，无 member 条件）
+func AutoConfirmOrders(sc *svc.ServiceContext) {
+	days := sc.Config.Trade.AutoConfirmDays
+	if days <= 0 {
+		return // ≤0 关闭
+	}
+	cutoff := time.Now().AddDate(0, 0, -days)
+	var orders []model.Order
+	if err := sc.DB.Where("status = ? AND paid_at < ?", model.OrderPaid, cutoff).
+		Limit(200).Find(&orders).Error; err != nil {
+		logx.Errorf("扫描待自动确认订单失败: %v", err)
+		return
+	}
+	for i := range orders {
+		now := time.Now()
+		res := sc.DB.Model(&model.Order{}).
+			Where("id = ? AND status = ?", orders[i].ID, model.OrderPaid).
+			Updates(map[string]any{
+				"status":       model.OrderCompleted,
+				"completed_at": &now,
+				"updated_at":   now,
+			})
+		if res.Error != nil {
+			logx.Errorf("自动确认订单 %s 失败: %v", orders[i].OrderNo, res.Error)
+			continue
+		}
+		if res.RowsAffected == 0 {
+			continue // 状态已流转（并发/幂等）
+		}
+		logx.Infof("订单 %s 超过 %d 天未确认，自动完成", orders[i].OrderNo, days)
+		if err := notify.Enqueue(sc, orders[i].MemberID, model.NotifySceneOrder,
+			"confirm:"+orders[i].OrderNo, "订单已确认完成", "订单已自动确认完成", orders[i].OrderNo); err != nil {
+			logx.Errorf("自动确认通知入队失败 orderNo=%s: %v", orders[i].OrderNo, err)
+		}
+	}
+}
+
+// StartOrderCloser 启动交易定时任务（每分钟）：启动即跑一轮，之后超时关单 + 自动确认收货
 func StartOrderCloser(sc *svc.ServiceContext) {
+	CloseExpiredOrders(sc)
+	AutoConfirmOrders(sc)
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	for range ticker.C {
 		CloseExpiredOrders(sc)
+		AutoConfirmOrders(sc)
 	}
 }

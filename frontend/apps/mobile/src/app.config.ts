@@ -8,6 +8,7 @@ export default defineAppConfig({
     'pages/orders/index',
     'pages/order-review/index',
     'pages/after-sale/index',
+    'pages/notify/index',
     'pages/coupon-center/index',
     'pages/favorites/index',
     'pages/login/index',

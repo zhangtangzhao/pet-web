@@ -23,6 +23,7 @@ export default function Home() {
   const goDetail = (p: ProductCard) => Taro.navigateTo({ url: `/pages/detail/index?id=${p.id}` })
   const goCoupons = () => Taro.navigateTo({ url: '/pages/coupon-center/index' })
   const goOrders = () => Taro.navigateTo({ url: '/pages/orders/index' })
+  const goNotify = () => Taro.navigateTo({ url: '/pages/notify/index' })
 
   return (
     <View className='home'>
@@ -37,6 +38,11 @@ export default function Home() {
         <View className='banner-coupon' onClick={goOrders}>
           <Text className='banner-coupon-icon'>📦</Text>
           <Text>我的订单 · 支付/收货/评价/售后</Text>
+          <Text className='banner-coupon-arrow'>→</Text>
+        </View>
+        <View className='banner-coupon' onClick={goNotify}>
+          <Text className='banner-coupon-icon'>🔔</Text>
+          <Text>消息中心 · 订单/客服/优惠券提醒</Text>
           <Text className='banner-coupon-arrow'>→</Text>
         </View>
       </View>

@@ -3,7 +3,10 @@ package handler
 import (
 	"net/http"
 
+	"github.com/zeromicro/go-zero/rest/httpx"
+
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
 )
@@ -18,5 +21,33 @@ func NotifyTmpl(sc *svc.ServiceContext) http.HandlerFunc {
 			H5TmplCsReply:   c.H5TmplCsReply,
 			H5TmplOrder:     c.H5TmplOrder,
 		})
+	})
+}
+
+// NotifyList GET /api/notify/list —— 站内消息中心列表（分页 + 未读数）
+func NotifyList(sc *svc.ServiceContext) http.HandlerFunc {
+	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.PageReq
+		if err := httpx.ParseForm(r, &req); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		resp, err := notify.List(sc, memberID(r), &req)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}
+
+// NotifyRead POST /api/notify/read —— 全部已读
+func NotifyRead(sc *svc.ServiceContext) http.HandlerFunc {
+	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		if err := notify.ReadAll(sc, memberID(r)); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
 	})
 }

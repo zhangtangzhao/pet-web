@@ -77,8 +77,14 @@ type Config struct {
 	Notify struct {
 		MiniTmplCsReply string `json:",optional"`
 		MiniTmplOrder   string `json:",optional"`
+		MiniTmplCoupon  string `json:",optional"`
 		H5TmplCsReply   string `json:",optional"`
 		H5TmplOrder     string `json:",optional"`
+		H5TmplCoupon    string `json:",optional"`
+	}
+
+	Trade struct {
+		AutoConfirmDays int `json:",default=7"` // 已支付订单 N 天后自动确认完成；≤0 关闭
 	}
 }
 

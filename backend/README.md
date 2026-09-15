@@ -20,7 +20,7 @@ Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时�
 
 ```
 backend/
-├── pet.go              # 入口：加载配置（支持 ${ENV} 占位展开）、雪花初始化、注册路由、启动超时关单扫描 + 通知投递器
+├── pet.go              # 入口：加载配置（支持 ${ENV} 占位展开）、雪花初始化、注册路由、启动交易定时任务 + 通知投递器 + 券到期提醒
 ├── etc/
 │   ├── pet-api.yaml    # 本地开发配置（明文 dev 值）
 │   └── pet-api.test.yaml
@@ -37,7 +37,7 @@ backend/
     │   ├── chat/       # 人工客服：会话 / 消息 / 未读 / 已读，发送走 REST、WS 仅推送
     │   ├── review/     # 订单评价：一单一评（仅已完成单）、公开列表 / 评分摘要、管理端隐藏 / 删除
     │   ├── aftersale/  # 售后：申请（默认全额）/ 撤销 / 审核（CAS + 可调金额退款，失败自动回滚重审）
-    │   └── notify/     # 微信通知投递队列：客服回复（离线）+ 订单事件，biz_key 幂等、失败重试、未配置模板降级
+    │   └── notify/     # 通知：微信投递队列（客服回复/订单事件，biz_key 幂等、失败重试、未配置模板降级）+ 站内消息中心列表 / 全部已读
     ├── hub/            # 客服 WebSocket 连接注册表：多端推送、心跳判死（30s 预警 + 30s 宽限）
     ├── middleware/     # JWT 鉴权等中间件
     ├── model/          # GORM 模型（表结构见 scripts/sql）
@@ -59,7 +59,7 @@ flowchart LR
     L --> AI["OpenAI 兼容大模型"]
 ```
 
-后台任务：`trade.StartOrderCloser` 每分钟扫描超时未支付订单，事务内关单并回滚库存与优惠券；`notify.StartNotifier` 每 10s 扫描通知投递队列（`FOR UPDATE SKIP LOCKED` 单行取件，多实例不重复投递）。
+后台任务：`trade.StartOrderCloser` 启动即跑一轮、此后每分钟扫描超时未支付订单（事务内关单并回滚库存与优惠券）与超时未确认订单（CAS 自动完成，`Trade.AutoConfirmDays` ≤0 关闭）；`notify.StartNotifier` 每 10s 扫描通知投递队列（`FOR UPDATE SKIP LOCKED` 单行取件，多实例不重复投递）；`marketing.StartCouponReminders` 启动即跑一轮、此后每 30 分钟把 3 天内到期的可用券入通知队列（biz_key 恰好一次）并批量置已过期的可用券为过期。
 
 ## 本地开发
 

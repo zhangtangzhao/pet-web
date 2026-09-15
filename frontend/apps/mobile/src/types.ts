@@ -243,3 +243,17 @@ export interface NotifyTmplResp {
   h5TmplCsReply: string
   h5TmplOrder: string
 }
+
+export interface NotifyView {
+  id: string
+  scene: number // 1客服回复 2订单 3优惠券
+  title: string
+  content: string
+  orderNo: string
+  readAt: string // 空=未读
+  createdAt: string
+}
+
+export interface NotifyListResp extends PageResp<NotifyView> {
+  unread: number
+}

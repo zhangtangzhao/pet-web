@@ -65,6 +65,8 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/007_after_sale.down.sql](sql/007_after_sale.down.sql) | 回滚售后表 |
 | [sql/008_notify.up.sql](sql/008_notify.up.sql) | 通知投递队列 notification（biz_key 幂等唯一 + 待投递部分索引） |
 | [sql/008_notify.down.sql](sql/008_notify.down.sql) | 回滚通知表 |
+| [sql/009_notify_read.up.sql](sql/009_notify_read.up.sql) | 站内消息中心：notification 加 read_at 已读列 + 未读部分索引 |
+| [sql/009_notify_read.down.sql](sql/009_notify_read.down.sql) | 回滚已读列与未读索引 |
 
 说明：
 
