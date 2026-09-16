@@ -93,6 +93,7 @@ type Order struct {
 	TailExpireAt   *time.Time      `json:"tailExpireAt"`                            // 尾款补款截止（付定金起 N 天）
 	FlashSaleID    int64           `json:"flashSaleId"`                             // 命中的秒杀活动，0=无
 	GuaranteeDays  int             `json:"guaranteeDays"`                           // 健康保障天数快照
+	LevelDiscount  decimal.Decimal `gorm:"type:numeric(10,2)" json:"levelDiscount"` // 等级折扣优惠金额快照
 	ContactName    string          `json:"contactName"`
 	ContactPhone   string          `json:"contactPhone"`
 	Remark         string          `json:"remark"`

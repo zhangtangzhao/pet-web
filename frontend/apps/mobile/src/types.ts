@@ -119,6 +119,7 @@ export interface OrderView {
   depositAmount?: string // 定金，0=非定金单
   tailExpireAt?: string // 尾款截止
   guaranteeDays?: number // 健康保障天数，0=无
+  levelDiscount?: string // 会员等级优惠金额
   items: { productId: string; productTitle: string; productImage: string; breedName: string; price: string; quantity: number }[]
 }
 
@@ -365,4 +366,37 @@ export interface RecommendItem {
 export interface AIRecommendResp {
   items: RecommendItem[]
   source: 'ai' | 'rule' // ai=大模型推荐 rule=规则打分兜底
+}
+
+// ─────────────────────────── 会员等级 / 搜索增强 / 电子证书 ───────────────────────────
+
+export interface LevelView {
+  growthValue: number
+  level: number
+  levelName: string
+  discount: string // 当前等级折扣率，如 "0.98"
+  nextThreshold: number // 0=已到顶
+  nextDiscount?: string
+}
+
+export interface SearchHotRow {
+  keyword: string
+  score: number
+}
+
+export interface StringListResp {
+  list: string[]
+}
+
+export interface CertView {
+  certNo: string
+  orderNo: string
+  memberMasked: string
+  productTitle: string
+  breedName: string
+  completedAt: string
+  guaranteeDays: number
+  guaranteeEndAt?: string
+  quarantineUrl?: string
+  supplierName?: string
 }

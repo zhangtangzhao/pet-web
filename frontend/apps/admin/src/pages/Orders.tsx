@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Descriptions, Drawer, Form, Input, InputNumber, message, Modal, Popconfirm, Table, Tag } from 'antd'
+import { DownloadOutlined } from '@ant-design/icons'
 import { PageResp } from '../api/client'
-import { deliverOrder, fetchOrders, OrderView, refundOrder, shipOrder } from '../api/admin'
+import { deliverOrder, downloadCSV, fetchOrders, OrderView, refundOrder, shipOrder } from '../api/admin'
 
 const STATUS_TAG: Record<number, string> = {
   10: 'gold',
@@ -190,6 +191,19 @@ export default function Orders() {
           style={{ width: 220 }}
           onSearch={(v) => setQuery({ ...query, page: 1, keyword: v })}
         />
+        <Button
+          icon={<DownloadOutlined />}
+          onClick={async () => {
+            try {
+              await downloadCSV('orders', `pet-orders-${new Date().toISOString().slice(0, 10)}.csv`)
+              message.success('导出成功')
+            } catch (e: any) {
+              message.error(e.message)
+            }
+          }}
+        >
+          导出 CSV
+        </Button>
       </div>
       <Table
         rowKey="orderNo"
@@ -229,7 +243,10 @@ export default function Orders() {
               {detail.guaranteeDays ? (
                 <Descriptions.Item label="健康保障">签收后 {detail.guaranteeDays} 天</Descriptions.Item>
               ) : null}
-              {(Number(detail.serviceFee) > 0 || Number(detail.discountAmount) > 0 || detail.couponInfo) && (
+              {(Number(detail.serviceFee) > 0 ||
+                Number(detail.discountAmount) > 0 ||
+                Number(detail.levelDiscount ?? 0) > 0 ||
+                detail.couponInfo) && (
                 <>
                   <Descriptions.Item label="商品金额">¥{detail.totalAmount}</Descriptions.Item>
                   {Number(detail.serviceFee) > 0 && (
@@ -241,6 +258,11 @@ export default function Orders() {
                         -¥{detail.discountAmount}
                         {detail.couponInfo ? `（${detail.couponInfo}）` : ''}
                       </span>
+                    </Descriptions.Item>
+                  )}
+                  {Number(detail.levelDiscount ?? 0) > 0 && (
+                    <Descriptions.Item label="会员折扣">
+                      <span style={{ color: '#fa541c' }}>-¥{detail.levelDiscount}</span>
                     </Descriptions.Item>
                   )}
                 </>

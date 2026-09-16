@@ -272,6 +272,7 @@ type OrderView struct {
 	DepositAmount   string          `json:"depositAmount"`   // 定金，0=非定金单
 	TailExpireAt    string          `json:"tailExpireAt,optional"`
 	GuaranteeDays   int             `json:"guaranteeDays"` // 健康保障天数快照，0=无
+	LevelDiscount   string          `json:"levelDiscount"` // 等级折扣优惠金额，0=无
 }
 
 type ShipMethodView struct {
@@ -286,8 +287,11 @@ type ShipMethodView struct {
 }
 
 type TradeConfigResp struct {
-	DepositPercent  int `json:"depositPercent"`  // 定金比例（%），0=未开启定金模式
-	DepositHoldDays int `json:"depositHoldDays"` // 尾款补款期限（天）
+	DepositPercent  int    `json:"depositPercent"`  // 定金比例（%），0=未开启定金模式
+	DepositHoldDays int    `json:"depositHoldDays"` // 尾款补款期限（天）
+	MyLevelName     string `json:"myLevelName"`     // 我的等级名（V0-V3）
+	MyDiscount      string `json:"myDiscount"`      // 我的商品折扣率 "1.00"/"0.98"…
+	MyGrowthValue   int64  `json:"myGrowthValue"`   // 我的成长值
 }
 
 type ShipMethodListReq struct {
@@ -385,11 +389,15 @@ type ProductUpsertReq struct {
 	Price         string `json:"price"` // 元，字符串小数
 	OriginalPrice string `json:"originalPrice,optional"`
 	PetProfileUpsert
-	MainImage  string   `json:"mainImage"`
-	Images     []string `json:"images"`
-	VideoURL   string   `json:"videoUrl,optional"`
-	VideoCover string   `json:"videoCover,optional"`
-	DetailHTML string   `json:"detailHtml,optional"`
+	MainImage         string   `json:"mainImage"`
+	Images            []string `json:"images"`
+	VideoURL          string   `json:"videoUrl,optional"`
+	VideoCover        string   `json:"videoCover,optional"`
+	DetailHTML        string   `json:"detailHtml,optional"`
+	SupplierID        string   `json:"supplierId,optional"`
+	QuarantineCertURL string   `json:"quarantineCertUrl,optional"`
+	NextVaccineDate   string   `json:"nextVaccineDate,optional"` // yyyy-MM-dd，疫苗到期提醒
+	NextDewormDate    string   `json:"nextDewormDate,optional"`  // yyyy-MM-dd，驱虫到期提醒
 }
 
 type ProductStatusReq struct {
@@ -422,11 +430,15 @@ type AdminProductDetailResp struct {
 	OriginalPrice string `json:"originalPrice"`
 	Status        int    `json:"status"`
 	PetProfileUpsert
-	MainImage  string   `json:"mainImage"`
-	Images     []string `json:"images"`
-	VideoURL   string   `json:"videoUrl"`
-	VideoCover string   `json:"videoCover"`
-	DetailHTML string   `json:"detailHtml"`
+	MainImage         string   `json:"mainImage"`
+	Images            []string `json:"images"`
+	VideoURL          string   `json:"videoUrl"`
+	VideoCover        string   `json:"videoCover"`
+	DetailHTML        string   `json:"detailHtml"`
+	SupplierID        string   `json:"supplierId"`
+	QuarantineCertURL string   `json:"quarantineCertUrl"`
+	NextVaccineDate   string   `json:"nextVaccineDate,optional"`
+	NextDewormDate    string   `json:"nextDewormDate,optional"`
 }
 
 type UploadTokenReq struct {
@@ -460,15 +472,17 @@ type MemberListReq struct {
 }
 
 type MemberAdminView struct {
-	ID         string `json:"id"`
-	Nickname   string `json:"nickname"`
-	Avatar     string `json:"avatar"`
-	Phone      string `json:"phone"`
-	Gender     int    `json:"gender"`
-	Status     int    `json:"status"`
-	OrderCount int64  `json:"orderCount"`
-	FavCount   int64  `json:"favoriteCount"`
-	CreatedAt  string `json:"createdAt"`
+	ID          string `json:"id"`
+	Nickname    string `json:"nickname"`
+	Avatar      string `json:"avatar"`
+	Phone       string `json:"phone"`
+	Gender      int    `json:"gender"`
+	Status      int    `json:"status"`
+	OrderCount  int64  `json:"orderCount"`
+	FavCount    int64  `json:"favoriteCount"`
+	GrowthValue int64  `json:"growthValue"`
+	LevelName   string `json:"levelName"`
+	CreatedAt   string `json:"createdAt"`
 }
 
 type MemberStatusReq struct {
@@ -956,4 +970,122 @@ type SensitiveWordRow struct {
 
 type SensitiveWordSaveReq struct {
 	Word string `json:"word"`
+}
+
+// ─────────────────────────── 会员等级 ───────────────────────────
+
+type LevelView struct {
+	GrowthValue   int64  `json:"growthValue"`
+	Level         int    `json:"level"`
+	LevelName     string `json:"levelName"`
+	Discount      string `json:"discount"`      // 当前等级商品折扣率，如 "0.98"
+	NextThreshold int64  `json:"nextThreshold"` // 下一等级门槛成长值，0=已到顶
+	NextDiscount  string `json:"nextDiscount,optional"`
+}
+
+// ─────────────────────────── 搜索增强 ───────────────────────────
+
+type SearchTraceReq struct {
+	Keyword string `json:"keyword"`
+}
+
+type SearchCompleteReq struct {
+	Prefix string `form:"prefix,optional"`
+}
+
+type SearchHotRow struct {
+	Keyword string  `json:"keyword"`
+	Score   float64 `json:"score"`
+}
+
+type SearchListResp struct {
+	List []string `json:"list"`
+}
+
+type SearchHotResp struct {
+	List []SearchHotRow `json:"list"`
+}
+
+// ─────────────────────────── 电子健康证书 ───────────────────────────
+
+type CertView struct {
+	CertNo         string `json:"certNo"`
+	OrderNo        string `json:"orderNo"`
+	MemberMasked   string `json:"memberMasked"` // 持有人（昵称 / 打码手机号）
+	ProductTitle   string `json:"productTitle"`
+	BreedName      string `json:"breedName"`
+	CompletedAt    string `json:"completedAt"`
+	GuaranteeDays  int    `json:"guaranteeDays"`
+	GuaranteeEndAt string `json:"guaranteeEndAt,optional"`
+	QuarantineURL  string `json:"quarantineUrl,optional"`
+	SupplierName   string `json:"supplierName,optional"`
+}
+
+// ─────────────────────────── 平台端 · 财务对账 ───────────────────────────
+
+type FinancePaymentListReq struct {
+	PageReq
+	OrderNo string `form:"orderNo,optional"`
+	Status  int    `form:"status,default=-1"`  // -1全部 0待支付 1成功 2失败 3已退款
+	PayType int    `form:"payType,default=-1"` // -1全部 1支付 2退款 3尾款
+}
+
+type FinancePaymentView struct {
+	ID            string `json:"id"`
+	PaymentNo     string `json:"paymentNo"`
+	OrderNo       string `json:"orderNo"`
+	Amount        string `json:"amount"`
+	Channel       int    `json:"channel"`
+	PayType       int    `json:"payType"`
+	Status        int    `json:"status"`
+	TransactionID string `json:"transactionId,optional"`
+	CallbackAt    string `json:"callbackAt,optional"`
+	CreatedAt     string `json:"createdAt"`
+}
+
+type FinanceDailyRow struct {
+	Date         string `json:"date"`
+	PayCount     int64  `json:"payCount"`
+	PayAmount    string `json:"payAmount"`
+	RefundCount  int64  `json:"refundCount"`
+	RefundAmount string `json:"refundAmount"`
+	NetAmount    string `json:"netAmount"`
+}
+
+type FinanceDailyResp struct {
+	List []FinanceDailyRow `json:"list"`
+}
+
+type FinanceDailyReq struct {
+	Days int `form:"days,default=30"`
+}
+
+// ─────────────────────────── 平台端 · 供货商 ───────────────────────────
+
+type SupplierListReq struct {
+	PageReq
+}
+
+type SupplierUpsertReq struct {
+	ID        string `json:"id,optional"`
+	Name      string `json:"name"`
+	Contact   string `json:"contact,optional"`
+	Phone     string `json:"phone,optional"`
+	Address   string `json:"address,optional"`
+	LicenseNo string `json:"licenseNo,optional"`
+	Remark    string `json:"remark,optional"`
+	Status    int    `json:"status,optional"`
+}
+
+type SupplierView struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Contact      string `json:"contact"`
+	Phone        string `json:"phone"`
+	Address      string `json:"address"`
+	LicenseNo    string `json:"licenseNo"`
+	Remark       string `json:"remark"`
+	ProductCount int    `json:"productCount"`
+	Status       int    `json:"status"`
+	CreatedAt    string `json:"createdAt"`
 }

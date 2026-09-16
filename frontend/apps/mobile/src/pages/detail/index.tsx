@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Image, ScrollView, Swiper, SwiperItem, Text, View } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
-import { del, get, post } from '../../request'
-import { ProductDetail, ReviewListResp, ReviewSummaryResp, ReviewView } from '../../types'
+import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
+import { del, get, getToken, post } from '../../request'
+import { PageResp, ProductCard, ProductDetail, ReviewListResp, ReviewSummaryResp, ReviewView } from '../../types'
 import './index.css'
 
 function ReviewItem({ r }: { r: ReviewView }) {
@@ -47,6 +47,7 @@ export default function Detail() {
   const [rvList, setRvList] = useState<ReviewView[]>([])
   const [rvCursor, setRvCursor] = useState('')
   const [rvHasMore, setRvHasMore] = useState(false)
+  const [related, setRelated] = useState<ProductCard[]>([])
 
   const load = () =>
     get<ProductDetail>(`/products/${params.id}`)
@@ -58,7 +59,26 @@ export default function Detail() {
     get<ReviewSummaryResp>(`/products/${params.id}/review-summary`)
       .then(setSummary)
       .catch(() => {})
+    get<PageResp<ProductCard>>(`/products/${params.id}/related`)
+      .then((r) => setRelated(r?.list ?? []))
+      .catch(() => {})
+    // 缓存邀请码供分享带参（未登录静默跳过）
+    if (getToken()) {
+      get<{ inviteCode: string }>('/invite')
+        .then((inv) => inv?.inviteCode && Taro.setStorageSync('pet_invite_code', inv.inviteCode))
+        .catch(() => {})
+    }
   }, [params.id])
+
+  // 小程序分享：带上邀请码，好友注册自动归因
+  useShareAppMessage(() => {
+    const code = (Taro.getStorageSync('pet_invite_code') as string) || ''
+    return {
+      title: d?.title ? `宠物之家·${d.title}` : '宠物之家',
+      path: `/pages/detail/index?id=${params.id}${code ? `&inviteCode=${code}` : ''}`,
+      imageUrl: d?.mainImage || undefined,
+    }
+  })
 
   const openReviews = () => {
     setRvOpen(true)
@@ -191,6 +211,29 @@ export default function Detail() {
         )}
 
         {d.detailHtml && <View className='rich card'>{d.detailHtml}</View>}
+
+        {related.length > 0 && (
+          <View className='related card'>
+            <View className='related-title'>看了又看</View>
+            <ScrollView scrollX className='related-scroll' enhanced showScrollbar={false}>
+              {related.map((p) => (
+                <View
+                  className='related-item'
+                  key={p.id}
+                  onClick={() => Taro.redirectTo({ url: `/pages/detail/index?id=${p.id}` })}
+                >
+                  {p.mainImage ? (
+                    <Image className='related-img' src={p.mainImage} mode='aspectFill' lazyLoad />
+                  ) : (
+                    <View className='related-img related-img-empty'>🐾</View>
+                  )}
+                  <Text className='related-name'>{p.title}</Text>
+                  <Text className='related-price'>¥{p.price}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
         <View className='detail-bottom-space' />
       </ScrollView>
 

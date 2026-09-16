@@ -11,6 +11,8 @@ import {
   fetchCategories,
   fetchProductDetail,
   fetchProducts,
+  fetchSuppliers,
+  SupplierRow,
   updateProduct,
   updateProductStatus,
 } from '../api/admin'
@@ -42,6 +44,10 @@ interface EditForm {
   videoUrl?: string
   videoCover?: string
   detailHtml?: string
+  supplierId?: string
+  quarantineCertUrl?: string
+  nextVaccineDate?: string
+  nextDewormDate?: string
 }
 
 export default function Products() {
@@ -53,6 +59,7 @@ export default function Products() {
   const [form] = Form.useForm<EditForm>()
   const [cats, setCats] = useState<CategoryItem[]>([])
   const [breeds, setBreeds] = useState<BreedItem[]>([])
+  const [suppliers, setSuppliers] = useState<SupplierRow[]>([])
 
   const load = useCallback(
     async (q = query) => {
@@ -74,6 +81,7 @@ export default function Products() {
 
   useEffect(() => {
     fetchCategories().then(setCats).catch(() => {})
+    fetchSuppliers({ page: 1, pageSize: 100 }).then((r) => setSuppliers(r.list)).catch(() => {})
   }, [])
 
   const openEdit = async (id?: string) => {
@@ -290,6 +298,24 @@ export default function Products() {
             </Form.Item>
             <Form.Item name="healthDesc" label="健康说明">
               <Input />
+            </Form.Item>
+            <Form.Item name="nextVaccineDate" label="疫苗到期日">
+              <Input placeholder="yyyy-MM-dd" />
+            </Form.Item>
+            <Form.Item name="nextDewormDate" label="驱虫到期日">
+              <Input placeholder="yyyy-MM-dd" />
+            </Form.Item>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item name="supplierId" label="供货商">
+              <Select
+                allowClear
+                placeholder="选择供货商（可选）"
+                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+              />
+            </Form.Item>
+            <Form.Item name="quarantineCertUrl" label="检疫证明 URL">
+              <Input placeholder="https://...（可选）" maxLength={512} />
             </Form.Item>
           </div>
           <Form.Item name="images" label="相册 URL（逗号分隔，按顺序展示）">

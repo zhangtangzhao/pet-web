@@ -65,6 +65,17 @@ export default function Members() {
     { title: '订单数', dataIndex: 'orderCount', width: 90 },
     { title: '收藏数', dataIndex: 'favoriteCount', width: 90 },
     {
+      title: '等级',
+      dataIndex: 'levelName',
+      width: 120,
+      render: (v: string, r: MemberRow) => (
+        <span>
+          <Tag color="gold">{v || 'V0'}</Tag>
+          <span style={{ color: '#999' }}>{r.growthValue}</span>
+        </span>
+      ),
+    },
+    {
       title: '注册时间',
       dataIndex: 'createdAt',
       width: 170,

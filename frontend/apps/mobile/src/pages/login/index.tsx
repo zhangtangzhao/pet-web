@@ -39,7 +39,9 @@ export default function Login() {
       return
     }
     try {
-      const r = await post<LoginResp>('/auth/sms/login', { phone, code })
+      // 分享带参归因：携带缓存的邀请码（后端仅对新注册生效）
+      const inviteCode = (Taro.getStorageSync('pet_invite_code') as string) || ''
+      const r = await post<LoginResp>('/auth/sms/login', { phone, code, inviteCode })
       setTokens(r.accessToken, r.refreshToken)
       Taro.showToast({ title: '登录成功', icon: 'success' })
       setTimeout(() => {

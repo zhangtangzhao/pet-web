@@ -180,9 +180,10 @@ func ProductDetail(sc *svc.ServiceContext, memberID int64, idStr string) (*types
 			Where("member_id = ? AND product_id = ?", memberID, id).
 			Count(&cnt).Error
 		isFav = cnt > 0
-		// 浏览计数（异步，不阻塞响应）
+		// 浏览计数 + 浏览历史（异步，不阻塞响应）
 		go sc.DB.Model(&model.PetProduct{}).Where("id = ?", id).
 			UpdateColumn("view_count", gorm.Expr("view_count + 1"))
+		go recordView(sc, memberID, id)
 	}
 
 	var birth string

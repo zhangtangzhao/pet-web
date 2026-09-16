@@ -21,6 +21,7 @@ export default defineAppConfig({
     'pages/invite/index',
     'pages/address/index',
     'pages/login/index',
+    'pages/certificate/index',
   ],
   window: {
     backgroundTextStyle: 'light',

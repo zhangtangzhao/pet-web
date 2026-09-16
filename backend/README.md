@@ -20,7 +20,7 @@ Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时�
 
 ```
 backend/
-├── pet.go              # 入口：加载配置（支持 ${ENV} 占位展开）、雪花初始化、注册路由、启动交易定时任务 + 通知投递器 + 券到期提醒
+├── pet.go              # 入口：加载配置（支持 ${ENV} 占位展开）、雪花初始化、注册路由、启动交易定时任务 + 通知投递器 + 券到期提醒 + 疫苗/驱虫到期提醒
 ├── etc/
 │   ├── pet-api.yaml    # 本地开发配置（明文 dev 值）
 │   └── pet-api.test.yaml
@@ -28,17 +28,17 @@ backend/
     ├── config/         # 配置定义 + 生产模式启动校验
     ├── handler/        # 路由注册与请求处理
     ├── logic/          # 业务逻辑（按域分包）
-    │   ├── auth/       # 短信 / 微信登录，双端独立 JWT + RefreshToken 轮换
-    │   ├── pet/        # 分类 / 品种 / 商品 / 收藏 / 首页
+    │   ├── auth/       # 短信 / 微信登录，双端独立 JWT + RefreshToken 轮换（登录支持分享带参 inviteCode 归因）
+    │   ├── pet/        # 分类 / 品种 / 商品 / 收藏 / 首页 / 搜索增强（热搜·联想·历史）/ 浏览历史 / 相关推荐
     │   ├── trade/      # 下单防超卖、微信支付 V3、回调幂等、超时关单（PayTimeoutMinutes 可调）、定金锁宠 / 补尾款、秒杀价快照、地址簿、退款、配送方式 / 托运发货送达
     │   ├── marketing/  # 优惠券（满减/折扣/立减）、增值服务、金额计算、首页 Banner 运营位管理
     │   ├── ai/         # AI 问宠（知识库 RAG + 档案增强、频控）+ 智能选宠推荐（LLM 结构化推荐，未配置降级规则打分）
-    │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 秒杀 / 经营报表 / 审计日志 / 图形验证码
+    │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 秒杀 / 经营报表 / 审计日志 / 图形验证码 / 供货商 / 财务对账 / 数据导出 CSV
     │   ├── chat/       # 人工客服：会话 / 消息 / 未读 / 已读，发送走 REST、WS 仅推送
     │   ├── review/     # 订单评价：一单一评（仅已完成单）、公开列表 / 评分摘要 / 我的评价、管理端隐藏 / 删除 / 官方回复
     │   ├── aftersale/  # 售后：申请（默认全额）/ 我的售后列表 / 撤销 / 审核（CAS + 可调金额退款，失败自动回滚重审）
     │   ├── notify/     # 通知：微信投递队列（客服回复/订单事件，biz_key 幂等、失败重试、未配置模板降级）+ 站内消息中心列表 / 单条已读 / 全部已读
-    │   ├── growth/     # 用户增长：积分（签到/评价/订单/邀请/兑换，append-only 流水 + 余额守卫）、邀请码归因、地址簿
+    │   ├── growth/     # 用户增长：积分（签到/评价/订单/邀请/兑换，append-only 流水 + 余额守卫）、邀请码归因、地址簿、会员等级（成长值 / 等级折扣 / 升级礼包）
     │   └── sensitive/  # 敏感词过滤（聊天拦截 41802、评价/售后打码 ***，60s 进程内缓存）
     ├── hub/            # 客服 WebSocket 连接注册表：多端推送、心跳判死（30s 预警 + 30s 宽限）
     ├── ratelimit/      # Redis 日限流（下单 / 登录 / 短信 IP / 演示支付，fail-open，超限 41801）
@@ -63,14 +63,16 @@ flowchart LR
     L --> AI["OpenAI 兼容大模型"]
 ```
 
-后台任务：`trade.StartOrderCloser` 启动即跑一轮、此后每分钟扫描超时未支付订单（事务内关单并回滚库存与优惠券）与超时未确认订单（CAS 自动完成，`Trade.AutoConfirmDays` ≤0 关闭）；`notify.StartNotifier` 每 10s 扫描通知投递队列（`FOR UPDATE SKIP LOCKED` 单行取件，多实例不重复投递）；`marketing.StartCouponReminders` 启动即跑一轮、此后每 30 分钟把 3 天内到期的可用券入通知队列（biz_key 恰好一次）并批量置已过期的可用券为过期。
+后台任务：`trade.StartOrderCloser` 启动即跑一轮、此后每分钟扫描超时未支付订单（事务内关单并回滚库存与优惠券）与超时未确认订单（CAS 自动完成，`Trade.AutoConfirmDays` ≤0 关闭）；`notify.StartNotifier` 每 10s 扫描通知投递队列（`FOR UPDATE SKIP LOCKED` 单行取件，多实例不重复投递）；`marketing.StartCouponReminders` 启动即跑一轮、此后每 30 分钟把 3 天内到期的可用券入通知队列（biz_key 恰好一次）并批量置已过期的可用券为过期；`pet.StartVaccineReminders` 启动即跑一轮、此后每 24 小时扫描疫苗 / 驱虫 7 天内到期的商品，向已购会员幂等投递关怀提醒。
+
+管理端鉴权：`adminAuth` 按请求查库校验角色与启用状态，三角色 RBAC —— `super_admin` 全部权限、`operator` 禁退款 / 会员与账号写操作、`support` 仅客服会话白名单 + 看板 / 订单 / 评价只读，越权 403，停用账号即时失效。
 
 ## 本地开发
 
 依赖：Go 1.25+、PostgreSQL 16、Redis 7（默认连 `127.0.0.1:5432` / `127.0.0.1:6379`，可在 `etc/pet-api.yaml` 调整）。
 
 ```bash
-# 1. 初始化数据库（在仓库根执行，共 14 个迁移）
+# 1. 初始化数据库（在仓库根执行，共 16 个迁移）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
@@ -85,6 +87,8 @@ psql -U pet -d pet -f scripts/sql/012_delivery.up.sql
 psql -U pet -d pet -f scripts/sql/013_member_growth.up.sql
 psql -U pet -d pet -f scripts/sql/014_trade_ext.up.sql
 psql -U pet -d pet -f scripts/sql/015_ops.up.sql
+psql -U pet -d pet -f scripts/sql/016_supplier_compliance.up.sql
+psql -U pet -d pet -f scripts/sql/017_member_level.up.sql
 
 # 2. 运行（默认读取 etc/pet-api.yaml，监听 :8888）
 go run .

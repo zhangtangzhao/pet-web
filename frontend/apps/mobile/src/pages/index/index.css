@@ -223,3 +223,44 @@
   font-size: 20px;
   color: #999;
 }
+
+/* ───── 最近看过 ───── */
+.viewed-row {
+  display: flex;
+  overflow-x: auto;
+  padding: 8px 24px 20px;
+  gap: 20px;
+}
+
+.viewed-card {
+  flex-shrink: 0;
+  width: 180px;
+}
+
+.viewed-img {
+  width: 180px;
+  height: 180px;
+  border-radius: 16px;
+  background: #f6f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewed-title {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewed-price {
+  display: block;
+  margin-top: 2px;
+  font-size: 24px;
+  color: #ff5b2c;
+  font-weight: 600;
+}

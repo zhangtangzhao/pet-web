@@ -26,7 +26,7 @@
 | ------- | ---- |
 | 0 | 成功 |
 | 40xxx | 客户端错误：40100 未登录 / 40101 过期 / 40300 无权限 / 40400 资源不存在 |
-| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 / 41401 优惠券不可用 / 41402 未达用券门槛 / 41403 券已领完 / 41404 超过限领 / 41405 不在可领时段 / 41406 增值服务不可用 / 41501 会话不存在（含越权访问他人会话）/ 41601 该订单已评价过 / 41602 订单当前不可评价 / 41701 售后单不存在（含越权）/ 41702 已有进行中售后 / 41703 订单不可售后 / 41704 售后状态不允许此操作 / 41705 审核状态冲突请刷新 / 41801 请求过于频繁（限流）/ 41802 内容包含敏感词 / 41803 积分不足 / 41804 定金模式不支持优惠券 / 41805 邀请码无效 |
+| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 / 41401 优惠券不可用 / 41402 未达用券门槛 / 41403 券已领完 / 41404 超过限领 / 41405 不在可领时段 / 41406 增值服务不可用 / 41501 会话不存在（含越权访问他人会话）/ 41601 该订单已评价过 / 41602 订单当前不可评价 / 41701 售后单不存在（含越权）/ 41702 已有进行中售后 / 41703 订单不可售后 / 41704 售后状态不允许此操作 / 41705 审核状态冲突请刷新 / 41801 请求过于频繁（限流）/ 41802 内容包含敏感词 / 41803 积分不足 / 41804 定金模式不支持优惠券 / 41805 邀请码无效 / 41806 订单当前不可开具健康证书（仅已完成单）/ 41901 供货商已被商品引用，禁删 |
 | 50xxx | 服务端错误：50000 系统异常 / 50001 微信接口异常 / 50002 支付下单失败 / 50003 短信发送失败 / 50005 AI 服务不可用 |
 
 ### 1.3 通用约定
@@ -48,7 +48,7 @@
 | GET | `/api/v1/auth/wechat/h5-oauth-url?redirect=` | 获取微信网页授权跳转地址 |
 | POST | `/api/v1/auth/wechat/h5-login` | H5 OAuth 回调 code 登录 |
 | POST | `/api/v1/auth/sms/send` | 发送短信验证码 `{phone}`（60s 冷却、单号日上限） |
-| POST | `/api/v1/auth/sms/login` | 手机号验证码登录 `{phone, code}`，未注册自动注册；支持测试公共验证码（仅非生产环境生效） |
+| POST | `/api/v1/auth/sms/login` | 手机号验证码登录 `{phone, code, inviteCode?}`，未注册自动注册；`inviteCode` 来自分享卡片带参（仅新注册生效，双方得积分）；支持测试公共验证码（仅非生产环境生效） |
 | POST | `/api/v1/auth/refresh` | 刷新 token `{refreshToken}` |
 | POST | `/api/v1/auth/logout` | 登出（吊销 refresh_token） |
 | GET | `/api/v1/member/profile` | 当前会员信息 |
@@ -335,7 +335,7 @@
 
 ### 2.11 通知订阅与消息中心（已实现，实际路径前缀为 /api）
 
-微信订阅消息（小程序）/模板消息（公众号 H5）离线触达：客服回复（仅用户不在线时）+ 订单事件（退款到账 / 超时关单 / 售后审核结果 / 自动确认收货）+ 优惠券到期提醒（3 天内到期，`biz_key=couponexp:<用户券ID>` 恰好一次）。服务端投递队列见文档 03 §3.20；模板未配置自动降级（不影响业务，站内消息中心不受影响）。
+微信订阅消息（小程序）/模板消息（公众号 H5）离线触达：客服回复（仅用户不在线时）+ 订单事件（退款到账 / 超时关单 / 售后审核结果 / 自动确认收货）+ 优惠券到期提醒（3 天内到期，`biz_key=couponexp:<用户券ID>` 恰好一次）+ 疫苗/驱虫到期关怀提醒（scene=4，`biz_key=vaccine:v:{商品ID}:{日期}` / `deworm:w:{...}`）。服务端投递队列见文档 03 §3.20；模板未配置自动降级（不影响业务，站内消息中心不受影响）。
 
 | 方法 | 路径 | 说明 |
 | ---- | ---- | ---- |
@@ -375,8 +375,43 @@
 
 | 方法 | 路径 | 说明 |
 | ---- | ---- | ---- |
-| GET | `/api/trade-config` | 公开配置 `{depositPercent, depositHoldDays}`（checkout 定金预估） |
+| GET | `/api/trade-config` | 公开配置 `{depositPercent, depositHoldDays}`；携带用户 token 时附带 `myLevelName / myDiscount / myGrowthValue`（未登录或 V0 缺省） |
 | POST | `/api/orders/:orderNo/mock-pay` | **演示支付**：未配商户号且非生产时直接落账（生产 404，前端自动回退微信支付提示） |
+
+### 2.13 搜索增强（已实现，实际路径前缀为 /api，Redis 支撑）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/search/hot` | 热搜榜（公开）：`{list: [{keyword, score}]}`，Redis ZSET 7 天滑动窗口 |
+| GET | `/api/search/complete?prefix=` | 搜索联想（公开）：品种名 5 + 分类名 3 + 标题命中 5，去重后 ≤10 条 `{list: string[]}` |
+| POST | `/api/search/trace` | 记录搜索词（需登录）`{keyword}`：写热搜 ZSET + 个人历史（LIST 保留 10 条，7 天） |
+| GET | `/api/search/history` | 我的搜索历史（时间倒序 ≤10 条） |
+| DELETE | `/api/search/history` | 清空我的搜索历史 |
+
+### 2.14 浏览历史与相关推荐（已实现，实际路径前缀为 /api）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/history/views?page=&pageSize=` | 浏览历史（需登录）：Redis LIST 记录最近 50 个商品（去重置顶），返回仅含在售商品卡 |
+| GET | `/api/products/:id/related` | 看了又看（公开，登录后记入浏览历史）：同品种 → 同分类 → 热销兜底，共 4 个 |
+
+> 商品详情接口内部异步记录浏览历史（登录态），浏览计数不变。
+
+### 2.15 会员等级（已实现，实际路径前缀为 /api，迁移 017）
+
+等级引擎（纯代码）：V1 ≥1000（98 折）、V2 ≥5000（95 折）、V3 ≥20000（92 折）；成长值 = 累计实付金额（元取整），支付落账只增不减。下单计价 `实付 = max(商品价+服务费-券抵扣, 0.01) × 等级折扣率 + 运费`，订单视图 `levelDiscount` 为等级优惠快照。首达 V1/V2/V3 恰好发放一次升级礼包券（5111/5112/5113）并推送通知。
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/level` | 我的等级：`{growthValue, level, levelName, discount, nextThreshold, nextDiscount?}`（`nextThreshold=0` 表示已是顶级） |
+
+### 2.16 电子健康证书（已实现，实际路径前缀为 /api）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/orders/:orderNo/certificate` | 本人已完成订单的健康证书：`{certNo("HC-"+orderNo), orderNo, memberMasked, productTitle, breedName, completedAt, guaranteeDays, guaranteeEndAt?, quarantineUrl?, supplierName?}`（41806 订单当前不可开具） |
+
+> 证书页为 mobile 端精美卡片（截图保存），保障期 = 完成时间 + `guaranteeDays`；检疫证明与供货商名称有值才返回。
 
 ---
 
@@ -398,8 +433,8 @@
 | ---- | ---- | ---- |
 | GET | `/admin/api/v1/products` | 商品列表（多条件筛选：状态/分类/品种/关键字） |
 | GET | `/admin/api/v1/products/:id` | 商品详情 |
-| POST | `/admin/api/v1/products` | 创建商品（草稿） |
-| PUT | `/admin/api/v1/products/:id` | 编辑商品 |
+| POST | `/admin/api/v1/products` | 创建商品（草稿；含 `supplierId?`/`quarantineCertUrl?`/`nextVaccineDate?`/`nextDewormDate?`（yyyy-MM-dd），迁移 016） |
+| PUT | `/admin/api/v1/products/:id` | 编辑商品（同上，已售出/锁定单禁改） |
 | PUT | `/admin/api/v1/products/:id/status` | 上架/下架 `{status}` |
 | POST | `/admin/api/v1/media/upload-token` | 签发 COS 直传凭证 `{dir, contentType}` |
 | GET | `/admin/api/v1/dashboard/overview` | 看板：在售数/今日订单/GMV/会员数 |
@@ -540,6 +575,41 @@
 
 `GET /metrics`（Prometheus 文本格式，容器网络内抓取）：`pet_api_http_requests_total{method,path,code}`、`pet_api_http_request_seconds_bucket`、`pet_api_orders_created_total`、`pet_api_orders_paid_total`、`pet_api_orders_closed_total{kind=pending|tail}`、`pet_api_pay_notify_total{result}`、`pet_api_notify_delivery_fail_total`、`pet_api_ratelimit_rejected_total{scope}`。部署编排见 `scripts/deploy/monitoring/`（Prometheus 抓取 + 告警规则 + Grafana）。
 
+### 3.17 供货商管理（已实现，实际路径前缀为 /api/admin，迁移 016）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/suppliers?page=&pageSize=&keyword=&status=` | 供货商分页（含在售商品计数） |
+| POST | `/api/admin/suppliers` | 新建 `{name(≤64必填), contact?, phone?, address?, licenseNo?, remark?, status?}` |
+| PUT | `/api/admin/suppliers/:id` | 编辑 |
+| PUT | `/api/admin/suppliers/:id/status` | 启用/停用 |
+| DELETE | `/api/admin/suppliers/:id` | 删除（被商品引用 → 41901） |
+
+### 3.18 财务对账（已实现，实际路径前缀为 /api/admin）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/finance/payments?page=&pageSize=&orderNo=&status=&payType=` | 交易流水：`payment` 表逐笔（`status≥0`/`payType≥0` 过滤，默认 -1 全部；会员昵称/商品标题联查） |
+| GET | `/api/admin/finance/daily?days=30` | 每日汇总（days 1-90 默认 30）：按支付时间聚合 `payAmount`（status=1 且 pay_type IN 1,3）与 `refundAmount`（status=3 且 pay_type=2），`netAmount = pay - refund` |
+
+### 3.19 数据导出 CSV（已实现，实际路径前缀为 /api/admin）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/export/orders` | 订单导出 CSV（≤20000 行，UTF-8 BOM 防 Excel 乱码，时间 `yyyy-MM-dd HH:mm:ss`） |
+| GET | `/api/admin/export/members` | 会员导出（含成长值/等级） |
+| GET | `/api/admin/export/points` | 积分流水导出 |
+
+### 3.20 多角色权限（RBAC，已实现）
+
+三角色：`super_admin`（全部权限）/ `operator`（运营：禁退款、禁会员与账号写操作）/ `support`（客服：白名单 = 客服会话全操作 + 看板/订单/评价只读 + 评价回复）。`adminAuth` 中间件按请求查库校验角色与启用状态后放行/403，停用账号即时失效；审计日志照常落库。
+
+| 角色 | 可用（非只读部分） |
+| ---- | ---- |
+| super_admin | 全部 |
+| operator | 商品/分类品种/营销/秒杀/Banner/配送方式/供货商/知识库 等运营写操作 |
+| support | 客服会话（收发/已读/结束）、评价回复与显示状态；其余只读（看板/订单/评价列表） |
+
 ---
 
 ## 4. 安全清单
@@ -547,6 +617,7 @@
 | 项 | 措施 |
 | -- | ---- |
 | 越权防护 | 双 JWT secret 物理隔离用户端/平台端；资源归属校验（订单只能查自己的） |
+| 管理端 RBAC | 三角色（super_admin/operator/support）按请求查库鉴权，403 拦截越权写操作；停用即时失效 |
 | 回调安全 | 微信支付 V3 验签 + 金额比对 + 幂等；回调地址不带敏感参数 |
 | 注入 | 全部走 GORM 参数化；detail_html 存储前服务端 XSS 过滤（blueoxx/bluemonday） |
 | 限流 | go-zero 内置限流：登录接口按 IP、支付轮询按用户 |

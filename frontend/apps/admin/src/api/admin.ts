@@ -44,6 +44,10 @@ export interface AdminProductDetail {
   videoUrl: string
   videoCover: string
   detailHtml: string
+  supplierId?: string
+  quarantineCertUrl?: string
+  nextVaccineDate?: string
+  nextDewormDate?: string
 }
 
 export interface OrderView {
@@ -70,6 +74,7 @@ export interface OrderView {
   expireAt: string
   paidAt: string
   createdAt: string
+  levelDiscount?: string
   depositAmount?: string
   tailExpireAt?: string
   guaranteeDays?: number
@@ -92,6 +97,8 @@ export interface MemberRow {
   status: number
   orderCount: number
   favoriteCount: number
+  growthValue: number
+  levelName: string
   createdAt: string
 }
 
@@ -631,4 +638,94 @@ export async function updateSensitiveWordStatus(id: string, status: number) {
 
 export async function deleteSensitiveWord(id: string) {
   await client.delete(`/admin/sensitive-words/${id}`)
+}
+
+// ───────── 供货商 / 财务对账 / 数据导出 ─────────
+
+export interface SupplierRow {
+  id: string
+  name: string
+  contact: string
+  phone: string
+  address: string
+  productCount: number
+  status: number
+  createdAt: string
+}
+
+export async function fetchSuppliers(params: {
+  page?: number
+  pageSize?: number
+  keyword?: string
+  status?: number
+}): Promise<PageResp<SupplierRow>> {
+  return (await client.get('/admin/suppliers', { params })) as any
+}
+
+export async function upsertSupplier(payload: {
+  id?: string
+  name: string
+  contact?: string
+  phone?: string
+  address?: string
+  status?: number
+}) {
+  if (payload.id) await client.put(`/admin/suppliers/${payload.id}`, payload)
+  else await client.post('/admin/suppliers', payload)
+}
+
+export async function updateSupplierStatus(id: string, status: number) {
+  await client.put(`/admin/suppliers/${id}/status`, { status })
+}
+
+export async function deleteSupplier(id: string) {
+  await client.delete(`/admin/suppliers/${id}`)
+}
+
+export interface FinancePaymentRow {
+  orderNo: string
+  memberName: string
+  productTitle: string
+  amount: string
+  refundAmount: string
+  payType: number
+  payTypeText: string
+  status: number
+  statusText: string
+  paymentNo: string
+  paidAt: string
+  createdAt: string
+}
+
+export async function fetchFinancePayments(params: {
+  page?: number
+  pageSize?: number
+  orderNo?: string
+  status?: number
+  payType?: number
+}): Promise<PageResp<FinancePaymentRow>> {
+  return (await client.get('/admin/finance/payments', { params })) as any
+}
+
+export interface FinanceDailyRow {
+  date: string
+  orderCount: number
+  payAmount: string
+  refundAmount: string
+  netAmount: string
+}
+
+export async function fetchFinanceDaily(days?: number): Promise<FinanceDailyRow[]> {
+  return (await client.get('/admin/finance/daily', { params: { days } })) as any
+}
+
+export async function downloadCSV(kind: 'orders' | 'members' | 'points', filename: string) {
+  // client 的响应拦截器已解包 resp.data，此处返回值即 Blob 本体
+  const blob = (await client.get(`/admin/export/${kind}`, { responseType: 'blob' })) as unknown as Blob
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }

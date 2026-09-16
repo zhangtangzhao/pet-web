@@ -12,6 +12,7 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/growth"
 	"pet/backend/internal/logic/trade"
 	"pet/backend/internal/metrics"
 	"pet/backend/internal/ratelimit"
@@ -42,17 +43,26 @@ func CreateOrder(sc *svc.ServiceContext) http.HandlerFunc {
 	})
 }
 
-// TradeConfig 下单相关公开配置（定金比例/尾款期限），供 checkout 预估展示
+// TradeConfig 下单相关公开配置（定金比例/尾款期限），供 checkout 预估展示。
+// 携带用户 token 时附带会员等级折扣信息（游客仅返回公共配置）。
 func TradeConfig(sc *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		holdDays := sc.Config.Growth.DepositHoldDays
 		if holdDays <= 0 {
 			holdDays = 3
 		}
-		common.OK(w, &types.TradeConfigResp{
+		resp := &types.TradeConfigResp{
 			DepositPercent:  sc.Config.Growth.DepositPercent,
 			DepositHoldDays: holdDays,
-		})
+		}
+		if uid, ok := parseAs(r, sc.Config.Auth.MemberAccessSecret, common.TokenTypeMember); ok {
+			if lv, err := growth.LevelView(sc, uid); err == nil {
+				resp.MyLevelName = lv.LevelName
+				resp.MyDiscount = lv.Discount
+				resp.MyGrowthValue = lv.GrowthValue
+			}
+		}
+		common.OK(w, resp)
 	}
 }
 

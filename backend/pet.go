@@ -14,6 +14,7 @@ import (
 	"pet/backend/internal/handler"
 	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/logic/notify"
+	"pet/backend/internal/logic/pet"
 	"pet/backend/internal/logic/trade"
 	"pet/backend/internal/metrics"
 	"pet/backend/internal/svc"
@@ -56,6 +57,9 @@ func main() {
 
 	// 优惠券到期提醒（启动即跑一轮，之后每 30 分钟）
 	go marketing.StartCouponReminders(context.Background(), ctx)
+
+	// 疫苗/驱虫到期提醒（启动即跑一轮，之后每天一轮）
+	go pet.StartVaccineReminders(context.Background(), ctx)
 
 	logx.Infof("pet-api 启动于 %s:%d (mode=%s)", c.Host, c.Port, c.Mode)
 	server.Start()

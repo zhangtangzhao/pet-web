@@ -237,6 +237,12 @@ export default function OrderDetail() {
             <Text>-¥{o.discountAmount}</Text>
           </View>
         )}
+        {Number(o.levelDiscount ?? '0') > 0 && (
+          <View className='odt-amt-row odt-amt-discount'>
+            <Text>会员优惠</Text>
+            <Text>-¥{o.levelDiscount}</Text>
+          </View>
+        )}
         {deposit > 0 && (
           <View className='odt-amt-row'>
             <Text>已付定金</Text>
@@ -293,6 +299,19 @@ export default function OrderDetail() {
           </View>
         )}
       </View>
+
+      {/* 电子健康证书入口（完成后可查） */}
+      {o.status === 30 && (
+        <View
+          className='odt-card odt-as'
+          onClick={() => Taro.navigateTo({ url: `/pages/certificate/index?orderNo=${o.orderNo}` })}
+        >
+          <Text className='odt-card-title'>电子健康证书</Text>
+          <View className='odt-kv'>
+            <Text className='odt-kv-value'>查看健康证书 ›</Text>
+          </View>
+        </View>
+      )}
 
       {/* 售后进度入口 */}
       {asStatus > 0 && (

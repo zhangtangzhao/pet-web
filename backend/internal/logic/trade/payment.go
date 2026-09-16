@@ -3,6 +3,7 @@ package trade
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -139,6 +140,7 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 	if txn.TransactionId != nil {
 		txnID = *txn.TransactionId
 	}
+	upgraded, newLevel := false, 0
 	err := sc.DB.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&model.Payment{}).
 			Where("payment_no = ? AND status = ?", p.PaymentNo, model.PayStatusPending).
@@ -183,6 +185,13 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 				}).Error; err != nil {
 				return err
 			}
+			// 定金实付也累计成长值（只增不减）
+			if depUp, lvl, gerr := growth.OnPaidTx(tx, o.MemberID, p.Amount.IntPart()); gerr != nil {
+				return gerr
+			} else if depUp {
+				upgraded = true
+				newLevel = lvl
+			}
 			return nil // 定金单禁用券，商品未售出
 		default:
 			if err := tx.Model(&model.Order{}).
@@ -208,12 +217,27 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 		}
 		// 支付完成返积分（随本事务仅一次；定金阶段在上分支已返回不返）
 		growth.RewardOrderTx(tx, sc, o.MemberID, o.PayAmount, o.OrderNo)
+		// 成长值按实付笔笔累计（全款/尾款），升级礼包随事务恰好发一次
+		if up, lvl, gerr := growth.OnPaidTx(tx, o.MemberID, p.Amount.IntPart()); gerr != nil {
+			return gerr
+		} else if up {
+			upgraded = true
+			newLevel = lvl
+		}
 		return nil
 	})
-	if err == nil {
-		metrics.OrdersPaid.Inc()
+	if err != nil {
+		return err
 	}
-	return err
+	metrics.OrdersPaid.Inc()
+	if upgraded {
+		if err := notify.Enqueue(sc, p.MemberID, model.NotifySceneCoupon,
+			"levelup:"+strconv.FormatInt(p.MemberID, 10)+":"+strconv.Itoa(newLevel),
+			"等级升级", "恭喜解锁"+growth.LevelName(newLevel)+"权益与升级礼券", p.OrderNo); err != nil {
+			logx.Errorf("升级通知入队失败 member=%d: %v", p.MemberID, err)
+		}
+	}
+	return nil
 }
 
 // PayTail 补尾款：复用/创建尾款支付流水并预支付（定金单 status=15 专用）

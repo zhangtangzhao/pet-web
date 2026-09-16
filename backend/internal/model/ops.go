@@ -28,3 +28,20 @@ type SensitiveWord struct {
 }
 
 func (SensitiveWord) TableName() string { return "sensitive_word" }
+
+// ─────────────────────────── 供货商 ───────────────────────────
+
+type Supplier struct {
+	ID        int64     `gorm:"primaryKey" json:"id"`
+	Name      string    `json:"name"`
+	Contact   string    `json:"contact"`
+	Phone     string    `json:"phone"`
+	Address   string    `json:"address"`
+	LicenseNo string    `json:"licenseNo"`
+	Remark    string    `json:"remark"`
+	Status    int       `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (Supplier) TableName() string { return "supplier" }

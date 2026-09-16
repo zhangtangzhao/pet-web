@@ -36,6 +36,10 @@
 - 人工客服实时聊天（文本 / 图片，WebSocket 推送 + 弱网自动重连、断线消息补拉）
 - 微信订阅消息 / 公众号模板消息通知（客服回复 + 退款到账 / 关单 / 售后结果）
 - 站内消息中心：通知列表（未读角标 / 单条已读 / 全部已读 / 下拉刷新）、优惠券到期自动提醒（3 天内到期恰好提醒一次）
+- 搜索增强：热搜榜 + 搜索联想 + 个人搜索历史（7 天 / 10 条）；浏览历史（最近 50 个去重）与详情页「看了又看」推荐
+- 会员等级：成长值 = 累计实付（V1 98 折 / V2 95 折 / V3 92 折），升级礼包券首达恰好发放，checkout 实时预览会员折扣
+- 分享裂变：商品 / 首页分享卡片带邀请码参数，新注册自动归因双方得积分
+- 电子健康证书：已完成订单开具精美证书页（证书编号 / 保障期 / 检疫证明预览），截图保存
 
 **平台管理端（PC，React 18 + Ant Design 5）**
 
@@ -48,6 +52,8 @@
 - 秒杀活动管理（商品搜索选定、秒杀价 / 名额 / 时间窗、每商品至多一个启用中）
 - 经营报表（今日 / 本月 GMV 与订单、近 N 天成交趋势、商品销量 Top10、品类分布）
 - 平台合规：管理端操作审计日志（非读操作自动落库）、敏感词库（聊天拦截 + 评价/售后打码）
+- 财务对账（交易流水 + 每日净收入汇总）、数据导出 CSV（订单 / 会员 / 积分，UTF-8 BOM 防乱码）、供货商管理（商品引用校验）
+- 多角色 RBAC：super_admin / operator（运营，禁退款与账号管理）/ support（客服白名单），停用即时失效
 - 售后管理（状态筛选、审核同意可调退款金额 / 拒绝须备注）、评价管理（隐藏 / 删除违规评价 / 官方回复）
 - AI 知识库维护、营销管理（优惠券模板 / 增值服务 / 定向发放）
 - 人工客服工作台（公共会话池、未读角标、双向实时收发、结束 / 自动重开会话）
@@ -67,6 +73,7 @@
 - 秒杀：每商品至多一个启用中活动（部分唯一索引），名额原子抢占 / 关单回补，订单快照秒杀价
 - 配送 / 托运：管理端维护配送方式，订单快照方式名与运费（券抵扣不含运费），发货 / 送达 CAS 子状态 + 订阅消息通知
 - 用户增长：积分（签到 / 评价 / 订单 / 邀请 / 兑换，append-only 流水 + 余额守卫）、邀请归因双方得积分、积分兑券
+- 会员等级：成长值只增不减（支付落账事务内累加），等级折扣在券后金额上计算、运费后加，升级礼包 `level_reached` 恰好一次；疫苗 / 驱虫到期关怀提醒（每日扫描，幂等投递）
 - 营销：优惠券（满减 / 折扣 / 立减 / 积分兑换，领券中心 + 管理端定向发放 + 注册赠送）与订单增值服务，券锁定防并发复用、关单自动回滚
 - 售后退款走确定性退款单号幂等（`RF+售后单号`），审核 CAS 防并发、失败自动回滚重审
 - 通知投递队列：biz_key 幂等 + `SKIP LOCKED` 取件 + 失败重试 / 未配置模板自动降级
@@ -117,6 +124,8 @@ psql -U pet -d pet -f scripts/sql/012_delivery.up.sql
 psql -U pet -d pet -f scripts/sql/013_member_growth.up.sql
 psql -U pet -d pet -f scripts/sql/014_trade_ext.up.sql
 psql -U pet -d pet -f scripts/sql/015_ops.up.sql
+psql -U pet -d pet -f scripts/sql/016_supplier_compliance.up.sql
+psql -U pet -d pet -f scripts/sql/017_member_level.up.sql
 
 # 2. 后端（配置 backend/etc/pet-api.yaml，dev 模板开箱即用）→ :8888
 cd backend && go run .
@@ -143,7 +152,7 @@ cp .env.example .env                                  # 填入全部密钥（勿
 docker compose up -d --build
 
 # 初始化数据库
-for f in 001_init 002_seed 003_ai_knowledge 004_marketing 005_chat 006_review 007_after_sale 008_notify 010_banner 011_review_reply 012_delivery 013_member_growth 014_trade_ext 015_ops; do
+for f in 001_init 002_seed 003_ai_knowledge 004_marketing 005_chat 006_review 007_after_sale 008_notify 010_banner 011_review_reply 012_delivery 013_member_growth 014_trade_ext 015_ops 016_supplier_compliance 017_member_level; do
   docker exec -i $(docker compose ps -q postgres) \
     psql -U pet -d pet -v ON_ERROR_STOP=1 < ../sql/$f.up.sql
 done
@@ -197,7 +206,7 @@ pet/
 | ---- | ---- |
 | [01-技术选型](docs/01-技术选型.md) | Go vs Java、Taro vs uni-app 评估结论与依赖清单 |
 | [02-系统架构](docs/02-系统架构.md) | 总体架构图、登录/支付时序图、订单状态机、部署架构 |
-| [03-数据库设计](docs/03-数据库设计.md) | ER 图、27 张表 DDL（商品/交易/配送/AI 知识库/营销/客服/评价/售后/通知/运营位/积分/秒杀/审计/敏感词）、防超卖事务、索引策略 |
+| [03-数据库设计](docs/03-数据库设计.md) | ER 图、28 张表 DDL（商品/交易/配送/AI 知识库/营销/客服/评价/售后/通知/运营位/积分/秒杀/审计/敏感词/供货商/会员等级）、防超卖事务、索引策略 |
 | [04-API接口设计](docs/04-API接口设计.md) | 路由域、错误码、用户端/平台端全量接口、订阅消息说明、安全清单 |
 | [05-前端设计](docs/05-前端设计.md) | Monorepo 结构、页面信息架构、UI 设计 Token |
 

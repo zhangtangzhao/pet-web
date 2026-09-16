@@ -21,11 +21,14 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/breeds", Handler: Breeds(sc)},
 		{Method: "GET", Path: "/api/products", Handler: ProductList(sc)},
 		{Method: "GET", Path: "/api/products/:id", Handler: ProductDetail(sc)},
+		{Method: "GET", Path: "/api/products/:id/related", Handler: RelatedProducts(sc)},
 		{Method: "GET", Path: "/api/products/:id/reviews", Handler: ProductReviews(sc)},
 		{Method: "GET", Path: "/api/products/:id/review-summary", Handler: ProductReviewSummary(sc)},
 		{Method: "GET", Path: "/api/services", Handler: ServiceList(sc)},
 		{Method: "GET", Path: "/api/flash-sales", Handler: FlashSales(sc)},
 		{Method: "GET", Path: "/api/trade-config", Handler: TradeConfig(sc)},
+		{Method: "GET", Path: "/api/search/hot", Handler: SearchHot(sc)},
+		{Method: "GET", Path: "/api/search/complete", Handler: SearchComplete(sc)},
 		{Method: "POST", Path: "/api/pay/notify/wx", Handler: WxPayNotify(sc)},
 	})
 
@@ -74,6 +77,12 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/points/signin", Handler: SignIn(sc)},
 		{Method: "GET", Path: "/api/points", Handler: MyPoints(sc)},
 		{Method: "GET", Path: "/api/invite", Handler: Invite(sc)},
+		{Method: "GET", Path: "/api/level", Handler: MyLevel(sc)},
+		{Method: "POST", Path: "/api/search/trace", Handler: SearchTrace(sc)},
+		{Method: "GET", Path: "/api/search/history", Handler: SearchHistory(sc)},
+		{Method: "DELETE", Path: "/api/search/history", Handler: SearchHistoryClear(sc)},
+		{Method: "GET", Path: "/api/history/views", Handler: ViewHistory(sc)},
+		{Method: "GET", Path: "/api/orders/:orderNo/certificate", Handler: OrderCertificate(sc)},
 		{Method: "POST", Path: "/api/orders/:orderNo/mock-pay", Handler: MockPay(sc)},
 	})
 
@@ -131,6 +140,18 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 
 		{Method: "GET", Path: "/api/admin/members", Handler: AdminMemberList(sc)},
 		{Method: "PUT", Path: "/api/admin/members/:id/status", Handler: AdminMemberStatus(sc)},
+
+		{Method: "GET", Path: "/api/admin/finance/payments", Handler: AdminFinancePayments(sc)},
+		{Method: "GET", Path: "/api/admin/finance/daily", Handler: AdminFinanceDaily(sc)},
+		{Method: "GET", Path: "/api/admin/export/orders", Handler: AdminExportOrders(sc)},
+		{Method: "GET", Path: "/api/admin/export/members", Handler: AdminExportMembers(sc)},
+		{Method: "GET", Path: "/api/admin/export/points", Handler: AdminExportPoints(sc)},
+
+		{Method: "GET", Path: "/api/admin/suppliers", Handler: AdminSupplierList(sc)},
+		{Method: "POST", Path: "/api/admin/suppliers", Handler: AdminSupplierUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/suppliers/:id", Handler: AdminSupplierUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/suppliers/:id/status", Handler: AdminSupplierStatus(sc)},
+		{Method: "DELETE", Path: "/api/admin/suppliers/:id", Handler: AdminSupplierDelete(sc)},
 
 		{Method: "GET", Path: "/api/admin/ai/knowledge", Handler: AdminKnowledgeList(sc)},
 		{Method: "POST", Path: "/api/admin/ai/knowledge", Handler: AdminKnowledgeUpsert(sc)},

@@ -346,3 +346,49 @@
   font-size: 24px;
   padding: 24px 0 40px;
 }
+
+/* ───── 相关推荐（看了又看） ───── */
+.related-title {
+  font-size: 30px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.related-scroll {
+  white-space: nowrap;
+}
+
+.related-item {
+  display: inline-block;
+  width: 200px;
+  margin-right: 20px;
+  vertical-align: top;
+}
+
+.related-img {
+  width: 200px;
+  height: 200px;
+  border-radius: 16px;
+  background: #f6f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.related-name {
+  display: block;
+  margin-top: 10px;
+  font-size: 24px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.related-price {
+  display: block;
+  margin-top: 4px;
+  font-size: 26px;
+  color: #ff5b2c;
+  font-weight: 600;
+}

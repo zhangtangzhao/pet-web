@@ -89,3 +89,56 @@
   font-size: 30px;
   font-weight: 600;
 }
+
+/* ───── 会员等级卡 ───── */
+.me-level {
+  margin: 20px 24px;
+  padding: 24px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, #3c2b20 0%, #5b4230 60%, #7a5a3f 100%);
+  color: #f7ead9;
+}
+
+.me-level-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.me-level-badge {
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #ffd9a0, #ffb46b);
+  color: #5b3a1a;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.me-level-desc {
+  font-size: 24px;
+  opacity: 0.92;
+}
+
+.me-level-next {
+  margin-top: 18px;
+}
+
+.me-level-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.me-level-bar-in {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffd9a0, #ffb46b);
+}
+
+.me-level-tip {
+  display: block;
+  margin-top: 10px;
+  font-size: 22px;
+  opacity: 0.85;
+}

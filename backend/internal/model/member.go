@@ -21,6 +21,8 @@ type Member struct {
 	Gender      int        `json:"gender"`
 	Status      int        `json:"status"`
 	Points      int64      `json:"points"`
+	GrowthValue int64      `json:"growthValue"` // 成长值 = 累计实付（元），只增不减
+	LevelReached int       `json:"levelReached"` // 已发放升级礼包的最高等级
 	InviteCode  string     `json:"inviteCode"`
 	InvitedBy   int64      `json:"invitedBy"`
 	LastLoginAt *time.Time `json:"lastLoginAt"`
@@ -97,6 +99,7 @@ func (MemberFavorite) TableName() string { return "member_favorite" }
 const (
 	AdminRoleSuper    = "super_admin"
 	AdminRoleOperator = "operator"
+	AdminRoleSupport  = "support"
 )
 
 type AdminUser struct {

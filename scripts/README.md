@@ -80,6 +80,10 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/014_trade_ext.down.sql](sql/014_trade_ext.down.sql) | 回滚秒杀表与交易扩展列 |
 | [sql/015_ops.up.sql](sql/015_ops.up.sql) | 运营保障：admin_audit_log 管理端操作审计 + sensitive_word 敏感词库（种子 3 条） |
 | [sql/015_ops.down.sql](sql/015_ops.down.sql) | 回滚审计与敏感词表 |
+| [sql/016_supplier_compliance.up.sql](sql/016_supplier_compliance.up.sql) | 供货商 supplier 表 + pet_product 合规/防疫列（供货商/检疫证明/疫苗驱虫到期日）+ 多角色管理员种子（operator/support） |
+| [sql/016_supplier_compliance.down.sql](sql/016_supplier_compliance.down.sql) | 回滚供货商表、商品扩展列与角色种子 |
+| [sql/017_member_level.up.sql](sql/017_member_level.up.sql) | 会员等级：member 成长值/level_reached 列 + orders 等级折扣快照 + 历史成长值回填 + 升级礼包券种子（5111-5113） |
+| [sql/017_member_level.down.sql](sql/017_member_level.down.sql) | 回滚等级列与升级礼包券种子 |
 
 说明：
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
-import Taro, { usePullDownRefresh } from '@tarojs/taro'
-import { get } from '../../request'
-import { BannerView, FlashSaleInfo, HomeResp, ProductCard } from '../../types'
+import Taro, { usePullDownRefresh, useRouter, useShareAppMessage } from '@tarojs/taro'
+import { get, getToken } from '../../request'
+import { BannerView, FlashSaleInfo, HomeResp, PageResp, ProductCard } from '../../types'
 import './index.css'
 
 // banner jump_type → 跳转（与后端 jumpTypes 白名单、管理端选项一一对应）
@@ -22,8 +22,10 @@ const BANNER_NAV: Record<string, (target: string) => void> = {
 }
 
 export default function Home() {
+  const { params } = useRouter()
   const [data, setData] = useState<HomeResp>()
   const [flash, setFlash] = useState<FlashSaleInfo[]>([])
+  const [viewed, setViewed] = useState<ProductCard[]>([])
 
   const load = () =>
     get<HomeResp>('/home')
@@ -32,12 +34,32 @@ export default function Home() {
       .finally(() => Taro.stopPullDownRefresh())
 
   useEffect(() => {
+    // 分享带参：缓存邀请码，注册时自动归因
+    if (params.inviteCode) Taro.setStorageSync('pet_invite_code', params.inviteCode)
     load()
     // 秒杀专区：公开接口已过滤（启用中 + 时间窗内 + 有余量）
     get<FlashSaleInfo[]>('/flash-sales')
       .then((l) => setFlash((l ?? []).slice(0, 6)))
       .catch(() => {})
+    // 最近浏览（登录用户）
+    if (getToken()) {
+      get<PageResp<ProductCard>>('/history/views')
+        .then((r) => setViewed((r?.list ?? []).slice(0, 10)))
+        .catch(() => {})
+      get<{ inviteCode: string }>('/invite')
+        .then((inv) => inv?.inviteCode && Taro.setStorageSync('pet_invite_code', inv.inviteCode))
+        .catch(() => {})
+    }
   }, [])
+
+  // 小程序分享：带上邀请码，好友注册自动归因
+  useShareAppMessage(() => {
+    const code = (Taro.getStorageSync('pet_invite_code') as string) || ''
+    return {
+      title: '宠物之家·遇见你的毛孩子',
+      path: `/pages/index/index${code ? `?inviteCode=${code}` : ''}`,
+    }
+  })
 
   usePullDownRefresh(load)
 
@@ -101,6 +123,25 @@ export default function Home() {
                     <Text className='flash-stock'>剩 {f.stock - f.sold}</Text>
                   </View>
                 </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {viewed.length > 0 && (
+        <>
+          <View className='section-title'>最近看过</View>
+          <View className='viewed-row'>
+            {viewed.map((p) => (
+              <View className='viewed-card' key={p.id} onClick={() => goDetail(p)}>
+                {p.mainImage ? (
+                  <Image className='viewed-img' src={p.mainImage} mode='aspectFill' lazyLoad />
+                ) : (
+                  <View className='viewed-img viewed-img-empty'>🐾</View>
+                )}
+                <Text className='viewed-title'>{p.title}</Text>
+                <Text className='viewed-price'>¥{p.price}</Text>
               </View>
             ))}
           </View>

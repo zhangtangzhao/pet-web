@@ -34,6 +34,8 @@ export default function Checkout() {
   const [addrs, setAddrs] = useState<AddressView[]>([])
   const [addrId, setAddrId] = useState('')
   const [depositPercent, setDepositPercent] = useState(0)
+  const [levelRate, setLevelRate] = useState(1)
+  const [levelName, setLevelName] = useState('')
   const [useDeposit, setUseDeposit] = useState(false)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -66,8 +68,17 @@ export default function Checkout() {
         if (def) setAddrId(def.id)
       })
       .catch(() => {})
-    get<{ depositPercent: number; depositHoldDays: number }>('/trade-config')
-      .then((t) => setDepositPercent(t.depositPercent || 0))
+    get<{ depositPercent: number; depositHoldDays: number; myLevelName?: string; myDiscount?: string }>('/trade-config')
+      .then((t) => {
+        setDepositPercent(t.depositPercent || 0)
+        if (t.myDiscount) {
+          const r = Number(t.myDiscount)
+          if (r > 0 && r < 1) {
+            setLevelRate(r)
+            setLevelName(t.myLevelName || '')
+          }
+        }
+      })
       .catch(() => {})
   }, [params.id])
 
@@ -98,8 +109,12 @@ export default function Checkout() {
   const discount = useDeposit ? 0 : coupon ? Number(coupon.discount) : 0
   const shipMethod = shipMethods.find((m) => m.id === shipMethodId)
   const shipFee = shipMethod ? Number(shipMethod.fee) : 0
-  // 与后端一致：券抵扣商品+服务费（保底 0.01），运费不参与折扣
-  const pay = Math.max(total - discount, 0.01) + shipFee
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  // 与后端一致：券抵扣（保底 0.01）→ 会员等级折扣作用于券后商品额 → 加运费（券不抵运费）
+  const afterCoupon = Math.max(total - discount, 0.01)
+  const goodsPay = levelRate < 1 ? round2(afterCoupon * levelRate) : afterCoupon
+  const levelOff = round2(afterCoupon - goodsPay)
+  const pay = goodsPay + shipFee
   // 定金锁宠：定金 = 商品+服务费的 N%（不支持用券），尾款 = 总额-定金
   const depositAmt = Math.round(Math.max(total, 0.01) * depositPercent) / 100
   const tailAmt = Math.max(pay - depositAmt, 0)
@@ -292,6 +307,12 @@ export default function Checkout() {
           <View className='co-sum-row'>
             <Text>券抵扣（{coupon?.name}）</Text>
             <Text className='co-sum-discount'>-¥{discount.toFixed(2)}</Text>
+          </View>
+        )}
+        {levelOff > 0 && (
+          <View className='co-sum-row'>
+            <Text>会员优惠{levelName ? `（${levelName} ${Math.round(levelRate * 100)}折）` : ''}</Text>
+            <Text className='co-sum-discount'>-¥{levelOff.toFixed(2)}</Text>
           </View>
         )}
         {useDeposit && (

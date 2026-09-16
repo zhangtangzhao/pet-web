@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/growth"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -41,15 +42,17 @@ func MemberList(sc *svc.ServiceContext, req *types.MemberListReq) (*types.PageRe
 		_ = sc.DB.Model(&model.Order{}).Where("member_id = ?", m.ID).Count(&orderCnt).Error
 		_ = sc.DB.Model(&model.MemberFavorite{}).Where("member_id = ?", m.ID).Count(&favCnt).Error
 		list = append(list, types.MemberAdminView{
-			ID:         strconv.FormatInt(m.ID, 10),
-			Nickname:   m.Nickname,
-			Avatar:     m.Avatar,
-			Phone:      maskPhone(m.Phone),
-			Gender:     m.Gender,
-			Status:     m.Status,
-			OrderCount: orderCnt,
-			FavCount:   favCnt,
-			CreatedAt:  m.CreatedAt.Format(time.RFC3339),
+			ID:          strconv.FormatInt(m.ID, 10),
+			Nickname:    m.Nickname,
+			Avatar:      m.Avatar,
+			Phone:       maskPhone(m.Phone),
+			Gender:      m.Gender,
+			Status:      m.Status,
+			OrderCount:  orderCnt,
+			FavCount:    favCnt,
+			GrowthValue: m.GrowthValue,
+			LevelName:   growth.LevelName(growth.LevelOf(m.GrowthValue)),
+			CreatedAt:   m.CreatedAt.Format(time.RFC3339),
 		})
 	}
 	return &types.PageResp{Total: total, List: list}, nil

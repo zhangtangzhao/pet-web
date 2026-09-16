@@ -64,6 +64,9 @@ var (
 	ErrPointsNotEnough = NewErr(400, 41803, "积分不足")
 	ErrDepositCoupon   = NewErr(400, 41804, "定金模式暂不支持使用优惠券")
 	ErrInviteCode      = NewErr(400, 41805, "邀请码无效")
+	ErrCertState       = NewErr(400, 41806, "订单完成后方可查看健康证书")
+
+	ErrSupplierReferenced = NewErr(400, 41901, "该供货商已关联商品，请先调整商品")
 
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")

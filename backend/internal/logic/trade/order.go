@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/growth"
 	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/metrics"
 	"pet/backend/internal/model"
@@ -23,6 +24,15 @@ func payTTL(sc *svc.ServiceContext) time.Duration {
 		minutes = 15
 	}
 	return time.Duration(minutes) * time.Minute
+}
+
+// memberLevelRate 会员等级折扣率（未登录/查询异常/无折扣均返回 1）
+func memberLevelRate(sc *svc.ServiceContext, memberID int64) float64 {
+	var m model.Member
+	if err := sc.DB.Select("growth_value").First(&m, memberID).Error; err != nil {
+		return 1
+	}
+	return growth.LevelRate(growth.LevelOf(m.GrowthValue))
 }
 
 func parseID(s string) (int64, error) {
@@ -197,11 +207,18 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		shipAddress = string(rs[:255])
 	}
 
-	payAmount := base.Sub(discount)
-	if payAmount.LessThan(decimal.NewFromFloat(0.01)) {
-		payAmount = decimal.NewFromFloat(0.01)
+	// 等级折扣：券后商品金额 × 等级折扣率（与券可叠加；券不抵运费）
+	afterCoupon := base.Sub(discount)
+	if afterCoupon.LessThan(decimal.NewFromFloat(0.01)) {
+		afterCoupon = decimal.NewFromFloat(0.01)
 	}
-	payAmount = payAmount.Add(sm.Fee)
+	goodsPay := afterCoupon
+	levelDiscount := decimal.Zero
+	if rate := memberLevelRate(sc, memberID); rate < 1 {
+		goodsPay = afterCoupon.Mul(decimal.NewFromFloat(rate)).Round(2)
+		levelDiscount = afterCoupon.Sub(goodsPay)
+	}
+	payAmount := goodsPay.Add(sm.Fee)
 
 	// 定金锁宠：首笔仅付定金，尾款在 N 天内补齐（closer 超时关单退定金）
 	deposit := decimal.Zero
@@ -240,6 +257,7 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		MemberID:       memberID,
 		TotalAmount:    base,
 		DiscountAmount: discount,
+		LevelDiscount:  levelDiscount,
 		ServiceFee:     serviceFee,
 		PayAmount:      payAmount,
 		CouponID:       couponID,
@@ -459,6 +477,7 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 			StatusText:      model.OrderStatusText(o.Status),
 			TotalAmount:     o.TotalAmount.StringFixed(2),
 			DiscountAmount:  o.DiscountAmount.StringFixed(2),
+			LevelDiscount:   o.LevelDiscount.StringFixed(2),
 			ServiceFee:      o.ServiceFee.StringFixed(2),
 			ShipFee:         o.ShipFee.StringFixed(2),
 			PayAmount:       o.PayAmount.StringFixed(2),

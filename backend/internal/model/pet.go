@@ -66,6 +66,10 @@ type PetProduct struct {
 	Sales         int             `json:"sales"`
 	ViewCount     int             `json:"viewCount"`
 	FavoriteCount int             `json:"favoriteCount"`
+	SupplierID          int64       `json:"supplierId"`
+	QuarantineCertURL   string      `json:"quarantineCertUrl"`
+	NextVaccineDate     *time.Time  `json:"nextVaccineDate"`
+	NextDewormDate      *time.Time  `json:"nextDewormDate"`
 	CreatedAt     time.Time       `json:"createdAt"`
 	UpdatedAt     time.Time       `json:"updatedAt"`
 }

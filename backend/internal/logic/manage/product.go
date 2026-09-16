@@ -117,6 +117,17 @@ func AdminProductDetail(sc *svc.ServiceContext, idStr string) (*types.AdminProdu
 	if p.BirthDate != nil {
 		birth = p.BirthDate.Format("2006-01-02")
 	}
+	var nextVaccine, nextDeworm string
+	if p.NextVaccineDate != nil {
+		nextVaccine = p.NextVaccineDate.Format("2006-01-02")
+	}
+	if p.NextDewormDate != nil {
+		nextDeworm = p.NextDewormDate.Format("2006-01-02")
+	}
+	supplierID := ""
+	if p.SupplierID > 0 {
+		supplierID = strconv.FormatInt(p.SupplierID, 10)
+	}
 	return &types.AdminProductDetailResp{
 		ID:            strconv.FormatInt(p.ID, 10),
 		Title:         p.Title,
@@ -135,11 +146,15 @@ func AdminProductDetail(sc *svc.ServiceContext, idStr string) (*types.AdminProdu
 			Personality: p.Personality,
 			HealthDesc:  p.HealthDesc,
 		},
-		MainImage:  p.MainImage,
-		Images:     imgs,
-		VideoURL:   p.VideoURL,
-		VideoCover: p.VideoCover,
-		DetailHTML: p.DetailHTML,
+		MainImage:         p.MainImage,
+		Images:            imgs,
+		VideoURL:          p.VideoURL,
+		VideoCover:        p.VideoCover,
+		DetailHTML:        p.DetailHTML,
+		SupplierID:        supplierID,
+		QuarantineCertURL: p.QuarantineCertURL,
+		NextVaccineDate:   nextVaccine,
+		NextDewormDate:    nextDeworm,
 	}, nil
 }
 
@@ -178,31 +193,69 @@ func UpsertProduct(sc *svc.ServiceContext, req *types.ProductUpsertReq) error {
 		}
 		birth = &t
 	}
+	// 供货与检疫信息（均可选）
+	supplierID := int64(0)
+	if req.SupplierID != "" {
+		v, e := parseID(req.SupplierID)
+		if e != nil {
+			return e
+		}
+		if !existsByID(sc.DB, &model.Supplier{}, v) {
+			return common.NewErr(400, 41208, "供货商不存在")
+		}
+		supplierID = v
+	}
+	certURL := strings.TrimSpace(req.QuarantineCertURL)
+	if len(certURL) > 512 {
+		return common.NewErr(400, 40001, "检疫证明地址过长")
+	}
+	parseDay := func(s, field string) (*time.Time, error) {
+		if s == "" {
+			return nil, nil
+		}
+		t, e := time.ParseInLocation("2006-01-02", s, time.Local)
+		if e != nil {
+			return nil, common.NewErr(400, 40001, field+"格式应为 yyyy-MM-dd")
+		}
+		return &t, nil
+	}
+	nextVaccine, err := parseDay(req.NextVaccineDate, "疫苗到期日")
+	if err != nil {
+		return err
+	}
+	nextDeworm, err := parseDay(req.NextDewormDate, "驱虫到期日")
+	if err != nil {
+		return err
+	}
 
 	err = sc.DB.Transaction(func(tx *gorm.DB) error {
 		if req.ID == "" {
 			p := model.PetProduct{
-				ID:            common.NewID(),
-				SpuNo:         newSpuNo(),
-				Title:         req.Title,
-				CategoryID:    catID,
-				BreedID:       breedID,
-				Price:         price,
-				OriginalPrice: orig,
-				Status:        model.ProductDraft,
-				PetGender:     req.PetGender,
-				BirthDate:     birth,
-				VaccineDesc:   req.VaccineDesc,
-				DewormDesc:    req.DewormDesc,
-				BodyType:      req.BodyType,
-				CoatColor:     req.CoatColor,
-				Personality:   req.Personality,
-				HealthDesc:    req.HealthDesc,
-				MainImage:     req.MainImage,
-				VideoURL:      req.VideoURL,
-				VideoCover:    req.VideoCover,
-				DetailHTML:    req.DetailHTML,
-				Stock:         1,
+				ID:                common.NewID(),
+				SpuNo:             newSpuNo(),
+				Title:             req.Title,
+				CategoryID:        catID,
+				BreedID:           breedID,
+				Price:             price,
+				OriginalPrice:     orig,
+				Status:            model.ProductDraft,
+				PetGender:         req.PetGender,
+				BirthDate:         birth,
+				VaccineDesc:       req.VaccineDesc,
+				DewormDesc:        req.DewormDesc,
+				BodyType:          req.BodyType,
+				CoatColor:         req.CoatColor,
+				Personality:       req.Personality,
+				HealthDesc:        req.HealthDesc,
+				MainImage:         req.MainImage,
+				VideoURL:          req.VideoURL,
+				VideoCover:        req.VideoCover,
+				DetailHTML:        req.DetailHTML,
+				Stock:             1,
+				SupplierID:        supplierID,
+				QuarantineCertURL: certURL,
+				NextVaccineDate:   nextVaccine,
+				NextDewormDate:    nextDeworm,
 			}
 			if err := tx.Create(&p).Error; err != nil {
 				return err
@@ -230,6 +283,8 @@ func UpsertProduct(sc *svc.ServiceContext, req *types.ProductUpsertReq) error {
 			"personality": req.Personality, "health_desc": req.HealthDesc,
 			"main_image": req.MainImage, "video_url": req.VideoURL,
 			"video_cover": req.VideoCover, "detail_html": req.DetailHTML,
+			"supplier_id": supplierID, "quarantine_cert_url": certURL,
+			"next_vaccine_date": nextVaccine, "next_deworm_date": nextDeworm,
 		}).Error; err != nil {
 			return err
 		}

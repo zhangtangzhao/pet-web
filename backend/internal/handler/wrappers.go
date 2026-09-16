@@ -33,12 +33,21 @@ func memberAuth(sc *svc.ServiceContext, next http.HandlerFunc) http.HandlerFunc 
 	}
 }
 
-// adminAuth 平台端 JWT 校验（独立 secret，typ=admin）；非 GET 请求异步落操作审计
+// adminAuth 平台端 JWT 校验（独立 secret，typ=admin）+ 角色门禁；非 GET 请求异步落操作审计
 func adminAuth(sc *svc.ServiceContext, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uid, ok := parseAs(r, sc.Config.Auth.AdminAccessSecret, common.TokenTypeAdmin)
 		if !ok {
 			common.Err(w, common.ErrUnauthorized)
+			return
+		}
+		var u model.AdminUser
+		if err := sc.DB.Select("role", "status").First(&u, uid).Error; err != nil || u.Status != 1 {
+			common.Err(w, common.ErrUnauthorized)
+			return
+		}
+		if !rbacAllow(u.Role, r.Method, r.URL.Path) {
+			common.Err(w, common.ErrForbidden)
 			return
 		}
 		ctx := withID(r.Context(), ctxAdminID, uid)
@@ -47,6 +56,42 @@ func adminAuth(sc *svc.ServiceContext, next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r.WithContext(ctx))
 	}
+}
+
+// rbacAllow 角色门禁：super_admin 全通过；
+// operator（运营）禁退款、会员写、账号管理；support（客服）仅客服会话 + 只读订单/评价/概览 + 评价回复
+func rbacAllow(role, method, path string) bool {
+	if role == "" || role == model.AdminRoleSuper {
+		return true
+	}
+	isGet := method == http.MethodGet
+	switch role {
+	case model.AdminRoleOperator:
+		if strings.HasSuffix(path, "/refund") {
+			return false
+		}
+		if strings.HasPrefix(path, "/api/admin/members") && !isGet {
+			return false
+		}
+		if strings.HasPrefix(path, "/api/admin/admins") {
+			return false
+		}
+		return true
+	case model.AdminRoleSupport:
+		if strings.Contains(path, "/cs/") {
+			return true
+		}
+		if isGet && (strings.HasPrefix(path, "/api/admin/overview") ||
+			strings.HasPrefix(path, "/api/admin/orders") ||
+			strings.HasPrefix(path, "/api/admin/reviews")) {
+			return true
+		}
+		if !isGet && strings.HasSuffix(path, "/reply") {
+			return true
+		}
+		return false
+	}
+	return false
 }
 
 // auditAdmin 异步记录管理端写操作（method+path+ip），失败仅日志不影响请求

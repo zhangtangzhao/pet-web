@@ -13,6 +13,8 @@ import Reviews from './pages/Reviews'
 import AfterSale from './pages/AfterSale'
 import Banners from './pages/Banners'
 import ShipMethods from './pages/ShipMethods'
+import Finance from './pages/Finance'
+import Suppliers from './pages/Suppliers'
 import FlashSales from './pages/FlashSales'
 import Report from './pages/Report'
 import Ops from './pages/Ops'
@@ -31,6 +33,8 @@ export default function App() {
         <Route path="banner" element={<Banners />} />
         <Route path="shipping" element={<ShipMethods />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="finance" element={<Finance />} />
+        <Route path="suppliers" element={<Suppliers />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="aftersale" element={<AfterSale />} />
         <Route path="members" element={<Members />} />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { clearTokens, get, getToken, post } from '../../request'
+import { LevelView } from '../../types'
 import './index.css'
 
 interface MemberInfo {
@@ -32,6 +33,7 @@ const fmtDate = (s: string) => (s ? s.slice(0, 10) : '')
 
 export default function Me() {
   const [member, setMember] = useState<MemberInfo>()
+  const [level, setLevel] = useState<LevelView>()
 
   useEffect(() => {
     if (!getToken()) {
@@ -43,6 +45,7 @@ export default function Me() {
     get<MemberInfo>('/member/profile')
       .then(setMember)
       .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
+    get<LevelView>('/level').then(setLevel).catch(() => {})
   }, [])
 
   const goEntry = (url: string) => Taro.navigateTo({ url }).catch(() => {})
@@ -80,6 +83,31 @@ export default function Me() {
           </View>
         </View>
       </View>
+
+      {level && (
+        <View className='me-level'>
+          <View className='me-level-row'>
+            <Text className='me-level-badge'>{level.levelName}</Text>
+            <Text className='me-level-desc'>
+              成长值 {level.growthValue}
+              {level.discount !== '1.00' && ` · 商品享 ${Math.round(Number(level.discount) * 100)} 折`}
+            </Text>
+          </View>
+          {level.nextThreshold > 0 && (
+            <View className='me-level-next'>
+              <View className='me-level-bar'>
+                <View
+                  className='me-level-bar-in'
+                  style={{ width: `${Math.min(100, Math.round((level.growthValue / level.nextThreshold) * 100))}%` }}
+                />
+              </View>
+              <Text className='me-level-tip'>
+                还差 {level.nextThreshold - level.growthValue} 成长值升级，享 {Math.round(Number(level.nextDiscount ?? '1') * 100)} 折
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <View className='me-entries'>
         {ENTRIES.map((e) => (

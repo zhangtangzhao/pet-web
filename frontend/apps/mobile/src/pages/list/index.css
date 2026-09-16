@@ -126,3 +126,71 @@
   font-size: 26px;
   padding: 28px 0;
 }
+
+/* ───── 搜索增强面板（历史 / 热搜 / 联想） ───── */
+.lst-search {
+  position: relative;
+}
+
+.lst-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.lst-sug {
+  padding: 14px 8px;
+  font-size: 26px;
+  color: #333;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.lst-panel-sec + .lst-panel-sec {
+  margin-top: 24px;
+}
+
+.lst-panel-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24px;
+  color: #999;
+  margin-bottom: 14px;
+}
+
+.lst-panel-clear {
+  color: #bbb;
+}
+
+.lst-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.lst-chip {
+  padding: 8px 20px;
+  background: #f6f7fb;
+  border-radius: 999px;
+  font-size: 24px;
+  color: #444;
+}
+
+.lst-chip-rank {
+  display: inline-block;
+  margin-right: 8px;
+  font-style: italic;
+  color: #bbb;
+}
+
+.lst-chip-rank-hot {
+  color: #ff8a4c;
+  font-weight: 600;
+}
