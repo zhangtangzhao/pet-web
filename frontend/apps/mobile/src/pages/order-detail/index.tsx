@@ -160,6 +160,12 @@ export default function OrderDetail() {
           <Text className='odt-hero-tip'>{o.tailExpireAt ? `定金已付，请在 ${fmtShort(o.tailExpireAt)} 前补齐尾款` : '定金已付，请尽快补齐尾款'}</Text>
         )}
         {o.status === 20 && o.shipAddress && <Text className='odt-hero-tip'>{SHIP_TEXT[o.shipStatus]}，请保持电话畅通</Text>}
+        {o.isPickup && o.status === 20 && o.pickupCode && (
+          <View className='odt-pickup' onClick={() => Taro.setClipboardData({ data: o.pickupCode! }).catch(() => {})}>
+            <Text className='odt-pickup-label'>到店自提核销码（点击复制）</Text>
+            <Text className='odt-pickup-code'>{o.pickupCode}</Text>
+          </View>
+        )}
         {o.status === 30 && (
           <Text className='odt-hero-tip'>
             感谢您的信任，欢迎评价本次交易{o.guaranteeDays ? ` · 健康保障期 ${o.guaranteeDays} 天` : ''}

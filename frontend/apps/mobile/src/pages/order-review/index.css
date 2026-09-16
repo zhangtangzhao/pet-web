@@ -125,3 +125,9 @@
 .rv-submit-off {
   opacity: 0.6;
 }
+
+.rv-dims { margin-top: 20rpx; display: flex; flex-direction: column; gap: 14rpx; }
+.rv-dim { display: flex; align-items: center; justify-content: space-between; }
+.rv-dim-label { font-size: 26rpx; color: #666; }
+.rv-dim-stars { display: flex; gap: 8rpx; }
+.rv-dim-star { font-size: 32rpx; color: #e5e5e5; }

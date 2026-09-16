@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Image, ScrollView, Swiper, SwiperItem, Text, View } from '@tarojs/components'
+import { Image, ScrollView, Swiper, SwiperItem, Text, Video, View } from '@tarojs/components'
 import Taro, { useRouter, useShareAppMessage } from '@tarojs/taro'
 import { del, get, getToken, post } from '../../request'
 import { PageResp, ProductCard, ProductDetail, ReviewListResp, ReviewSummaryResp, ReviewView } from '../../types'
@@ -48,6 +48,7 @@ export default function Detail() {
   const [rvCursor, setRvCursor] = useState('')
   const [rvHasMore, setRvHasMore] = useState(false)
   const [related, setRelated] = useState<ProductCard[]>([])
+  const [skuId, setSkuId] = useState('')
 
   const load = () =>
     get<ProductDetail>(`/products/${params.id}`)
@@ -113,12 +114,28 @@ export default function Detail() {
   }
 
   const buy = () => {
-    Taro.navigateTo({ url: `/pages/checkout/index?id=${params.id}` })
+    if (d?.hasSku === 1 && !skuId) {
+      Taro.showToast({ title: '请选择规格', icon: 'none' })
+      return
+    }
+    Taro.navigateTo({ url: `/pages/checkout/index?id=${params.id}${skuId ? `&skuId=${skuId}` : ''}` })
+  }
+
+  const addToCart = () => {
+    if (d?.hasSku === 1 && !skuId) {
+      Taro.showToast({ title: '请选择规格', icon: 'none' })
+      return
+    }
+    post('/cart', { productId: params.id, skuId })
+      .then(() => Taro.showToast({ title: '已加入购物车', icon: 'success' }))
+      .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
   }
 
   if (!d) return <View className='detail-loading'>加载中…</View>
 
   const profile = d.petProfile
+  const selectedSku = (d.skus ?? []).find((s) => s.id === skuId)
+  const skuPrice = selectedSku ? selectedSku.price : d.price
 
   return (
     <View className='detail'>
@@ -135,9 +152,15 @@ export default function Detail() {
           <View className='swp swp-empty'>🐾</View>
         )}
 
+        {!!d.videoUrl && (
+          <View className='card video-card'>
+            <Video src={d.videoUrl} poster={d.videoCover || undefined} className='video' controls />
+          </View>
+        )}
+
         <View className='head card'>
           <View className='price-row'>
-            <Text className='price price-big'>¥{d.price}</Text>
+            <Text className='price price-big'>¥{skuPrice}</Text>
             {Number(d.originalPrice) > Number(d.price) && (
               <Text className='orig'>¥{d.originalPrice}</Text>
             )}
@@ -148,6 +171,20 @@ export default function Detail() {
             <Text>{d.favoriteCount} 人收藏</Text>
           </View>
         </View>
+
+        {d.hasSku === 1 && (d.skus ?? []).length > 0 && (
+          <View className='card sku-card'>
+            <View className='sku-title'>选择规格</View>
+            <View className='sku-chips'>
+              {(d.skus ?? []).map((s) => (
+                <View key={s.id} className={`sku-chip ${skuId === s.id ? 'sku-chip-on' : ''}`} onClick={() => setSkuId(s.id)}>
+                  <Text>{s.specs}</Text>
+                  <Text className='sku-chip-price'>¥{s.price}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         <View className='profile card'>
           <View className='profile-title'>宠物档案</View>
@@ -211,6 +248,14 @@ export default function Detail() {
         )}
 
         {d.detailHtml && <View className='rich card'>{d.detailHtml}</View>}
+
+        {(d.detailImages ?? []).length > 0 && (
+          <View className='card detail-imgs'>
+            {(d.detailImages ?? []).map((u) => (
+              <Image key={u} src={u} mode='widthFix' className='detail-img' onClick={() => Taro.previewImage({ urls: d.detailImages ?? [], current: u })} />
+            ))}
+          </View>
+        )}
 
         {related.length > 0 && (
           <View className='related card'>
@@ -276,9 +321,8 @@ export default function Detail() {
           <Text>💬</Text>
           <Text className='fav-text'>客服</Text>
         </View>
-        <View className='btn-buy' onClick={!favLoading ? buy : undefined}>
-          立即购买
-        </View>
+        <View className='btn-cart' onClick={addToCart}>🛒 加购</View>
+        <View className='btn-buy' onClick={!favLoading ? buy : undefined}>立即购买</View>
       </View>
     </View>
   )

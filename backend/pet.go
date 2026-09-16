@@ -61,6 +61,9 @@ func main() {
 	// 疫苗/驱虫到期提醒（启动即跑一轮，之后每天一轮）
 	go pet.StartVaccineReminders(context.Background(), ctx)
 
+	// 营销自动化：购物车放弃提醒 + 沉睡用户召回（每 6 小时一轮）
+	go marketing.StartAutomation(context.Background(), ctx)
+
 	logx.Infof("pet-api 启动于 %s:%d (mode=%s)", c.Host, c.Port, c.Mode)
 	server.Start()
 }

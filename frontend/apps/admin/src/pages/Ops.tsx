@@ -5,7 +5,9 @@ import {
   AuditLogRow,
   deleteSensitiveWord,
   fetchAuditLogs,
+  fetchRiskLogs,
   fetchSensitiveWords,
+  RiskLogRow,
   saveSensitiveWord,
   SensitiveWordRow,
   updateSensitiveWordStatus,
@@ -65,6 +67,81 @@ function AuditLogs() {
         onChange: (p) => load(p),
       }}
     />
+  )
+}
+
+const RULE_TEXT: Record<string, string> = {
+  order_freq: '下单频控',
+  review_contact: '评价联系方式',
+  member_blacklist: '黑名单',
+}
+
+function RiskLogs() {
+  const [list, setList] = useState<RiskLogRow[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [rule, setRule] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const load = useCallback(
+    async (nextPage: number, nextRule = rule) => {
+      setLoading(true)
+      try {
+        const resp = await fetchRiskLogs({ page: nextPage, pageSize: 15, rule: nextRule || undefined })
+        setList(resp.list)
+        setTotal(resp.total)
+        setPage(nextPage)
+      } catch (e: any) {
+        message.error(e.message)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [rule],
+  )
+
+  useEffect(() => {
+    load(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <>
+      <Space style={{ marginBottom: 12 }}>
+        <Input
+          allowClear
+          placeholder="按规则筛选（order_freq / review_contact / member_blacklist）"
+          style={{ width: 380 }}
+          onChange={(e) => setRule(e.target.value.trim())}
+          onPressEnter={() => load(1)}
+        />
+        <Button onClick={() => load(1)}>查询</Button>
+      </Space>
+      <Table
+        rowKey="id"
+        loading={loading}
+        size="small"
+        columns={[
+          {
+            title: '规则',
+            dataIndex: 'rule',
+            width: 120,
+            render: (v: string) => <Tag color="orange">{RULE_TEXT[v] ?? v}</Tag>,
+          },
+          { title: '会员ID', dataIndex: 'memberId', width: 200 },
+          { title: '详情', dataIndex: 'detail', ellipsis: true },
+          { title: '时间', dataIndex: 'createdAt', width: 170 },
+        ]}
+        dataSource={list}
+        pagination={{
+          current: page,
+          total,
+          pageSize: 15,
+          showSizeChanger: false,
+          onChange: (p) => load(p),
+        }}
+      />
+    </>
   )
 }
 
@@ -192,6 +269,7 @@ export default function Ops() {
         items={[
           { key: 'audit', label: '操作审计', children: <AuditLogs /> },
           { key: 'sensitive', label: '敏感词', children: <SensitiveWords /> },
+          { key: 'risk', label: '风控记录', children: <RiskLogs /> },
         ]}
       />
     </Card>

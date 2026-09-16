@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	redisSearchHot    = "rl:search:hot"
+	redisSearchHot     = "rl:search:hot"
 	redisSearchHistFmt = "rl:search:hist:%d"
-	redisSearchTTL    = 7 * 24 * time.Hour
-	historyKeep       = 10
+	redisSearchTTL     = 7 * 24 * time.Hour
+	historyKeep        = 10
 )
 
 func normKeyword(kw string) (string, error) {

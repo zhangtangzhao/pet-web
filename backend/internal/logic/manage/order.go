@@ -8,6 +8,8 @@ import (
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
+	"strings"
+	"time"
 )
 
 // AdminOrderList 订单列表（平台端，全量 + 筛选）
@@ -72,4 +74,36 @@ func AdminOrderDetail(sc *svc.ServiceContext, orderNo string) (*types.OrderView,
 		return nil, err
 	}
 	return views[0], nil
+}
+
+// AdminPickupVerify 自提核销：核销码匹配 + 已支付 → 直达已完成（自提即交付）
+func AdminPickupVerify(sc *svc.ServiceContext, orderNo, code string) error {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return common.ErrParam
+	}
+	var o model.Order
+	if err := sc.DB.Where("order_no = ?", orderNo).First(&o).Error; err != nil {
+		return common.ErrNotFound
+	}
+	if o.PickupCode == "" || o.PickupCode != code {
+		return common.ErrPickupVerify
+	}
+	now := time.Now()
+	res := sc.DB.Model(&model.Order{}).
+		Where("order_no = ? AND status = ?", orderNo, model.OrderPaid).
+		Updates(map[string]any{
+			"status":       model.OrderCompleted,
+			"completed_at": &now,
+			"ship_status":  model.ShipDelivered,
+			"delivered_at": &now,
+			"updated_at":   now,
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return common.ErrPickupVerify
+	}
+	return nil
 }

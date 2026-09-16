@@ -26,6 +26,7 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/products/:id/review-summary", Handler: ProductReviewSummary(sc)},
 		{Method: "GET", Path: "/api/services", Handler: ServiceList(sc)},
 		{Method: "GET", Path: "/api/flash-sales", Handler: FlashSales(sc)},
+		{Method: "GET", Path: "/api/group-buys", Handler: GroupBuys(sc)},
 		{Method: "GET", Path: "/api/trade-config", Handler: TradeConfig(sc)},
 		{Method: "GET", Path: "/api/search/hot", Handler: SearchHot(sc)},
 		{Method: "GET", Path: "/api/search/complete", Handler: SearchComplete(sc)},
@@ -49,6 +50,15 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/orders/:orderNo/prepay", Handler: Prepay(sc)},
 		{Method: "POST", Path: "/api/orders/:orderNo/review", Handler: OrderReview(sc)},
 		{Method: "GET", Path: "/api/ship/methods", Handler: ShipMethods(sc)},
+		{Method: "GET", Path: "/api/cart", Handler: CartList(sc)},
+		{Method: "POST", Path: "/api/cart", Handler: CartAdd(sc)},
+		{Method: "PUT", Path: "/api/cart/:id", Handler: CartUpdate(sc)},
+		{Method: "DELETE", Path: "/api/cart/:id", Handler: CartDelete(sc)},
+		{Method: "DELETE", Path: "/api/cart", Handler: CartDelete(sc)},
+		{Method: "GET", Path: "/api/pets", Handler: UserPetList(sc)},
+		{Method: "POST", Path: "/api/pets", Handler: UserPetUpsert(sc)},
+		{Method: "PUT", Path: "/api/pets/:id", Handler: UserPetUpdate(sc)},
+		{Method: "DELETE", Path: "/api/pets/:id", Handler: UserPetDelete(sc)},
 		{Method: "GET", Path: "/api/payments/:paymentNo/status", Handler: PaymentStatus(sc)},
 		{Method: "POST", Path: "/api/aftersale", Handler: AfterSaleApply(sc)},
 		{Method: "GET", Path: "/api/aftersale", Handler: AfterSaleByOrder(sc)},
@@ -106,6 +116,12 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "PUT", Path: "/api/admin/flash-sales/:id/status", Handler: AdminFlashSaleStatus(sc)},
 		{Method: "DELETE", Path: "/api/admin/flash-sales/:id", Handler: AdminFlashSaleDelete(sc)},
 
+		{Method: "GET", Path: "/api/admin/group-buys", Handler: AdminGroupBuyList(sc)},
+		{Method: "POST", Path: "/api/admin/group-buys", Handler: AdminGroupBuyUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/group-buys/:id", Handler: AdminGroupBuyUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/group-buys/:id/status", Handler: AdminGroupBuyStatus(sc)},
+		{Method: "DELETE", Path: "/api/admin/group-buys/:id", Handler: AdminGroupBuyDelete(sc)},
+
 		{Method: "GET", Path: "/api/admin/audit-logs", Handler: AdminAuditList(sc)},
 		{Method: "GET", Path: "/api/admin/sensitive-words", Handler: AdminSensitiveList(sc)},
 		{Method: "POST", Path: "/api/admin/sensitive-words", Handler: AdminSensitiveSave(sc)},
@@ -128,6 +144,7 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 
 		{Method: "GET", Path: "/api/admin/orders", Handler: AdminOrderList(sc)},
 		{Method: "GET", Path: "/api/admin/orders/:orderNo", Handler: AdminOrderDetail(sc)},
+		{Method: "POST", Path: "/api/admin/orders/:orderNo/pickup-verify", Handler: AdminPickupVerify(sc)},
 		{Method: "POST", Path: "/api/admin/orders/:orderNo/refund", Handler: AdminRefund(sc)},
 		{Method: "POST", Path: "/api/admin/orders/:orderNo/ship", Handler: AdminShip(sc)},
 		{Method: "POST", Path: "/api/admin/orders/:orderNo/deliver", Handler: AdminDeliver(sc)},
@@ -140,6 +157,10 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 
 		{Method: "GET", Path: "/api/admin/members", Handler: AdminMemberList(sc)},
 		{Method: "PUT", Path: "/api/admin/members/:id/status", Handler: AdminMemberStatus(sc)},
+		{Method: "PUT", Path: "/api/admin/members/blacklist", Handler: AdminMemberBlacklist(sc)},
+
+		{Method: "GET", Path: "/api/admin/stock-alerts", Handler: AdminStockAlerts(sc)},
+		{Method: "GET", Path: "/api/admin/risk-logs", Handler: AdminRiskLogs(sc)},
 
 		{Method: "GET", Path: "/api/admin/finance/payments", Handler: AdminFinancePayments(sc)},
 		{Method: "GET", Path: "/api/admin/finance/daily", Handler: AdminFinanceDaily(sc)},

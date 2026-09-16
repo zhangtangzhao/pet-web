@@ -168,3 +168,85 @@ func AdminSupplierDelete(sc *svc.ServiceContext) http.HandlerFunc {
 		common.OK(w, nil)
 	})
 }
+
+// ─────────────────────────── 拼团活动管理 ───────────────────────────
+
+// AdminGroupBuyList 拼团活动列表
+func AdminGroupBuyList(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.PageReq
+		if err := httpx.ParseForm(r, &req); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		resp, err := manage.AdminGroupBuyList(sc, &req)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, resp)
+	})
+}
+
+// AdminGroupBuyUpsert 新建 / 编辑拼团活动
+func AdminGroupBuyUpsert(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var req types.GroupBuyUpsertReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := manage.AdminGroupBuyUpsert(sc, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+// AdminGroupBuyStatus 启用 / 停用
+func AdminGroupBuyStatus(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		var req types.BannerStatusReq
+		if err := common.ParseBody(r, &req); err != nil {
+			common.Err(w, err)
+			return
+		}
+		id, err := parseID64(path.ID)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := manage.AdminGroupBuyStatus(sc, id, req.Status); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}
+
+// AdminGroupBuyDelete 删除拼团活动
+func AdminGroupBuyDelete(sc *svc.ServiceContext) http.HandlerFunc {
+	return adminAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+		var path types.IDPathReq
+		if err := httpx.ParsePath(r, &path); err != nil {
+			common.Err(w, common.ErrParam)
+			return
+		}
+		id, err := parseID64(path.ID)
+		if err != nil {
+			common.Err(w, err)
+			return
+		}
+		if err := manage.AdminGroupBuyDelete(sc, id); err != nil {
+			common.Err(w, err)
+			return
+		}
+		common.OK(w, nil)
+	})
+}

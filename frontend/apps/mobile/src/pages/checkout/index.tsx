@@ -4,8 +4,11 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { get, getToken, post } from '../../request'
 import {
   AddressView,
+  CartItem,
   CreateOrderResult,
+  CartListResp,
   FlashSaleInfo,
+  GroupBuyInfo,
   ProductDetail,
   ServiceItemView,
   ShipMethod,
@@ -21,6 +24,8 @@ const fmtDate = (iso: string) => {
 
 export default function Checkout() {
   const { params } = useRouter()
+  const cartMode = params.from === 'cart'
+  const groupMode = !!params.groupId
   const [d, setD] = useState<ProductDetail>()
   const [services, setServices] = useState<ServiceItemView[]>([])
   const [pickedSvc, setPickedSvc] = useState<string[]>([])
@@ -40,6 +45,10 @@ export default function Checkout() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [groupBuy, setGroupBuy] = useState<GroupBuyInfo | null>(null)
+  const [skuId, setSkuId] = useState(params.skuId ?? '')
+  const [cartLoaded, setCartLoaded] = useState(!cartMode)
 
   useEffect(() => {
     if (!getToken()) {
@@ -48,10 +57,24 @@ export default function Checkout() {
       }).catch(() => {})
       return
     }
-    get<ProductDetail>(`/products/${params.id}`)
-      .then(setD)
-      .catch((e) => Taro.showToast({ title: e.message, icon: 'none' }))
-    get<ServiceItemView[]>('/services').then(setServices).catch(() => {})
+    if (cartMode) {
+      const ids = (Taro.getStorageSync('pet_cart_ids') as string[]) || []
+      get<CartListResp>('/cart').then((r) => {
+        const want = new Set(ids)
+        setCartItems((r.list ?? []).filter((i) => want.has(i.id) && i.onSale))
+        setCartLoaded(true)
+      }).catch(() => setCartLoaded(true))
+    } else {
+      get<ProductDetail>(`/products/${params.id}`)
+        .then(setD)
+        .catch((e) => Taro.showToast({ title: e.message, icon: 'none' }))
+      get<ServiceItemView[]>('/services').then(setServices).catch(() => {})
+    }
+    if (groupMode) {
+      get<GroupBuyInfo[]>('/group-buys')
+        .then((list) => setGroupBuy((list ?? []).find((g) => g.id === params.groupId) ?? null))
+        .catch(() => {})
+    }
     get<ShipMethod[]>('/ship/methods')
       .then((list) => {
         setShipMethods(list ?? [])
@@ -80,7 +103,7 @@ export default function Checkout() {
         }
       })
       .catch(() => {})
-  }, [params.id])
+  }, [params.id, cartMode, groupMode])
 
   // 勾选服务变化后重新拉取可用券（门槛含服务费）
   useEffect(() => {
@@ -103,7 +126,15 @@ export default function Checkout() {
     () => services.filter((s) => pickedSvc.includes(s.id)).reduce((n, s) => n + Number(s.price), 0),
     [services, pickedSvc],
   )
-  const goodsPrice = flash ? Number(flash.salePrice) : d ? Number(d.price) : 0
+  const goodsPrice = cartMode
+    ? cartItems.reduce((n, i) => n + Number(i.price), 0)
+    : groupMode && groupBuy
+      ? Number(groupBuy.price)
+      : flash
+        ? Number(flash.salePrice)
+        : d
+          ? Number((d.skus ?? []).find((s) => s.id === skuId)?.price ?? d.price)
+          : 0
   const total = goodsPrice + serviceFee
   const coupon = coupons.find((c) => c.id === couponId)
   const discount = useDeposit ? 0 : coupon ? Number(coupon.discount) : 0
@@ -135,17 +166,27 @@ export default function Checkout() {
     }
     setSubmitting(true)
     try {
-      const r = await post<CreateOrderResult>('/orders', {
-        productId: params.id,
-        serviceIds: pickedSvc,
-        couponId: useDeposit ? '' : couponId,
+      const body: Record<string, unknown> = {
         shipMethodId,
         shipAddress: addrId ? '' : address.trim(),
         addressId: addrId,
         useDeposit,
         contactName: name,
         contactPhone: phone,
-      })
+      }
+      if (cartMode) {
+        body.cartIds = cartItems.map((i) => i.id)
+      } else if (groupMode) {
+        body.productId = params.id
+        body.groupBuyId = params.groupId
+        body.skuId = skuId
+      } else {
+        body.productId = params.id
+        body.serviceIds = pickedSvc
+        body.couponId = useDeposit ? '' : couponId
+        body.skuId = skuId
+      }
+      const r = await post<CreateOrderResult>('/orders', body)
       Taro.showModal({
         title: '订单已创建',
         content: r.isDeposit
@@ -166,11 +207,34 @@ export default function Checkout() {
     }
   }
 
-  if (!d) return <View className='checkout'>加载中…</View>
+  if (!d && !cartMode) return <View className='checkout'>加载中…</View>
+  if (cartMode && cartLoaded && cartItems.length === 0) {
+    return <View className='checkout'><View className='card co-empty-tip'>购物车里没有可结算的商品</View></View>
+  }
 
   return (
     <View className='checkout'>
       <View className='co-card card'>
+        {cartMode ? (
+          <View>
+            <View className='co-sec-title'>商品清单（{cartItems.length}）</View>
+            {cartItems.map((it) => (
+              <View className='co-prod' key={it.id}>
+                {it.productImage ? (
+                  <Image className='co-prod-img' src={it.productImage} mode='aspectFill' />
+                ) : (
+                  <View className='co-prod-img'>🐾</View>
+                )}
+                <View className='co-prod-main'>
+                  <Text className='co-prod-title'>{it.productTitle}</Text>
+                  {!!it.skuSpecs && <Text className='co-cart-specs'>{it.skuSpecs}</Text>}
+                  <View className='co-prod-price'><Text className='price'>¥{Number(it.price).toFixed(2)}</Text></View>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+        d && (
         <View className='co-prod'>
           {d.mainImage ? (
             <Image className='co-prod-img' src={d.mainImage} mode='aspectFill' />
@@ -186,7 +250,15 @@ export default function Checkout() {
             </View>
           </View>
         </View>
+        ))}
       </View>
+
+        {groupMode && groupBuy && (
+          <View className='co-group-banner'>
+            <Text className='co-group-tag'>{groupBuy.size}人团</Text>
+            <Text className='co-group-desc'>拼团价已优惠 ¥{(Number(groupBuy.origPrice) - Number(groupBuy.price)).toFixed(2)}，邀请好友成团后发货</Text>
+          </View>
+        )}
 
       {services.length > 0 && (
         <View className='co-card card'>
@@ -261,6 +333,7 @@ export default function Checkout() {
         </View>
       )}
 
+      {!cartMode && !groupMode && (
       <View className='co-card card'>
         {depositPercent > 0 && (
           <View className='co-deposit' onClick={() => setUseDeposit((v) => !v)}>
@@ -285,10 +358,11 @@ export default function Checkout() {
           </View>
         )}
       </View>
+      )}
 
       <View className='co-card card'>
         <View className='co-sum-row'>
-          <Text>商品价{flash ? '（秒杀价）' : ''}</Text>
+          <Text>商品价{groupMode ? '（拼团价）' : flash ? '（秒杀价）' : ''}</Text>
           <Text>¥{goodsPrice.toFixed(2)}</Text>
         </View>
         {serviceFee > 0 && (

@@ -19,9 +19,12 @@ type OrderReview struct {
 	Rating       int        `json:"rating"`
 	Content      string     `json:"content"`
 	Images       string     `json:"images"` // JSON 数组（COS 图片 URL）
+	HealthScore  int        `json:"healthScore"`
+	LookScore    int        `json:"lookScore"`
+	ServiceScore int        `json:"serviceScore"`
 	Status       int        `json:"status"`
 	CreatedAt    time.Time  `json:"createdAt"`
-	Reply        string     `json:"reply"`    // 官方回复（管理端维护）
+	Reply        string     `json:"reply"` // 官方回复（管理端维护）
 	RepliedAt    *time.Time `json:"repliedAt"`
 }
 

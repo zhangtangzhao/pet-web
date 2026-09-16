@@ -10,6 +10,7 @@ import (
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/growth"
+	"pet/backend/internal/logic/risk"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -78,6 +79,9 @@ func CouponCenter(sc *svc.ServiceContext, memberID int64) ([]types.CouponTemplat
 // Claim 领取优惠券：积分兑换扣分（如配置）+ CAS 扣减模板库存（并发安全）+ 个人限领校验
 func Claim(sc *svc.ServiceContext, memberID, templateID int64) error {
 	now := time.Now()
+	if err := risk.CheckTradeAction(sc, memberID, "领券"); err != nil {
+		return err
+	}
 	return sc.DB.Transaction(func(tx *gorm.DB) error {
 		var t0 model.CouponTemplate
 		if err := tx.First(&t0, templateID).Error; err != nil {

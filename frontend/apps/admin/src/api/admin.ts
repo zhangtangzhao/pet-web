@@ -48,6 +48,24 @@ export interface AdminProductDetail {
   quarantineCertUrl?: string
   nextVaccineDate?: string
   nextDewormDate?: string
+  detailImages?: string[]
+  stockWarnThreshold?: string
+  skus?: ProductSkuRow[]
+}
+
+export interface ProductSkuRow {
+  id: string
+  specs: string
+  price: string
+  sort: number
+  status: number
+}
+
+export interface SkuUpsertItem {
+  specs: string
+  price: string
+  sort?: number
+  status?: number
 }
 
 export interface OrderView {
@@ -78,6 +96,9 @@ export interface OrderView {
   depositAmount?: string
   tailExpireAt?: string
   guaranteeDays?: number
+  isPickup?: boolean
+  pickupCode?: string
+  groupTeamId?: string
   items: {
     productId: string
     productTitle: string
@@ -95,6 +116,7 @@ export interface MemberRow {
   phone: string
   gender: number
   status: number
+  blacklist: number
   orderCount: number
   favoriteCount: number
   growthValue: number
@@ -395,6 +417,9 @@ export interface ReviewRow {
   productId: string
   productTitle: string
   rating: number
+  healthScore?: number
+  lookScore?: number
+  serviceScore?: number
   content: string
   images: string[]
   status: number
@@ -680,6 +705,83 @@ export async function updateSupplierStatus(id: string, status: number) {
 
 export async function deleteSupplier(id: string) {
   await client.delete(`/admin/suppliers/${id}`)
+}
+
+// ───────── 拼团活动 ─────────
+
+export interface GroupBuyRow {
+  id: string
+  productId: string
+  productTitle: string
+  price: string
+  size: number
+  hours: number
+  openTeams?: number
+  status: number
+  createdAt: string
+}
+
+export async function fetchGroupBuys(params: { page?: number; pageSize?: number }): Promise<PageResp<GroupBuyRow>> {
+  return (await client.get('/admin/group-buys', { params })) as any
+}
+
+export async function upsertGroupBuy(payload: {
+  id?: string
+  productId: string
+  price: string
+  size: number
+  hours: number
+  status?: number
+}) {
+  if (payload.id) await client.put(`/admin/group-buys/${payload.id}`, payload)
+  else await client.post('/admin/group-buys', payload)
+}
+
+export async function updateGroupBuyStatus(id: string, status: number) {
+  await client.put(`/admin/group-buys/${id}/status`, { status })
+}
+
+export async function deleteGroupBuy(id: string) {
+  await client.delete(`/admin/group-buys/${id}`)
+}
+
+// ───────── 库存预警 / 风控 / 自提核销 / 会员黑名单 ─────────
+
+export interface StockAlertRow {
+  productId: string
+  title: string
+  stock: number
+  threshold: number
+  sales: number
+}
+
+export async function fetchStockAlerts(): Promise<StockAlertRow[]> {
+  const r = (await client.get('/admin/stock-alerts')) as any
+  return r?.list ?? []
+}
+
+export interface RiskLogRow {
+  id: string
+  memberId: string
+  rule: string
+  detail: string
+  createdAt: string
+}
+
+export async function fetchRiskLogs(params: {
+  page?: number
+  pageSize?: number
+  rule?: string
+}): Promise<{ total: number; list: RiskLogRow[] }> {
+  return (await client.get('/admin/risk-logs', { params })) as any
+}
+
+export async function pickupVerify(orderNo: string, code: string) {
+  await client.post(`/admin/orders/${orderNo}/pickup-verify`, { code })
+}
+
+export async function setMemberBlacklist(id: string, blacklist: number) {
+  await client.put('/admin/members/blacklist', { id, blacklist })
 }
 
 export interface FinancePaymentRow {

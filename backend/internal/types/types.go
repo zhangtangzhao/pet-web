@@ -140,15 +140,24 @@ type CategoryRef struct {
 
 type ProductDetail struct {
 	ProductCard
-	Images     []string    `json:"images"`
-	VideoURL   string      `json:"videoUrl"`
-	VideoCover string      `json:"videoCover"`
-	DetailHTML string      `json:"detailHtml"`
-	PetProfile PetProfile  `json:"petProfile"`
-	Breed      BreedItem   `json:"breed"`
-	Category   CategoryRef `json:"category"`
-	IsFavorite bool        `json:"isFavorite"`
-	AIEnabled  bool        `json:"aiEnabled"`
+	Images       []string    `json:"images"`
+	DetailImages []string    `json:"detailImages"`
+	VideoURL     string      `json:"videoUrl"`
+	VideoCover   string      `json:"videoCover"`
+	DetailHTML   string      `json:"detailHtml"`
+	PetProfile   PetProfile  `json:"petProfile"`
+	Breed        BreedItem   `json:"breed"`
+	Category     CategoryRef `json:"category"`
+	HasSku       int         `json:"hasSku"`
+	Skus         []SkuView   `json:"skus"`
+	IsFavorite   bool        `json:"isFavorite"`
+	AIEnabled    bool        `json:"aiEnabled"`
+}
+
+type SkuView struct {
+	ID    string `json:"id"`
+	Specs string `json:"specs"`
+	Price string `json:"price"`
 }
 
 type FavoriteListReq struct {
@@ -197,7 +206,10 @@ type BannerStatusReq struct {
 // ─────────────────────────── 用户端 · 订单支付 ───────────────────────────
 
 type CreateOrderReq struct {
-	ProductID    string   `json:"productId"`
+	ProductID    string   `json:"productId,optional"`   // 购物车批量结算时可不传
+	SkuID        string   `json:"skuId,optional"`       // 规格商品必传
+	CartIds      []string `json:"cartIds,optional"`     // 购物车批量结算（与 productId 二选一）
+	GroupBuyID   string   `json:"groupBuyId,optional"`  // 拼团下单
 	ServiceIDs   []string `json:"serviceIds,optional"`  // 增值服务
 	CouponID     string   `json:"couponId,optional"`    // 用户券 ID，空 = 不用券
 	ShipMethodID string   `json:"shipMethodId"`         // 配送方式
@@ -240,6 +252,7 @@ type OrderItemView struct {
 	BreedName    string `json:"breedName"`
 	Price        string `json:"price"`
 	Quantity     int    `json:"quantity"`
+	SkuSpecs     string `json:"skuSpecs,optional"`
 }
 
 type OrderView struct {
@@ -273,6 +286,9 @@ type OrderView struct {
 	TailExpireAt    string          `json:"tailExpireAt,optional"`
 	GuaranteeDays   int             `json:"guaranteeDays"` // 健康保障天数快照，0=无
 	LevelDiscount   string          `json:"levelDiscount"` // 等级折扣优惠金额，0=无
+	IsPickup        bool            `json:"isPickup"`      // 到店自提单
+	PickupCode      string          `json:"pickupCode,optional"`
+	GroupTeamID     string          `json:"groupTeamId,optional"` // 拼团单团 ID，空=非拼团
 }
 
 type ShipMethodView struct {
@@ -389,15 +405,26 @@ type ProductUpsertReq struct {
 	Price         string `json:"price"` // 元，字符串小数
 	OriginalPrice string `json:"originalPrice,optional"`
 	PetProfileUpsert
-	MainImage         string   `json:"mainImage"`
-	Images            []string `json:"images"`
-	VideoURL          string   `json:"videoUrl,optional"`
-	VideoCover        string   `json:"videoCover,optional"`
-	DetailHTML        string   `json:"detailHtml,optional"`
-	SupplierID        string   `json:"supplierId,optional"`
-	QuarantineCertURL string   `json:"quarantineCertUrl,optional"`
-	NextVaccineDate   string   `json:"nextVaccineDate,optional"` // yyyy-MM-dd，疫苗到期提醒
-	NextDewormDate    string   `json:"nextDewormDate,optional"`  // yyyy-MM-dd，驱虫到期提醒
+	MainImage          string          `json:"mainImage"`
+	Images             []string        `json:"images"`
+	VideoURL           string          `json:"videoUrl,optional"`
+	VideoCover         string          `json:"videoCover,optional"`
+	DetailHTML         string          `json:"detailHtml,optional"`
+	SupplierID         string          `json:"supplierId,optional"`
+	QuarantineCertURL  string          `json:"quarantineCertUrl,optional"`
+	NextVaccineDate    string          `json:"nextVaccineDate,optional"` // yyyy-MM-dd，疫苗到期提醒
+	NextDewormDate     string          `json:"nextDewormDate,optional"`  // yyyy-MM-dd，驱虫到期提醒
+	DetailImages       []string        `json:"detailImages,optional"`
+	StockWarnThreshold string          `json:"stockWarnThreshold,optional"`
+	Skus               []SkuUpsertItem `json:"skus,optional"`
+}
+
+type SkuUpsertItem struct {
+	ID     string `json:"id,optional"`
+	Specs  string `json:"specs"`
+	Price  string `json:"price"`
+	Sort   int    `json:"sort,optional"`
+	Status *int   `json:"status,optional"` // nil=启用；显式 0 才停用
 }
 
 type ProductStatusReq struct {
@@ -430,15 +457,26 @@ type AdminProductDetailResp struct {
 	OriginalPrice string `json:"originalPrice"`
 	Status        int    `json:"status"`
 	PetProfileUpsert
-	MainImage         string   `json:"mainImage"`
-	Images            []string `json:"images"`
-	VideoURL          string   `json:"videoUrl"`
-	VideoCover        string   `json:"videoCover"`
-	DetailHTML        string   `json:"detailHtml"`
-	SupplierID        string   `json:"supplierId"`
-	QuarantineCertURL string   `json:"quarantineCertUrl"`
-	NextVaccineDate   string   `json:"nextVaccineDate,optional"`
-	NextDewormDate    string   `json:"nextDewormDate,optional"`
+	MainImage          string   `json:"mainImage"`
+	Images             []string `json:"images"`
+	VideoURL           string   `json:"videoUrl"`
+	VideoCover         string   `json:"videoCover"`
+	DetailHTML         string   `json:"detailHtml"`
+	SupplierID         string   `json:"supplierId"`
+	QuarantineCertURL  string   `json:"quarantineCertUrl"`
+	NextVaccineDate    string   `json:"nextVaccineDate,optional"`
+	NextDewormDate     string   `json:"nextDewormDate,optional"`
+	DetailImages       []string `json:"detailImages"`
+	StockWarnThreshold string   `json:"stockWarnThreshold"`
+	Skus               []SkuRow `json:"skus"`
+}
+
+type SkuRow struct {
+	ID     string `json:"id"`
+	Specs  string `json:"specs"`
+	Price  string `json:"price"`
+	Sort   int    `json:"sort"`
+	Status int    `json:"status"`
 }
 
 type UploadTokenReq struct {
@@ -729,10 +767,13 @@ type CsSessionItem struct {
 // ─────────────────────────── 订单评价 ───────────────────────────
 
 type ReviewCreateReq struct {
-	OrderNo string   `json:"orderNo,optional"` // 实际取 path 参数，optional 仅为满足 go-zero mapping 必填校验
-	Rating  int      `json:"rating"`
-	Content string   `json:"content,optional"`
-	Images  []string `json:"images,optional"`
+	OrderNo      string   `json:"orderNo,optional"` // 实际取 path 参数，optional 仅为满足 go-zero mapping 必填校验
+	Rating       int      `json:"rating"`
+	Content      string   `json:"content,optional"`
+	Images       []string `json:"images,optional"`
+	HealthScore  int      `json:"healthScore,optional"`
+	LookScore    int      `json:"lookScore,optional"`
+	ServiceScore int      `json:"serviceScore,optional"`
 }
 
 type ReviewView struct {
@@ -746,6 +787,9 @@ type ReviewView struct {
 	Rating       int      `json:"rating"`
 	Content      string   `json:"content"`
 	Images       []string `json:"images"`
+	HealthScore  int      `json:"healthScore"`
+	LookScore    int      `json:"lookScore"`
+	ServiceScore int      `json:"serviceScore"`
 	Status       int      `json:"status"`
 	CreatedAt    string   `json:"createdAt"`
 	Reply        string   `json:"reply"`
@@ -763,9 +807,12 @@ type ReviewListResp struct {
 }
 
 type ReviewSummaryResp struct {
-	AvgRating string       `json:"avgRating"`
-	Total     int64        `json:"total"`
-	Latest    []ReviewView `json:"latest"`
+	AvgRating  string       `json:"avgRating"`
+	Total      int64        `json:"total"`
+	AvgHealth  string       `json:"avgHealth"`
+	AvgLook    string       `json:"avgLook"`
+	AvgService string       `json:"avgService"`
+	Latest     []ReviewView `json:"latest"`
 }
 
 type ReviewStatusReq struct {
@@ -1088,4 +1135,143 @@ type SupplierView struct {
 	ProductCount int    `json:"productCount"`
 	Status       int    `json:"status"`
 	CreatedAt    string `json:"createdAt"`
+}
+
+// ─────────────────────────── 购物车 ───────────────────────────
+
+type CartView struct {
+	ID           string `json:"id"`
+	ProductID    string `json:"productId"`
+	ProductTitle string `json:"productTitle"`
+	ProductImage string `json:"productImage"`
+	Price        string `json:"price"` // 当前成交价（规格价/秒杀价优先）
+	OrigPrice    string `json:"origPrice"`
+	SkuID        string `json:"skuId,optional"`
+	SkuSpecs     string `json:"skuSpecs,optional"`
+	Checked      int    `json:"checked"`
+	OnSale       bool   `json:"onSale"` // 商品仍在售（否则不可结算）
+	CreatedAt    string `json:"createdAt"`
+}
+
+type CartListResp struct {
+	List         []CartView `json:"list"`
+	CheckedCount int        `json:"checkedCount"`
+}
+
+type CartAddReq struct {
+	ProductID string `json:"productId"`
+	SkuID     string `json:"skuId,optional"`
+}
+
+type CartUpdateReq struct {
+	ID      string `path:"id"`
+	Checked *int   `json:"checked,optional"`
+}
+
+// ─────────────────────────── 拼团 ───────────────────────────
+
+type GroupBuyView struct {
+	ID           string `json:"id"`
+	ProductID    string `json:"productId"`
+	ProductTitle string `json:"productTitle"`
+	ProductImage string `json:"productImage"`
+	Price        string `json:"price"` // 拼团价
+	OrigPrice    string `json:"origPrice"`
+	Size         int    `json:"size"`
+	Hours        int    `json:"hours"`
+	OpenTeams    int    `json:"openTeams"` // 进行中的团数
+	Status       int    `json:"status"`
+	CreatedAt    string `json:"createdAt"`
+}
+
+type GroupBuyListResp struct {
+	List []GroupBuyView `json:"list"`
+}
+
+type GroupBuyUpsertReq struct {
+	ID        string `json:"id,optional"`
+	ProductID string `json:"productId"`
+	Price     string `json:"price"`
+	Size      int    `json:"size"`
+	Hours     int    `json:"hours"`
+	Status    *int   `json:"status,optional"` // nil=启用；显式 0 才停用
+}
+
+// ─────────────────────────── 自提核销 ───────────────────────────
+
+type PickupVerifyReq struct {
+	OrderNo string `path:"orderNo"`
+	Code    string `json:"code"`
+}
+
+// ─────────────────────────── 宠物档案 ───────────────────────────
+
+type UserPetUpsertReq struct {
+	ID              string `json:"id,optional"`
+	Name            string `json:"name"`
+	BreedName       string `json:"breedName,optional"`
+	Gender          int    `json:"gender,optional"`
+	Birthday        string `json:"birthday,optional"` // yyyy-MM-dd
+	Weight          string `json:"weight,optional"`   // kg
+	Avatar          string `json:"avatar,optional"`
+	VaccineAt       string `json:"vaccineAt,optional"`       // yyyy-MM-dd 最近疫苗
+	NextVaccineDate string `json:"nextVaccineDate,optional"` // yyyy-MM-dd
+	NextDewormDate  string `json:"nextDewormDate,optional"`  // yyyy-MM-dd
+	Remark          string `json:"remark,optional"`
+}
+
+type UserPetView struct {
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	BreedName       string `json:"breedName"`
+	Gender          int    `json:"gender"`
+	Birthday        string `json:"birthday,optional"`
+	Weight          string `json:"weight,optional"`
+	Avatar          string `json:"avatar"`
+	VaccineAt       string `json:"vaccineAt,optional"`
+	NextVaccineDate string `json:"nextVaccineDate,optional"`
+	NextDewormDate  string `json:"nextDewormDate,optional"`
+	Remark          string `json:"remark"`
+	CreatedAt       string `json:"createdAt"`
+}
+
+type UserPetListResp struct {
+	List []UserPetView `json:"list"`
+}
+
+// ─────────────────────────── 库存预警 / 风控（平台端）───────────────────────────
+
+type StockAlertResp struct {
+	List []StockAlertRow `json:"list"`
+}
+
+type StockAlertRow struct {
+	ProductID string `json:"productId"`
+	Title     string `json:"title"`
+	Stock     int    `json:"stock"`
+	Threshold int    `json:"threshold"`
+	Sales     int    `json:"sales"`
+}
+
+type RiskLogListReq struct {
+	PageReq
+	Rule string `form:"rule,optional"`
+}
+
+type RiskLogRow struct {
+	ID        string `json:"id"`
+	MemberID  string `json:"memberId"`
+	Rule      string `json:"rule"`
+	Detail    string `json:"detail"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type RiskLogResp struct {
+	Total int64        `json:"total"`
+	List  []RiskLogRow `json:"list"`
+}
+
+type MemberBlacklistReq struct {
+	ID        string `json:"id"`
+	Blacklist int    `json:"blacklist"` // 1=拉黑 0=解除
 }

@@ -41,6 +41,33 @@ func scanCareReminders(sc *svc.ServiceContext) {
 	to := today.AddDate(0, 0, careWindowDays)
 	scanKind(sc, "next_vaccine_date", "vaccine:v:", "疫苗提醒", today, to)
 	scanKind(sc, "next_deworm_date", "deworm:w:", "驱虫提醒", today, to)
+	scanPetProfiles(sc, today, to)
+}
+
+// scanPetProfiles 扫描用户宠物档案的疫苗/驱虫到期（挂档案，通知档案主人）
+func scanPetProfiles(sc *svc.ServiceContext, today, to time.Time) {
+	var pets []model.PetProfile
+	todayStr := today.Format("2006-01-02")
+	toStr := to.Format("2006-01-02")
+	if err := sc.DB.
+		Where("(next_vaccine_date IS NOT NULL AND next_vaccine_date BETWEEN ? AND ?) OR (next_deworm_date IS NOT NULL AND next_deworm_date BETWEEN ? AND ?)",
+			todayStr, toStr, todayStr, toStr).
+		Limit(500).Find(&pets).Error; err != nil {
+		logx.Errorf("care: 扫描宠物档案失败: %v", err)
+		return
+	}
+	for _, p := range pets {
+		if p.NextVaccineDate != nil {
+			bizKey := "petvaccine:" + strconv.FormatInt(p.ID, 10) + ":" + p.NextVaccineDate.Format("2006-01-02")
+			_ = notify.Enqueue(sc, p.MemberID, model.NotifySceneCare, bizKey,
+				"疫苗提醒", p.Name+" 疫苗 "+p.NextVaccineDate.Format("01月02日")+" 到期", "")
+		}
+		if p.NextDewormDate != nil {
+			bizKey := "petdeworm:" + strconv.FormatInt(p.ID, 10) + ":" + p.NextDewormDate.Format("2006-01-02")
+			_ = notify.Enqueue(sc, p.MemberID, model.NotifySceneCare, bizKey,
+				"驱虫提醒", p.Name+" 驱虫 "+p.NextDewormDate.Format("01月02日")+" 到期", "")
+		}
+	}
 }
 
 func scanKind(sc *svc.ServiceContext, col, keyPrefix, title string, today, to time.Time) {

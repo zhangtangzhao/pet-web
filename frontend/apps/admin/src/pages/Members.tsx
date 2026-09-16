@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Avatar, Button, Input, message, Popconfirm, Switch, Table, Tag } from 'antd'
 import { PageResp } from '../api/client'
-import { fetchMembers, MemberRow, updateMemberStatus } from '../api/admin'
+import { fetchMembers, MemberRow, setMemberBlacklist, updateMemberStatus } from '../api/admin'
 
 export default function Members() {
   const [data, setData] = useState<PageResp<MemberRow>>({ total: 0, list: [] })
@@ -36,6 +36,17 @@ export default function Members() {
     }
   }
 
+  const toggleBlacklist = async (r: MemberRow) => {
+    try {
+      const next = r.blacklist === 1 ? 0 : 1
+      await setMemberBlacklist(r.id, next)
+      message.success(next === 1 ? '已拉黑（禁交易/评价/领券）' : '已解除拉黑')
+      load()
+    } catch (e: any) {
+      message.error(e.message)
+    }
+  }
+
   const columns = [
     {
       title: '会员',
@@ -62,6 +73,12 @@ export default function Members() {
       width: 90,
       render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '正常' : '禁用'}</Tag>,
     },
+    {
+      title: '黑名单',
+      dataIndex: 'blacklist',
+      width: 90,
+      render: (v: number) => (v === 1 ? <Tag color="red">黑名单</Tag> : '-'),
+    },
     { title: '订单数', dataIndex: 'orderCount', width: 90 },
     { title: '收藏数', dataIndex: 'favoriteCount', width: 90 },
     {
@@ -83,11 +100,21 @@ export default function Members() {
     },
     {
       title: '操作',
-      width: 110,
+      width: 150,
       render: (_: unknown, r: MemberRow) => (
-        <Popconfirm title={`确认${r.status === 1 ? '禁用' : '启用'}该会员？`} onConfirm={() => toggle(r, r.status !== 1)}>
-          <Switch checked={r.status === 1} size="small" />
-        </Popconfirm>
+        <>
+          <Popconfirm title={`确认${r.status === 1 ? '禁用' : '启用'}该会员？`} onConfirm={() => toggle(r, r.status !== 1)}>
+            <Switch checked={r.status === 1} size="small" />
+          </Popconfirm>
+          <Popconfirm
+            title={`确认${r.blacklist === 1 ? '解除' : '拉黑'}该会员？`}
+            onConfirm={() => toggleBlacklist(r)}
+          >
+            <Button size="small" type="link" danger={r.blacklist !== 1}>
+              {r.blacklist === 1 ? '解除' : '拉黑'}
+            </Button>
+          </Popconfirm>
+        </>
       ),
     },
   ]

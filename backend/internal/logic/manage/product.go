@@ -1,6 +1,7 @@
 package manage
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -128,6 +129,18 @@ func AdminProductDetail(sc *svc.ServiceContext, idStr string) (*types.AdminProdu
 	if p.SupplierID > 0 {
 		supplierID = strconv.FormatInt(p.SupplierID, 10)
 	}
+	var skus []model.ProductSku
+	_ = sc.DB.Where("product_id = ?", p.ID).Order("sort ASC, id ASC").Find(&skus).Error
+	skuRows := make([]types.SkuRow, 0, len(skus))
+	for _, s := range skus {
+		skuRows = append(skuRows, types.SkuRow{
+			ID:     strconv.FormatInt(s.ID, 10),
+			Specs:  s.Specs,
+			Price:  s.Price.StringFixed(2),
+			Sort:   s.Sort,
+			Status: s.Status,
+		})
+	}
 	return &types.AdminProductDetailResp{
 		ID:            strconv.FormatInt(p.ID, 10),
 		Title:         p.Title,
@@ -146,15 +159,18 @@ func AdminProductDetail(sc *svc.ServiceContext, idStr string) (*types.AdminProdu
 			Personality: p.Personality,
 			HealthDesc:  p.HealthDesc,
 		},
-		MainImage:         p.MainImage,
-		Images:            imgs,
-		VideoURL:          p.VideoURL,
-		VideoCover:        p.VideoCover,
-		DetailHTML:        p.DetailHTML,
-		SupplierID:        supplierID,
-		QuarantineCertURL: p.QuarantineCertURL,
-		NextVaccineDate:   nextVaccine,
-		NextDewormDate:    nextDeworm,
+		MainImage:          p.MainImage,
+		Images:             imgs,
+		VideoURL:           p.VideoURL,
+		VideoCover:         p.VideoCover,
+		DetailHTML:         p.DetailHTML,
+		SupplierID:         supplierID,
+		QuarantineCertURL:  p.QuarantineCertURL,
+		NextVaccineDate:    nextVaccine,
+		NextDewormDate:     nextDeworm,
+		DetailImages:       parseDetailImages(p.DetailImages),
+		StockWarnThreshold: strconv.Itoa(p.StockWarnThreshold),
+		Skus:               skuRows,
 	}, nil
 }
 
@@ -227,40 +243,64 @@ func UpsertProduct(sc *svc.ServiceContext, req *types.ProductUpsertReq) error {
 	if err != nil {
 		return err
 	}
+	detailImages, err := normDetailImages(req.DetailImages)
+	if err != nil {
+		return err
+	}
+	threshold := 1
+	if req.StockWarnThreshold != "" {
+		if v, e := strconv.Atoi(strings.TrimSpace(req.StockWarnThreshold)); e == nil && v >= 0 && v <= 100 {
+			threshold = v
+		}
+	}
+	skus, err := normSkus(req.Skus)
+	if err != nil {
+		return err
+	}
+	hasSku := 0
+	if len(skus) > 0 {
+		hasSku = 1
+	}
 
 	err = sc.DB.Transaction(func(tx *gorm.DB) error {
 		if req.ID == "" {
 			p := model.PetProduct{
-				ID:                common.NewID(),
-				SpuNo:             newSpuNo(),
-				Title:             req.Title,
-				CategoryID:        catID,
-				BreedID:           breedID,
-				Price:             price,
-				OriginalPrice:     orig,
-				Status:            model.ProductDraft,
-				PetGender:         req.PetGender,
-				BirthDate:         birth,
-				VaccineDesc:       req.VaccineDesc,
-				DewormDesc:        req.DewormDesc,
-				BodyType:          req.BodyType,
-				CoatColor:         req.CoatColor,
-				Personality:       req.Personality,
-				HealthDesc:        req.HealthDesc,
-				MainImage:         req.MainImage,
-				VideoURL:          req.VideoURL,
-				VideoCover:        req.VideoCover,
-				DetailHTML:        req.DetailHTML,
-				Stock:             1,
-				SupplierID:        supplierID,
-				QuarantineCertURL: certURL,
-				NextVaccineDate:   nextVaccine,
-				NextDewormDate:    nextDeworm,
+				ID:                 common.NewID(),
+				SpuNo:              newSpuNo(),
+				Title:              req.Title,
+				CategoryID:         catID,
+				BreedID:            breedID,
+				Price:              price,
+				OriginalPrice:      orig,
+				Status:             model.ProductDraft,
+				PetGender:          req.PetGender,
+				BirthDate:          birth,
+				VaccineDesc:        req.VaccineDesc,
+				DewormDesc:         req.DewormDesc,
+				BodyType:           req.BodyType,
+				CoatColor:          req.CoatColor,
+				Personality:        req.Personality,
+				HealthDesc:         req.HealthDesc,
+				MainImage:          req.MainImage,
+				VideoURL:           req.VideoURL,
+				VideoCover:         req.VideoCover,
+				DetailHTML:         req.DetailHTML,
+				Stock:              1,
+				SupplierID:         supplierID,
+				QuarantineCertURL:  certURL,
+				NextVaccineDate:    nextVaccine,
+				NextDewormDate:     nextDeworm,
+				HasSKU:             hasSku,
+				DetailImages:       detailImages,
+				StockWarnThreshold: threshold,
 			}
 			if err := tx.Create(&p).Error; err != nil {
 				return err
 			}
-			return replaceImages(tx, p.ID, req.Images)
+			if err := replaceImages(tx, p.ID, req.Images); err != nil {
+				return err
+			}
+			return replaceSkus(tx, p.ID, skus)
 		}
 		id, e := parseID(req.ID)
 		if e != nil {
@@ -285,12 +325,95 @@ func UpsertProduct(sc *svc.ServiceContext, req *types.ProductUpsertReq) error {
 			"video_cover": req.VideoCover, "detail_html": req.DetailHTML,
 			"supplier_id": supplierID, "quarantine_cert_url": certURL,
 			"next_vaccine_date": nextVaccine, "next_deworm_date": nextDeworm,
+			"has_sku": hasSku, "detail_images": detailImages,
+			"stock_warn_threshold": threshold,
 		}).Error; err != nil {
 			return err
 		}
-		return replaceImages(tx, id, req.Images)
+		if err := replaceImages(tx, id, req.Images); err != nil {
+			return err
+		}
+		return replaceSkus(tx, id, skus)
 	})
 	return err
+}
+
+// normSkus 校验并规范化 SKU 列表（全量替换）
+func normSkus(items []types.SkuUpsertItem) ([]model.ProductSku, error) {
+	if len(items) == 0 {
+		return nil, nil
+	}
+	if len(items) > 20 {
+		return nil, common.NewErr(400, 40001, "规格数量过多（≤20）")
+	}
+	out := make([]model.ProductSku, 0, len(items))
+	for i, it := range items {
+		specs := strings.TrimSpace(it.Specs)
+		if specs == "" || len([]rune(specs)) > 128 {
+			return nil, common.NewErr(400, 40001, "规格描述不合法")
+		}
+		price, e := decimal.NewFromString(strings.TrimSpace(it.Price))
+		if e != nil || price.Sign() <= 0 || price.GreaterThan(decimal.NewFromInt(99999999)) {
+			return nil, common.NewErr(400, 40001, "规格价格不合法")
+		}
+		status := 1
+		if it.Status != nil && *it.Status == 0 {
+			status = 0
+		}
+		sort := it.Sort
+		if sort == 0 {
+			sort = i
+		}
+		out = append(out, model.ProductSku{
+			ID: common.NewID(), Specs: specs, Price: price, Sort: sort, Status: status,
+		})
+	}
+	return out, nil
+}
+
+// replaceSkus 全量替换商品 SKU（产品侧只存 ID 外键，事务内先删后插）
+func replaceSkus(tx *gorm.DB, productID int64, skus []model.ProductSku) error {
+	if err := tx.Where("product_id = ?", productID).Delete(&model.ProductSku{}).Error; err != nil {
+		return err
+	}
+	for i := range skus {
+		skus[i].ProductID = productID
+		if err := tx.Create(&skus[i]).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func normDetailImages(urls []string) (string, error) {
+	clean := make([]string, 0, len(urls))
+	for _, u := range urls {
+		u = strings.TrimSpace(u)
+		if u == "" {
+			continue
+		}
+		if len(u) > 512 {
+			return "", common.NewErr(400, 40001, "详情图地址过长")
+		}
+		clean = append(clean, u)
+		if len(clean) >= 20 {
+			break
+		}
+	}
+	if len(clean) == 0 {
+		return "[]", nil
+	}
+	b, err := json.Marshal(clean)
+	if err != nil {
+		return "[]", nil
+	}
+	return string(b), nil
+}
+
+func parseDetailImages(raw string) []string {
+	out := []string{}
+	_ = json.Unmarshal([]byte(raw), &out)
+	return out
 }
 
 // replaceImages 全量替换相册（简单可靠，量级：个位数图片）

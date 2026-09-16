@@ -392,3 +392,15 @@
   color: #ff5b2c;
   font-weight: 600;
 }
+
+.video-card { padding: 0; overflow: hidden; }
+.video { width: 100%; height: 420rpx; }
+.sku-card { padding: 24rpx 28rpx; }
+.sku-title { font-size: 28rpx; font-weight: 700; margin-bottom: 18rpx; }
+.sku-chips { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.sku-chip { display: flex; flex-direction: column; gap: 6rpx; border: 2rpx solid #eee; border-radius: 16rpx; padding: 16rpx 24rpx; font-size: 26rpx; }
+.sku-chip-on { border-color: #ff6b35; background: #fff7f2; }
+.sku-chip-price { color: #ff4d4f; font-size: 24rpx; }
+.detail-imgs { padding: 0; }
+.detail-img { width: 100%; display: block; }
+.btn-cart { flex: 1; background: #fff4ec; color: #ff6b35; font-size: 28rpx; font-weight: 600; border-radius: 40rpx; padding: 20rpx 0; text-align: center; margin-right: 16rpx; border: 2rpx solid #ffd9c2; }

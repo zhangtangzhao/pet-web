@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	recTopN      = 3  // 推荐数量
+	recTopN      = 3   // 推荐数量
 	catalogLimit = 200 // 送入 LLM 的目录上限（按销量取头部）
 )
 

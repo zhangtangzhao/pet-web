@@ -93,4 +93,3 @@ func (sc *ServiceContext) H5Code2OpenID(ctx context.Context, code string) (*WxOA
 	}
 	return &t, nil
 }
-

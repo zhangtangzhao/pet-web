@@ -20,6 +20,8 @@ export default defineAppConfig({
     'pages/points/index',
     'pages/invite/index',
     'pages/address/index',
+    'pages/cart/index',
+    'pages/pet/index',
     'pages/login/index',
     'pages/certificate/index',
   ],

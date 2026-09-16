@@ -67,6 +67,14 @@ var (
 	ErrCertState       = NewErr(400, 41806, "订单完成后方可查看健康证书")
 
 	ErrSupplierReferenced = NewErr(400, 41901, "该供货商已关联商品，请先调整商品")
+	ErrRiskOrderFreq      = NewErr(429, 41902, "下单过于频繁，请稍后再试")
+	ErrReviewContact      = NewErr(400, 41903, "评价内容请勿包含联系方式")
+	ErrMemberBlacklisted  = NewErr(403, 41904, "账号暂无法进行该操作")
+	ErrSkuRequired        = NewErr(400, 41905, "请选择商品规格")
+	ErrSkuInvalid         = NewErr(400, 41906, "商品规格不可用")
+	ErrGroupInvalid       = NewErr(400, 41907, "拼团活动不可用")
+	ErrCartEmpty          = NewErr(400, 41908, "请先勾选要结算的商品")
+	ErrPickupVerify       = NewErr(400, 41909, "核销码错误或订单状态不允许核销")
 
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")

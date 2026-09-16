@@ -1,6 +1,7 @@
 package pet
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -191,6 +192,22 @@ func ProductDetail(sc *svc.ServiceContext, memberID int64, idStr string) (*types
 		birth = p.BirthDate.Format("2006-01-02")
 	}
 
+	// SKU 规格
+	var skus []model.ProductSku
+	_ = sc.DB.Where("product_id = ? AND status = ?", p.ID, 1).Order("sort ASC, id ASC").Find(&skus).Error
+	skuViews := make([]types.SkuView, 0, len(skus))
+	for _, s := range skus {
+		skuViews = append(skuViews, types.SkuView{
+			ID:    strconv.FormatInt(s.ID, 10),
+			Specs: s.Specs,
+			Price: s.Price.StringFixed(2),
+		})
+	}
+	hasSku := 0
+	if p.HasSKU == 1 && len(skuViews) > 0 {
+		hasSku = 1
+	}
+
 	detail := &types.ProductDetail{
 		ProductCard: types.ProductCard{
 			ID:            strconv.FormatInt(p.ID, 10),
@@ -204,10 +221,11 @@ func ProductDetail(sc *svc.ServiceContext, memberID int64, idStr string) (*types
 			Sales:         p.Sales,
 			Status:        p.Status,
 		},
-		Images:     imgs,
-		VideoURL:   p.VideoURL,
-		VideoCover: p.VideoCover,
-		DetailHTML: p.DetailHTML,
+		Images:       imgs,
+		DetailImages: detailImagesOf(p.DetailImages),
+		VideoURL:     p.VideoURL,
+		VideoCover:   p.VideoCover,
+		DetailHTML:   p.DetailHTML,
 		PetProfile: types.PetProfile{
 			Gender:      p.PetGender,
 			GenderText:  GenderText(p.PetGender),
@@ -227,8 +245,17 @@ func ProductDetail(sc *svc.ServiceContext, memberID int64, idStr string) (*types
 			Cover:      breed.Cover,
 		},
 		Category:   types.CategoryRef{ID: strconv.FormatInt(category.ID, 10), Name: category.Name},
+		HasSku:     hasSku,
+		Skus:       skuViews,
 		IsFavorite: isFav,
 		AIEnabled:  sc.Config.AIEnabled() || !sc.Config.IsProd(),
 	}
 	return detail, nil
+}
+
+// detailImagesOf 解析商品详情长图 JSON
+func detailImagesOf(raw string) []string {
+	images := []string{}
+	_ = json.Unmarshal([]byte(raw), &images)
+	return images
 }

@@ -48,6 +48,9 @@ interface EditForm {
   quarantineCertUrl?: string
   nextVaccineDate?: string
   nextDewormDate?: string
+  detailImages?: string
+  stockWarnThreshold?: number
+  skus?: { specs: string; price: string; sort?: number; status?: number }[]
 }
 
 export default function Products() {
@@ -89,7 +92,12 @@ export default function Products() {
     form.resetFields()
     if (id) {
       const d: AdminProductDetail = await fetchProductDetail(id)
-      form.setFieldsValue(d as unknown as EditForm)
+      const rows = d as unknown as EditForm & { detailImages?: string[]; skus?: { specs: string; price: string; sort?: number; status?: number }[] }
+      form.setFieldsValue({
+        ...(rows as unknown as EditForm),
+        detailImages: (rows.detailImages ?? []).join('\n'),
+        skus: rows.skus ?? [],
+      })
     }
     setOpen(true)
   }
@@ -112,6 +120,12 @@ export default function Products() {
               .map((s) => s.trim())
               .filter(Boolean)
           : [],
+      detailImages:
+        typeof raw.detailImages === 'string' && (raw.detailImages as string).trim()
+          ? (raw.detailImages as unknown as string).split('\n').map((s) => s.trim()).filter(Boolean)
+          : [],
+      stockWarnThreshold: raw.stockWarnThreshold != null ? String(raw.stockWarnThreshold) : '',
+      skus: (raw.skus ?? []).map((s) => ({ specs: s.specs, price: String(s.price), sort: s.sort, status: s.status })),
     }
     try {
       if (editId) await updateProduct(editId, v)
@@ -323,6 +337,36 @@ export default function Products() {
           </Form.Item>
           <Form.Item name="detailHtml" label="图文详情 HTML">
             <Input.TextArea rows={4} />
+          </Form.Item>
+          <Form.Item name="detailImages" label="详情长图 URL（每行一个）">
+            <Input.TextArea rows={3} placeholder={'https://...\nhttps://...'} />
+          </Form.Item>
+          <Form.Item name="stockWarnThreshold" label="库存预警阈值（在售库存 ≤ 该值时进入预警）">
+            <InputNumber min={0} max={100} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="SKU 规格（规格商品下单必选其一，价格以规格为准）">
+            <Form.List name="skus">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map((field) => (
+                    <div key={field.key} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 8 }}>
+                      <Form.Item name={[field.name, 'specs']} noStyle rules={[{ required: true, message: '规格描述' }]}>
+                        <Input placeholder="如：3个月|含三针疫苗" />
+                      </Form.Item>
+                      <Form.Item name={[field.name, 'price']} noStyle rules={[{ required: true, message: '价格' }]}>
+                        <InputNumber min={0.01} precision={2} placeholder="价格" style={{ width: '100%' }} />
+                      </Form.Item>
+                      <Button danger type="link" onClick={() => remove(field.name)}>
+                        删除
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="dashed" block onClick={() => add({ status: 1 })}>
+                    + 添加规格
+                  </Button>
+                </>
+              )}
+            </Form.List>
           </Form.Item>
         </Form>
       </Modal>

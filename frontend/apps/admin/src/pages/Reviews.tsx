@@ -75,6 +75,15 @@ export default function Reviews() {
     { title: '会员', dataIndex: 'nickname', width: 110 },
     { title: '商品', dataIndex: 'productTitle', ellipsis: true },
     { title: '评分', dataIndex: 'rating', width: 140, render: (v: number) => <Rate disabled value={v} style={{ fontSize: 14 }} /> },
+    {
+      title: '三维分',
+      width: 130,
+      render: (_: unknown, r: ReviewRow) => (
+        <span style={{ fontSize: 12, color: '#666' }}>
+          健康 {r.healthScore ?? 5} / 品相 {r.lookScore ?? 5} / 服务 {r.serviceScore ?? 5}
+        </span>
+      ),
+    },
     { title: '内容', dataIndex: 'content', ellipsis: true, render: (v: string) => v || '-' },
     {
       title: '图片',

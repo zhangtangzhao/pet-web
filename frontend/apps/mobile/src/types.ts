@@ -51,14 +51,70 @@ export interface PetProfile {
 
 export interface ProductDetail extends ProductCard {
   images: string[]
+  detailImages?: string[]
   videoUrl: string
   videoCover: string
   detailHtml: string
   petProfile: PetProfile
   breed: { id: string; categoryId: string; name: string; cover: string }
   category: { id: string; name: string }
+  hasSku?: number
+  skus?: SkuView[]
   isFavorite: boolean
   aiEnabled?: boolean
+}
+
+export interface SkuView {
+  id: string
+  specs: string
+  price: string
+}
+
+export interface GroupBuyInfo {
+  id: string
+  productId: string
+  productTitle: string
+  productImage: string
+  price: string
+  origPrice: string
+  size: number
+  hours: number
+  openTeams: number
+  status: number
+}
+
+export interface CartItem {
+  id: string
+  productId: string
+  productTitle: string
+  productImage: string
+  price: string
+  origPrice: string
+  skuId: string
+  skuSpecs: string
+  checked: number
+  onSale: boolean
+  createdAt: string
+}
+
+export interface CartListResp {
+  list: CartItem[]
+  checkedCount: number
+}
+
+export interface UserPet {
+  id: string
+  name: string
+  breedName: string
+  gender: number
+  birthday: string
+  weight: string
+  avatar: string
+  vaccineAt: string
+  nextVaccineDate: string
+  nextDewormDate: string
+  remark: string
+  createdAt: string
 }
 
 export interface AIChatMessage {
@@ -120,7 +176,18 @@ export interface OrderView {
   tailExpireAt?: string // 尾款截止
   guaranteeDays?: number // 健康保障天数，0=无
   levelDiscount?: string // 会员等级优惠金额
-  items: { productId: string; productTitle: string; productImage: string; breedName: string; price: string; quantity: number }[]
+  isPickup?: boolean // 到店自提单
+  pickupCode?: string // 自提核销码
+  groupTeamId?: string // 拼团团 ID
+  items: {
+    productId: string
+    productTitle: string
+    productImage: string
+    breedName: string
+    price: string
+    quantity: number
+    skuSpecs?: string
+  }[]
 }
 
 export interface ShipMethod {

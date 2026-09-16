@@ -14,6 +14,9 @@ export default function OrderReview() {
   const [content, setContent] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [healthScore, setHealthScore] = useState(5)
+  const [lookScore, setLookScore] = useState(5)
+  const [serviceScore, setServiceScore] = useState(5)
 
   useEffect(() => {
     get<OrderView>(`/orders/${params.orderNo}`).then(setOrder).catch(() => {})
@@ -65,6 +68,9 @@ export default function OrderReview() {
         rating,
         content: content.trim(),
         images,
+        healthScore,
+        lookScore,
+        serviceScore,
       })
       Taro.showToast({ title: '评价成功', icon: 'success' })
       setTimeout(() => Taro.navigateBack().catch(() => {}), 800)
@@ -102,6 +108,22 @@ export default function OrderReview() {
             </Text>
           ))}
           <Text className='rv-star-text'>{['', '很差', '较差', '一般', '满意', '超赞'][rating]}</Text>
+        </View>
+        <View className='rv-dims'>
+          {([
+            ['健康程度', healthScore, setHealthScore],
+            ['品相外观', lookScore, setLookScore],
+            ['服务体验', serviceScore, setServiceScore],
+          ] as [string, number, (n: number) => void][]).map(([label, val, set]) => (
+            <View className='rv-dim' key={label}>
+              <Text className='rv-dim-label'>{label}</Text>
+              <View className='rv-dim-stars'>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Text key={n} className={`rv-dim-star ${n <= val ? 'rv-star-on' : ''}`} onClick={() => set(n)}>★</Text>
+                ))}
+              </View>
+            </View>
+          ))}
         </View>
         <Textarea
           className='rv-textarea'

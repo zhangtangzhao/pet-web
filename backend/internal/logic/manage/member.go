@@ -77,6 +77,25 @@ func UpdateMemberStatus(sc *svc.ServiceContext, req *types.MemberStatusReq) erro
 	return nil
 }
 
+// UpdateMemberBlacklist 拉黑/解除（可登录但禁交易/评价/领券）
+func UpdateMemberBlacklist(sc *svc.ServiceContext, req *types.MemberBlacklistReq) error {
+	id, err := parseID(req.ID)
+	if err != nil {
+		return err
+	}
+	if req.Blacklist != 0 && req.Blacklist != 1 {
+		return common.ErrParam
+	}
+	res := sc.DB.Model(&model.Member{}).Where("id = ?", id).Update("blacklist", req.Blacklist)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return common.ErrNotFound
+	}
+	return nil
+}
+
 func maskPhone(phone string) string {
 	if len(phone) == 11 {
 		return phone[:3] + "****" + phone[7:]

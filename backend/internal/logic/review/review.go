@@ -11,6 +11,7 @@ import (
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/growth"
+	"pet/backend/internal/logic/risk"
 	"pet/backend/internal/logic/sensitive"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
@@ -45,6 +46,9 @@ func view(r reviewRow) types.ReviewView {
 		Rating:       r.Rating,
 		Content:      r.Content,
 		Images:       images,
+		HealthScore:  r.HealthScore,
+		LookScore:    r.LookScore,
+		ServiceScore: r.ServiceScore,
 		Status:       r.Status,
 		CreatedAt:    r.CreatedAt.Format(time.RFC3339),
 		Reply:        r.Reply,
@@ -59,6 +63,9 @@ func view(r reviewRow) types.ReviewView {
 func Create(sc *svc.ServiceContext, memberID int64, req *types.ReviewCreateReq) (*types.ReviewView, error) {
 	if req.Rating < 1 || req.Rating > 5 {
 		return nil, common.ErrParam
+	}
+	if err := risk.CheckReviewContent(sc, memberID, trimSpace(req.Content)); err != nil {
+		return nil, err
 	}
 	content := sensitive.Filter(sc.DB, trimSpace(req.Content))
 	if utf8.RuneCountInString(content) > maxContentRunes {
@@ -96,6 +103,9 @@ func Create(sc *svc.ServiceContext, memberID int64, req *types.ReviewCreateReq) 
 		return nil, err
 	}
 	images, _ := json.Marshal(req.Images)
+	health := clampScore(req.HealthScore)
+	look := clampScore(req.LookScore)
+	service := clampScore(req.ServiceScore)
 	r := model.OrderReview{
 		ID:           common.NewID(),
 		OrderNo:      o.OrderNo,
@@ -105,6 +115,9 @@ func Create(sc *svc.ServiceContext, memberID int64, req *types.ReviewCreateReq) 
 		Rating:       req.Rating,
 		Content:      content,
 		Images:       string(images),
+		HealthScore:  health,
+		LookScore:    look,
+		ServiceScore: service,
 		Status:       model.ReviewShown,
 	}
 	if err := sc.DB.Create(&r).Error; err != nil {
@@ -121,9 +134,19 @@ func Create(sc *svc.ServiceContext, memberID int64, req *types.ReviewCreateReq) 
 		Rating:       r.Rating,
 		Content:      r.Content,
 		Images:       req.Images,
+		HealthScore:  health,
+		LookScore:    look,
+		ServiceScore: service,
 		Status:       r.Status,
 		CreatedAt:    r.CreatedAt.Format(time.RFC3339),
 	}, nil
+}
+
+func clampScore(v int) int {
+	if v < 1 || v > 5 {
+		return 5
+	}
+	return v
 }
 
 // ListByProduct 商品评价列表（仅显示中，游标 id DESC）
@@ -165,22 +188,32 @@ func ListByMember(sc *svc.ServiceContext, memberID int64, cursor string, limit i
 // ProductReviewSummary 详情页评价摘要（评分均值 + 总数 + 最新 3 条）
 func ProductReviewSummary(sc *svc.ServiceContext, productID int64) (*types.ReviewSummaryResp, error) {
 	var agg struct {
-		Avg   float64
-		Total int64
+		Avg       float64
+		AvgHealth float64
+		AvgLook   float64
+		AvgSvc    float64
+		Total     int64
 	}
 	if err := sc.DB.Model(&model.OrderReview{}).
-		Select("COALESCE(AVG(rating), 0) AS avg, COUNT(*) AS total").
+		Select("COALESCE(AVG(rating), 0) AS avg, COALESCE(AVG(health_score), 0) AS avg_health,"+
+			"COALESCE(AVG(look_score), 0) AS avg_look, COALESCE(AVG(service_score), 0) AS avg_svc, COUNT(*) AS total").
 		Where("product_id = ? AND status = ?", productID, model.ReviewShown).
 		Scan(&agg).Error; err != nil {
 		return nil, err
 	}
 	resp := &types.ReviewSummaryResp{
-		AvgRating: "0.0",
-		Total:     agg.Total,
-		Latest:    []types.ReviewView{},
+		AvgRating:  "0.0",
+		AvgHealth:  "0.0",
+		AvgLook:    "0.0",
+		AvgService: "0.0",
+		Total:      agg.Total,
+		Latest:     []types.ReviewView{},
 	}
 	if agg.Total > 0 {
 		resp.AvgRating = trimFloat(agg.Avg)
+		resp.AvgHealth = trimFloat(agg.AvgHealth)
+		resp.AvgLook = trimFloat(agg.AvgLook)
+		resp.AvgService = trimFloat(agg.AvgSvc)
 		page, err := ListByProduct(sc, productID, "", 3)
 		if err != nil {
 			return nil, err

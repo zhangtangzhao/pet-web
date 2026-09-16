@@ -1,0 +1,24 @@
+.pet { padding: 24rpx; }
+.pet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
+.pet-head-title { font-size: 34rpx; font-weight: 700; }
+.pet-add { color: #ff6b35; font-size: 28rpx; font-weight: 600; }
+.pet-form, .pet-card { background: #fff; border-radius: 20rpx; padding: 28rpx; margin-bottom: 24rpx; }
+.pet-field { display: flex; align-items: center; gap: 16rpx; padding: 16rpx 0; border-bottom: 1rpx solid #f4f4f4; }
+.pet-label { width: 140rpx; font-size: 26rpx; color: #666; flex-shrink: 0; }
+.pet-input { flex: 1; font-size: 28rpx; }
+.pet-genders { display: flex; gap: 16rpx; }
+.pet-gender-item { padding: 8rpx 32rpx; border-radius: 28rpx; background: #f6f6f6; font-size: 26rpx; color: #666; }
+.pet-gender-on { background: #ff6b35; color: #fff; }
+.pet-save { margin-top: 28rpx; background: linear-gradient(135deg, #ff6b35, #ff8f5c); color: #fff; text-align: center; border-radius: 40rpx; padding: 20rpx; font-size: 28rpx; font-weight: 600; }
+.pet-empty { text-align: center; color: #999; font-size: 26rpx; padding: 120rpx 0; }
+.pet-card-head { display: flex; align-items: center; gap: 16rpx; }
+.pet-name { font-size: 32rpx; font-weight: 700; }
+.pet-breed { font-size: 24rpx; color: #999; background: #f6f6f6; padding: 4rpx 16rpx; border-radius: 10rpx; }
+.pet-gender { color: #4a9ff5; font-size: 28rpx; }
+.pet-gender-f { color: #ff7ab5; }
+.pet-meta { display: flex; gap: 24rpx; margin-top: 14rpx; font-size: 24rpx; color: #999; }
+.pet-care { display: flex; gap: 16rpx; margin-top: 16rpx; flex-wrap: wrap; }
+.pet-care-item { font-size: 22rpx; color: #fa8c16; background: #fff7e6; border-radius: 8rpx; padding: 6rpx 14rpx; }
+.pet-remark { margin-top: 14rpx; font-size: 24rpx; color: #666; }
+.pet-actions { display: flex; gap: 32rpx; justify-content: flex-end; margin-top: 18rpx; font-size: 24rpx; color: #1890ff; }
+.pet-del { color: #999; }

@@ -84,6 +84,8 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/016_supplier_compliance.down.sql](sql/016_supplier_compliance.down.sql) | 回滚供货商表、商品扩展列与角色种子 |
 | [sql/017_member_level.up.sql](sql/017_member_level.up.sql) | 会员等级：member 成长值/level_reached 列 + orders 等级折扣快照 + 历史成长值回填 + 升级礼包券种子（5111-5113） |
 | [sql/017_member_level.down.sql](sql/017_member_level.down.sql) | 回滚等级列与升级礼包券种子 |
+| [sql/018_commerce_suite.up.sql](sql/018_commerce_suite.up.sql) | 商城深化：cart 购物车 / product_sku 规格 / group_buy+group_team 拼团 / orders 自提核销码与拼团 ID / order_review 三维评分 / pet_profile 宠物档案 / risk_log 风控 / member.blacklist / 商品详情长图与库存预警阈值 / notify 幂等键 / 召回券种子（5120） |
+| [sql/018_commerce_suite.down.sql](sql/018_commerce_suite.down.sql) | 回滚迁移 018 全部对象与种子 |
 
 说明：
 

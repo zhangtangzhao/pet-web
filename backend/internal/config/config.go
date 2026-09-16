@@ -106,6 +106,13 @@ type Config struct {
 		OrderPerMinute int `json:",default=5"`  // 每用户每分钟下单上限
 		SmsIPDaily     int `json:",default=20"` // 每 IP 每日短信发送上限
 	}
+
+	// 营销自动化（≤0 关闭对应项）
+	Automation struct {
+		CartRemindHours int   `json:",default=24"`   // 购物车加入 N 小时未结算 → 提醒
+		DormantDays     int   `json:",default=30"`   // 距最近支付订单 N 天未下单 → 召回
+		DormantCouponID int64 `json:",default=5120"` // 召回券模板 ID
+	}
 }
 
 // IsProd 生产环境判定（go-zero Mode 取值 pro；兼容 prod）

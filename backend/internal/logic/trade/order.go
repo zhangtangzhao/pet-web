@@ -12,6 +12,8 @@ import (
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/growth"
 	"pet/backend/internal/logic/marketing"
+	"pet/backend/internal/logic/notify"
+	"pet/backend/internal/logic/risk"
 	"pet/backend/internal/metrics"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
@@ -24,6 +26,13 @@ func payTTL(sc *svc.ServiceContext) time.Duration {
 		minutes = 15
 	}
 	return time.Duration(minutes) * time.Minute
+}
+
+func skuSpecsOf(sku *model.ProductSku) string {
+	if sku == nil {
+		return ""
+	}
+	return sku.Specs
 }
 
 // memberLevelRate 会员等级折扣率（未登录/查询异常/无折扣均返回 1）
@@ -84,6 +93,12 @@ func releaseOrderStock(db *gorm.DB, orderID, flashSaleID int64) {
 
 // CreateOrder 创建订单（活体防超卖：原子占位），并尝试预支付
 func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderReq) (*types.CreateOrderResp, error) {
+	if len(req.CartIds) > 0 {
+		return createCartOrder(sc, memberID, req)
+	}
+	if err := risk.CheckOrderAllowed(sc, memberID); err != nil {
+		return nil, err
+	}
 	productID, err := parseID(req.ProductID)
 	if err != nil {
 		return nil, err
@@ -92,22 +107,34 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		return nil, common.NewErr(400, 40001, "请填写联系人信息")
 	}
 
-	// 原子占位：仅"在售"可被锁定（防并发多人下单同一只）
-	res := sc.DB.Exec(
-		"UPDATE pet_product SET status = ?, updated_at = now() WHERE id = ? AND status = ?",
-		model.ProductLocked, productID, model.ProductOnSale)
-	if res.Error != nil {
-		return nil, res.Error
-	}
-	if res.RowsAffected == 0 {
-		var p model.PetProduct
-		if err := sc.DB.First(&p, productID).Error; err != nil {
-			return nil, common.ErrNotFound
+	// 拼团单不锁定单只（可多人成团，可售性由拼团活动本身控制）；其余订单原子占位防超卖
+	if req.GroupBuyID != "" {
+		var cnt int64
+		if err := sc.DB.Model(&model.PetProduct{}).
+			Where("id = ? AND status = ?", productID, model.ProductOnSale).
+			Count(&cnt).Error; err != nil {
+			return nil, err
 		}
-		if p.Status == model.ProductLocked {
-			return nil, common.ErrGoodsLocked
+		if cnt == 0 {
+			return nil, common.ErrGoodsOffline
 		}
-		return nil, common.ErrGoodsOffline
+	} else {
+		res := sc.DB.Exec(
+			"UPDATE pet_product SET status = ?, updated_at = now() WHERE id = ? AND status = ?",
+			model.ProductLocked, productID, model.ProductOnSale)
+		if res.Error != nil {
+			return nil, res.Error
+		}
+		if res.RowsAffected == 0 {
+			var p model.PetProduct
+			if err := sc.DB.First(&p, productID).Error; err != nil {
+				return nil, common.ErrNotFound
+			}
+			if p.Status == model.ProductLocked {
+				return nil, common.ErrGoodsLocked
+			}
+			return nil, common.ErrGoodsOffline
+		}
 	}
 
 	var p model.PetProduct
@@ -117,6 +144,27 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 	}
 	var breed model.Breed
 	_ = sc.DB.First(&breed, p.BreedID).Error
+
+	// SKU 规格：规格商品必须选择有效规格（价格以规格为准）
+	var sku *model.ProductSku
+	if p.HasSKU == 1 {
+		if req.SkuID == "" {
+			releaseProduct(sc.DB, productID)
+			return nil, common.ErrSkuRequired
+		}
+		skuID, serr := strconv.ParseInt(req.SkuID, 10, 64)
+		if serr != nil || skuID <= 0 {
+			releaseProduct(sc.DB, productID)
+			return nil, common.ErrParam
+		}
+		var s model.ProductSku
+		if err := sc.DB.Where("id = ? AND product_id = ? AND status = ?", skuID, productID, 1).
+			First(&s).Error; err != nil {
+			releaseProduct(sc.DB, productID)
+			return nil, common.ErrSkuInvalid
+		}
+		sku = &s
+	}
 
 	// 增值服务：必须全部启用，汇总服务费
 	serviceIDs, err := strconvSlice(req.ServiceIDs)
@@ -143,19 +191,54 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		return nil, err
 	}
 
+	// 拼团：拼团价成交；不叠加秒杀，禁券/禁定金/禁增值服务
+	var gb *model.GroupBuy
+	if req.GroupBuyID != "" {
+		gbID, gerr := strconv.ParseInt(req.GroupBuyID, 10, 64)
+		if gerr != nil || gbID <= 0 {
+			return fail(common.ErrParam)
+		}
+		gb = &model.GroupBuy{}
+		if err := sc.DB.Where("id = ? AND product_id = ? AND status = ?", gbID, productID, 1).
+			First(gb).Error; err != nil {
+			return fail(common.ErrGroupInvalid)
+		}
+		if flash != nil {
+			ReleaseFlashSale(sc.DB, flash.ID)
+			flash = nil
+		}
+		if req.UseDeposit {
+			return fail(common.NewErr(400, 41910, "拼团下单暂不支持定金模式"))
+		}
+		if len(req.ServiceIDs) > 0 {
+			return fail(common.NewErr(400, 41911, "拼团下单暂不支持增值服务"))
+		}
+		serviceFee = decimal.Zero
+		svcItems = nil
+	}
+
 	// 金额计算：成交价（秒杀价优先）+ 服务费；pay = total - 券抵扣（保底 0.01）+ 运费（券不抵运费）
 	couponID, err := strconvSingle(req.CouponID)
 	if err != nil {
 		return fail(err)
 	}
 	unitPrice := p.Price
+	if sku != nil {
+		unitPrice = sku.Price
+	}
 	if flash != nil {
 		unitPrice = flash.SalePrice
+	}
+	if gb != nil {
+		unitPrice = gb.Price
 	}
 	base := unitPrice.Add(serviceFee)
 	discount := decimal.Zero
 	var couponName string
 	if couponID > 0 {
+		if gb != nil {
+			return fail(common.NewErr(400, 41912, "拼团下单暂不支持优惠券"))
+		}
 		var mc model.MemberCoupon
 		if err := sc.DB.Where("id = ? AND member_id = ?", couponID, memberID).First(&mc).Error; err != nil {
 			return fail(common.ErrCouponUnusable)
@@ -285,6 +368,7 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		BreedName:    breed.Name,
 		Price:        unitPrice,
 		Quantity:     1,
+		SkuSpecs:     skuSpecsOf(sku),
 	}
 	payment := model.Payment{
 		ID:        common.NewID(),
@@ -299,6 +383,13 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 	}
 
 	err = sc.DB.Transaction(func(tx *gorm.DB) error {
+		if gb != nil {
+			teamID, terr := joinGroupTeam(tx, gb, memberID)
+			if terr != nil {
+				return terr
+			}
+			order.GroupTeamID = teamID
+		}
 		// 用券：事务内原子锁定（并发用同一张券只有一单成功）
 		if couponID > 0 {
 			res := tx.Exec(
@@ -328,6 +419,11 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		return fail(err)
 	}
 	metrics.OrdersCreated.Inc()
+	if gb != nil && order.GroupTeamID > 0 {
+		_ = notify.Enqueue(sc, memberID, model.NotifySceneOrder,
+			"groupjoin:"+order.OrderNo, "拼团订单已创建",
+			"拼团订单支付后即刻生效，邀请好友一起来拼", order.OrderNo)
+	}
 
 	// 定金单：本次实付为定金，尾款走 PayTail
 	firstPayShow := payAmount
@@ -466,7 +562,24 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 			BreedName:    it.BreedName,
 			Price:        it.Price.StringFixed(2),
 			Quantity:     it.Quantity,
+			SkuSpecs:     it.SkuSpecs,
 		})
+	}
+	// 配送方式类别（自提单展示核销码）
+	smKindMap := map[int64]int{}
+	smIDs := make([]int64, 0, len(orders))
+	for _, o := range orders {
+		if o.ShipMethodID > 0 {
+			smIDs = append(smIDs, o.ShipMethodID)
+		}
+	}
+	if len(smIDs) > 0 {
+		var sms []model.ShipMethod
+		if err := sc.DB.Select("id", "kind").Where("id IN ?", smIDs).Find(&sms).Error; err == nil {
+			for _, s := range sms {
+				smKindMap[s.ID] = s.Kind
+			}
+		}
 	}
 	views := make([]*types.OrderView, 0, len(orders))
 	for _, o := range orders {
@@ -497,6 +610,11 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 			AftersaleStatus: aftersaleMap[o.OrderNo],
 			DepositAmount:   o.DepositAmount.StringFixed(2),
 			GuaranteeDays:   o.GuaranteeDays,
+			IsPickup:        smKindMap[o.ShipMethodID] == model.KindPickup,
+			PickupCode:      o.PickupCode,
+		}
+		if o.GroupTeamID > 0 {
+			v.GroupTeamID = strconv.FormatInt(o.GroupTeamID, 10)
 		}
 		if v.Items == nil {
 			v.Items = []types.OrderItemView{}

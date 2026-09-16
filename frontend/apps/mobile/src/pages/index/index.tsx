@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import Taro, { usePullDownRefresh, useRouter, useShareAppMessage } from '@tarojs/taro'
 import { get, getToken } from '../../request'
-import { BannerView, FlashSaleInfo, HomeResp, PageResp, ProductCard } from '../../types'
+import { BannerView, FlashSaleInfo, GroupBuyInfo, HomeResp, PageResp, ProductCard } from '../../types'
 import './index.css'
 
 // banner jump_type → 跳转（与后端 jumpTypes 白名单、管理端选项一一对应）
@@ -25,6 +25,7 @@ export default function Home() {
   const { params } = useRouter()
   const [data, setData] = useState<HomeResp>()
   const [flash, setFlash] = useState<FlashSaleInfo[]>([])
+  const [groups, setGroups] = useState<GroupBuyInfo[]>([])
   const [viewed, setViewed] = useState<ProductCard[]>([])
 
   const load = () =>
@@ -40,6 +41,10 @@ export default function Home() {
     // 秒杀专区：公开接口已过滤（启用中 + 时间窗内 + 有余量）
     get<FlashSaleInfo[]>('/flash-sales')
       .then((l) => setFlash((l ?? []).slice(0, 6)))
+      .catch(() => {})
+    // 拼团专区
+    get<GroupBuyInfo[]>('/group-buys')
+      .then((l) => setGroups((l ?? []).slice(0, 6)))
       .catch(() => {})
     // 最近浏览（登录用户）
     if (getToken()) {
@@ -142,6 +147,37 @@ export default function Home() {
                 )}
                 <Text className='viewed-title'>{p.title}</Text>
                 <Text className='viewed-price'>¥{p.price}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {groups.length > 0 && (
+        <>
+          <View className='section-title section-flash'>
+            👥 拼团专区
+            <Text className='section-flash-tip'>邀友成团更划算</Text>
+          </View>
+          <View className='flash-row'>
+            {groups.map((g) => (
+              <View
+                className='flash-card'
+                key={g.id}
+                onClick={() => Taro.navigateTo({ url: `/pages/checkout/index?id=${g.productId}&groupId=${g.id}` }).catch(() => {})}
+              >
+                {g.productImage ? (
+                  <Image className='flash-img' src={g.productImage} mode='aspectFill' lazyLoad />
+                ) : (
+                  <View className='flash-img flash-img-empty'>🐾</View>
+                )}
+                <View className='flash-main'>
+                  <Text className='flash-title'>{g.productTitle}</Text>
+                  <View className='flash-meta'>
+                    <Text className='flash-price'>¥{Number(g.price).toFixed(2)}</Text>
+                    <Text className='flash-stock'>{g.size}人团</Text>
+                  </View>
+                </View>
               </View>
             ))}
           </View>

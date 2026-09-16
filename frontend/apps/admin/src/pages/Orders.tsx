@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Descriptions, Drawer, Form, Input, InputNumber, message, Modal, Popconfirm, Table, Tag } from 'antd'
 import { DownloadOutlined } from '@ant-design/icons'
 import { PageResp } from '../api/client'
-import { deliverOrder, downloadCSV, fetchOrders, OrderView, refundOrder, shipOrder } from '../api/admin'
+import {
+  deliverOrder,
+  downloadCSV,
+  fetchOrders,
+  OrderView,
+  pickupVerify,
+  refundOrder,
+  shipOrder,
+} from '../api/admin'
 
 const STATUS_TAG: Record<number, string> = {
   10: 'gold',
@@ -26,6 +34,8 @@ export default function Orders() {
   const [refundForm] = Form.useForm()
   const [shipTarget, setShipTarget] = useState<OrderView>()
   const [shipForm] = Form.useForm()
+  const [pickupTarget, setPickupTarget] = useState<OrderView>()
+  const [pickupCode, setPickupCode] = useState('')
 
   const load = useCallback(
     async (q = query) => {
@@ -278,6 +288,7 @@ export default function Orders() {
               {detail.shipAddress && <Descriptions.Item label="收货地址">{detail.shipAddress}</Descriptions.Item>}
               <Descriptions.Item label="配送状态">{SHIP_TEXT[detail.shipStatus] ?? '-'}</Descriptions.Item>
               {detail.shipNo && <Descriptions.Item label="运单号">{detail.shipNo}</Descriptions.Item>}
+              {detail.pickupCode && <Descriptions.Item label="自提核销码"><b>{detail.pickupCode}</b></Descriptions.Item>}
               <Descriptions.Item label="下单时间">{detail.createdAt?.replace('T', ' ').slice(0, 19)}</Descriptions.Item>
               {detail.paidAt && (
                 <Descriptions.Item label="支付时间">{detail.paidAt.replace('T', ' ').slice(0, 19)}</Descriptions.Item>
@@ -294,6 +305,18 @@ export default function Orders() {
                 {detail.shipAddress && (
                   <Button size="small" onClick={() => printWaybill(detail)}>
                     打印托运单
+                  </Button>
+                )}
+                {detail.isPickup && (
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => {
+                      setPickupCode('')
+                      setPickupTarget(detail)
+                    }}
+                  >
+                    自提核销
                   </Button>
                 )}
                 {detail.shipStatus === 0 && (
@@ -347,6 +370,31 @@ export default function Orders() {
           </>
         )}
       </Drawer>
+
+      <Modal
+        title={`自提核销 · ${pickupTarget?.orderNo ?? ''}`}
+        open={!!pickupTarget}
+        onOk={async () => {
+          if (!pickupTarget) return
+          try {
+            await pickupVerify(pickupTarget.orderNo, pickupCode.trim())
+            message.success('核销成功，订单已完成')
+            setPickupTarget(undefined)
+            setDetail(undefined)
+            load()
+          } catch (e: any) {
+            message.error(e.message)
+          }
+        }}
+        onCancel={() => setPickupTarget(undefined)}
+      >
+        <Input
+          placeholder="输入用户出示的 6 位核销码"
+          maxLength={6}
+          value={pickupCode}
+          onChange={(e) => setPickupCode(e.target.value)}
+        />
+      </Modal>
       <Modal
         title={`退款 · ${refundTarget?.orderNo ?? ''}`}
         open={!!refundTarget}

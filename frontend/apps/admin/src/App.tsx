@@ -16,6 +16,7 @@ import ShipMethods from './pages/ShipMethods'
 import Finance from './pages/Finance'
 import Suppliers from './pages/Suppliers'
 import FlashSales from './pages/FlashSales'
+import Groups from './pages/Groups'
 import Report from './pages/Report'
 import Ops from './pages/Ops'
 
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="knowledge" element={<Knowledge />} />
         <Route path="marketing" element={<Marketing />} />
         <Route path="flash-sales" element={<FlashSales />} />
+        <Route path="group-buys" element={<Groups />} />
         <Route path="banner" element={<Banners />} />
         <Route path="shipping" element={<ShipMethods />} />
         <Route path="orders" element={<Orders />} />

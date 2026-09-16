@@ -141,6 +141,7 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 		txnID = *txn.TransactionId
 	}
 	upgraded, newLevel := false, 0
+	teamOK, teamID := false, int64(0)
 	err := sc.DB.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&model.Payment{}).
 			Where("payment_no = ? AND status = ?", p.PaymentNo, model.PayStatusPending).
@@ -224,12 +225,30 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 			upgraded = true
 			newLevel = lvl
 		}
+		// 拼团计数：凑满即成团
+		if o.GroupTeamID > 0 {
+			filled, gerr := groupTeamFilledTx(tx, o.GroupTeamID)
+			if gerr != nil {
+				return gerr
+			}
+			if filled {
+				teamOK = true
+				teamID = o.GroupTeamID
+			}
+		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 	metrics.OrdersPaid.Inc()
+	// 自提单：支付后生成核销码（幂等）
+	if err := issuePickupCode(sc, p.OrderNo); err != nil {
+		logx.Errorf("自提核销码生成失败 orderNo=%s: %v", p.OrderNo, err)
+	}
+	if teamOK {
+		notifyGroupOK(sc, teamID)
+	}
 	if upgraded {
 		if err := notify.Enqueue(sc, p.MemberID, model.NotifySceneCoupon,
 			"levelup:"+strconv.FormatInt(p.MemberID, 10)+":"+strconv.Itoa(newLevel),
@@ -238,6 +257,47 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 		}
 	}
 	return nil
+}
+
+// issuePickupCode 自提单支付成功后生成 6 位核销码（已支付状态，重复调用幂等）
+func issuePickupCode(sc *svc.ServiceContext, orderNo string) error {
+	var o model.Order
+	if err := sc.DB.Select("id", "ship_method_id", "pickup_code", "status").
+		Where("order_no = ?", orderNo).First(&o).Error; err != nil {
+		return err
+	}
+	if o.PickupCode != "" || o.Status != model.OrderPaid {
+		return nil
+	}
+	var sm model.ShipMethod
+	if err := sc.DB.Select("kind").First(&sm, o.ShipMethodID).Error; err != nil {
+		return nil // 配送方式缺失时跳过（非自提单）
+	}
+	if sm.Kind != model.KindPickup {
+		return nil
+	}
+	for i := 0; i < 5; i++ {
+		code := padCode(time.Now().UnixNano())
+		res := sc.DB.Model(&model.Order{}).
+			Where("order_no = ? AND pickup_code = ''", orderNo).
+			Update("pickup_code", code)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected > 0 {
+			return nil
+		}
+	}
+	return nil
+}
+
+func padCode(n int64) string {
+	code := n % 1000000
+	s := strconv.FormatInt(code, 10)
+	for len(s) < 6 {
+		s = "0" + s
+	}
+	return s
 }
 
 // PayTail 补尾款：复用/创建尾款支付流水并预支付（定金单 status=15 专用）

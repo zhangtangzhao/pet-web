@@ -14,20 +14,21 @@ const (
 )
 
 type Member struct {
-	ID          int64      `gorm:"primaryKey" json:"id"`
-	Nickname    string     `json:"nickname"`
-	Avatar      string     `json:"avatar"`
-	Phone       string     `json:"phone"`
-	Gender      int        `json:"gender"`
-	Status      int        `json:"status"`
-	Points      int64      `json:"points"`
-	GrowthValue int64      `json:"growthValue"` // 成长值 = 累计实付（元），只增不减
-	LevelReached int       `json:"levelReached"` // 已发放升级礼包的最高等级
-	InviteCode  string     `json:"inviteCode"`
-	InvitedBy   int64      `json:"invitedBy"`
-	LastLoginAt *time.Time `json:"lastLoginAt"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
+	ID           int64      `gorm:"primaryKey" json:"id"`
+	Nickname     string     `json:"nickname"`
+	Avatar       string     `json:"avatar"`
+	Phone        string     `json:"phone"`
+	Gender       int        `json:"gender"`
+	Status       int        `json:"status"`
+	Points       int64      `json:"points"`
+	GrowthValue  int64      `json:"growthValue"`  // 成长值 = 累计实付（元），只增不减
+	LevelReached int        `json:"levelReached"` // 已发放升级礼包的最高等级
+	InviteCode   string     `json:"inviteCode"`
+	InvitedBy    int64      `json:"invitedBy"`
+	Blacklist    int        `json:"blacklist"` // 1=黑名单：可登录但禁交易/评价/领券
+	LastLoginAt  *time.Time `json:"lastLoginAt"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
 }
 
 func (Member) TableName() string { return "member" }

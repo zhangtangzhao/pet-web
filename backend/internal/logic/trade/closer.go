@@ -223,12 +223,14 @@ func AutoConfirmOrders(sc *svc.ServiceContext) {
 func StartOrderCloser(sc *svc.ServiceContext) {
 	CloseExpiredOrders(sc)
 	CloseExpiredTails(sc)
+	ExpireGroups(sc)
 	AutoConfirmOrders(sc)
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	for range ticker.C {
 		CloseExpiredOrders(sc)
 		CloseExpiredTails(sc)
+		ExpireGroups(sc)
 		AutoConfirmOrders(sc)
 	}
 }

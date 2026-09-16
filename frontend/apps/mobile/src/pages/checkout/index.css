@@ -432,3 +432,9 @@
   color: #999;
   margin-left: 12px;
 }
+
+.co-cart-specs { font-size: 22rpx; color: #999; background: #f6f6f6; border-radius: 8rpx; padding: 4rpx 12rpx; align-self: flex-start; }
+.co-empty-tip { text-align: center; color: #999; font-size: 26rpx; padding: 60rpx 0; }
+.co-group-banner { display: flex; align-items: center; gap: 16rpx; margin-top: 20rpx; background: #fff7f2; border-radius: 14rpx; padding: 16rpx 20rpx; }
+.co-group-tag { background: #ff4d4f; color: #fff; font-size: 22rpx; font-weight: 700; border-radius: 8rpx; padding: 4rpx 12rpx; flex-shrink: 0; }
+.co-group-desc { font-size: 22rpx; color: #ff6b35; }

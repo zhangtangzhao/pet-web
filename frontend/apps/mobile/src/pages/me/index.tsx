@@ -21,6 +21,8 @@ const ENTRIES: { icon: string; label: string; url: string }[] = [
   { icon: '🛠', label: '我的售后', url: '/pages/my-aftersales/index' },
   { icon: '🎫', label: '我的优惠券', url: '/pages/coupon-center/index' },
   { icon: '🎁', label: '积分签到', url: '/pages/points/index' },
+  { icon: '🛒', label: '购物车', url: '/pages/cart/index' },
+  { icon: '🐶', label: '宠物档案', url: '/pages/pet/index' },
   { icon: '🤝', label: '邀请有礼', url: '/pages/invite/index' },
   { icon: '📍', label: '地址簿', url: '/pages/address/index' },
   { icon: '❤️', label: '我的收藏', url: '/pages/favorites/index' },
