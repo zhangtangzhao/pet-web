@@ -11,6 +11,7 @@ import (
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/marketing"
+	"pet/backend/internal/metrics"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -57,6 +58,18 @@ func strconvSlice(ss []string) ([]int64, error) {
 func releaseProduct(db *gorm.DB, productID int64) {
 	db.Exec("UPDATE pet_product SET status = ?, updated_at = now() WHERE id = ? AND status = ?",
 		model.ProductOnSale, productID, model.ProductLocked)
+}
+
+// releaseOrderStock 释放订单商品（锁定→在售）并回补秒杀名额（定金单退款用）
+func releaseOrderStock(db *gorm.DB, orderID, flashSaleID int64) {
+	var items []model.OrderItem
+	if err := db.Where("order_id = ?", orderID).Find(&items).Error; err != nil {
+		return
+	}
+	for _, it := range items {
+		releaseProduct(db, it.ProductID)
+	}
+	ReleaseFlashSale(db, flashSaleID)
 }
 
 // CreateOrder 创建订单（活体防超卖：原子占位），并尝试预支付
@@ -107,55 +120,78 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		return nil, err
 	}
 
-	// 金额计算：total = 商品价 + 服务费；pay = total - 券抵扣（保底 0.01）+ 运费（券不抵运费）
-	couponID, err := strconvSingle(req.CouponID)
-	if err != nil {
+	// 秒杀：命中启用中且窗口内的活动 → 原子占名额（后续任何失败需回补）
+	var flash *model.FlashSale
+	if fs := ActiveFlashSaleOf(sc, productID); fs != nil && ClaimFlashSale(sc.DB, fs.ID) {
+		flash = fs
+	}
+	fail := func(err error) (*types.CreateOrderResp, error) {
+		if flash != nil {
+			ReleaseFlashSale(sc.DB, flash.ID)
+		}
 		releaseProduct(sc.DB, productID)
 		return nil, err
 	}
-	base := p.Price.Add(serviceFee)
+
+	// 金额计算：成交价（秒杀价优先）+ 服务费；pay = total - 券抵扣（保底 0.01）+ 运费（券不抵运费）
+	couponID, err := strconvSingle(req.CouponID)
+	if err != nil {
+		return fail(err)
+	}
+	unitPrice := p.Price
+	if flash != nil {
+		unitPrice = flash.SalePrice
+	}
+	base := unitPrice.Add(serviceFee)
 	discount := decimal.Zero
 	var couponName string
 	if couponID > 0 {
 		var mc model.MemberCoupon
 		if err := sc.DB.Where("id = ? AND member_id = ?", couponID, memberID).First(&mc).Error; err != nil {
-			releaseProduct(sc.DB, productID)
-			return nil, common.ErrCouponUnusable
+			return fail(common.ErrCouponUnusable)
 		}
 		var tpl model.CouponTemplate
 		if err := sc.DB.First(&tpl, mc.TemplateID).Error; err != nil {
-			releaseProduct(sc.DB, productID)
-			return nil, common.ErrCouponUnusable
+			return fail(common.ErrCouponUnusable)
 		}
 		if mc.Status != model.CouponUsable {
-			releaseProduct(sc.DB, productID)
-			return nil, common.ErrCouponUnusable
+			return fail(common.ErrCouponUnusable)
 		}
 		if err := marketing.ValidateUsable(&tpl, base); err != nil {
-			releaseProduct(sc.DB, productID)
-			return nil, err
+			return fail(err)
 		}
 		discount = marketing.CalcDiscount(&tpl, base)
 		couponName = tpl.Name
 	}
 
+	// 定金锁宠模式：禁用优惠券
+	useDeposit := req.UseDeposit && sc.Config.Growth.DepositPercent > 0
+	if useDeposit && couponID > 0 {
+		return fail(common.ErrDepositCoupon)
+	}
+
 	// 配送方式：必须启用；托运配送类必填收货地址
 	shipMethodID, err := parseID(req.ShipMethodID)
 	if err != nil {
-		releaseProduct(sc.DB, productID)
-		return nil, err
+		return fail(err)
 	}
 	var sm model.ShipMethod
 	if err := sc.DB.Where("id = ? AND status = ?", shipMethodID, model.ShipMethodOn).First(&sm).Error; err != nil {
-		releaseProduct(sc.DB, productID)
-		return nil, common.NewErr(400, 40002, "配送方式不可用")
+		return fail(common.NewErr(400, 40002, "配送方式不可用"))
 	}
 	shipAddress := strings.TrimSpace(req.ShipAddress)
-	if sm.Kind == model.KindShip {
-		if shipAddress == "" {
-			releaseProduct(sc.DB, productID)
-			return nil, common.NewErr(400, 40003, "请填写收货地址")
+
+	// 地址簿地址优先于手填
+	if req.AddressID != "" {
+		if addrID, perr := parseID(req.AddressID); perr == nil {
+			var addr model.MemberAddress
+			if err := sc.DB.Where("id = ? AND member_id = ?", addrID, memberID).First(&addr).Error; err == nil {
+				shipAddress = addr.Address
+			}
 		}
+	}
+	if sm.Kind == model.KindShip && shipAddress == "" {
+		return fail(common.NewErr(400, 40003, "请填写收货地址"))
 	}
 	if rs := []rune(shipAddress); len(rs) > 255 {
 		shipAddress = string(rs[:255])
@@ -166,6 +202,36 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		payAmount = decimal.NewFromFloat(0.01)
 	}
 	payAmount = payAmount.Add(sm.Fee)
+
+	// 定金锁宠：首笔仅付定金，尾款在 N 天内补齐（closer 超时关单退定金）
+	deposit := decimal.Zero
+	var tailExpireAt *time.Time
+	if useDeposit {
+		deposit = base.Mul(decimal.NewFromInt(int64(sc.Config.Growth.DepositPercent))).
+			Div(decimal.NewFromInt(100)).Round(2)
+		if deposit.LessThan(decimal.NewFromFloat(0.01)) {
+			deposit = decimal.NewFromFloat(0.01)
+		}
+		t := time.Now().AddDate(0, 0, sc.Config.Growth.DepositHoldDays)
+		tailExpireAt = &t
+	}
+
+	// 健康保障：取勾选服务中的最大保障天数快照
+	guarantee := 0
+	for _, it := range svcItems {
+		if it.GuaranteeDays > guarantee {
+			guarantee = it.GuaranteeDays
+		}
+	}
+
+	flashID := int64(0)
+	if flash != nil {
+		flashID = flash.ID
+	}
+	firstPay := payAmount
+	if useDeposit {
+		firstPay = deposit
+	}
 
 	now := time.Now()
 	order := model.Order{
@@ -180,6 +246,10 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		CouponInfo:     couponName,
 		ServiceItems:   marketing.ServiceSnapshotJSON(svcItems),
 		Status:         model.OrderPending,
+		DepositAmount:  deposit,
+		TailExpireAt:   tailExpireAt,
+		FlashSaleID:    flashID,
+		GuaranteeDays:  guarantee,
 		ContactName:    req.ContactName,
 		ContactPhone:   req.ContactPhone,
 		Remark:         req.Remark,
@@ -195,7 +265,7 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		ProductTitle: p.Title,
 		ProductImage: p.MainImage,
 		BreedName:    breed.Name,
-		Price:        p.Price,
+		Price:        unitPrice,
 		Quantity:     1,
 	}
 	payment := model.Payment{
@@ -204,7 +274,7 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		OrderID:   order.ID,
 		OrderNo:   order.OrderNo,
 		MemberID:  memberID,
-		Amount:    payAmount,
+		Amount:    firstPay,
 		Channel:   model.PayChannelMini,
 		PayType:   model.PayTypePurchase,
 		Status:    model.PayStatusPending,
@@ -237,14 +307,22 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		return tx.Create(&payment).Error
 	})
 	if err != nil {
-		releaseProduct(sc.DB, productID)
-		return nil, err
+		return fail(err)
 	}
+	metrics.OrdersCreated.Inc()
 
+	// 定金单：本次实付为定金，尾款走 PayTail
+	firstPayShow := payAmount
+	if useDeposit {
+		firstPayShow = deposit
+	}
 	resp := &types.CreateOrderResp{
-		OrderNo:   order.OrderNo,
-		PayAmount: order.PayAmount.StringFixed(2),
-		ExpireAt:  order.ExpireAt.Format(time.RFC3339),
+		OrderNo:    order.OrderNo,
+		PaymentNo:  payment.PaymentNo,
+		PayAmount:  firstPayShow.StringFixed(2),
+		ExpireAt:   order.ExpireAt.Format(time.RFC3339),
+		IsDeposit:  useDeposit,
+		TailAmount: payAmount.Sub(deposit).StringFixed(2),
 	}
 	// 尝试预支付（未配置支付/未绑定微信时返回空参数，前端可通过 prepay 接口重试）
 	payParams, _ := prepayOrder(sc, memberID, &order)
@@ -296,7 +374,7 @@ func OrderDetail(sc *svc.ServiceContext, memberID int64, orderNo string) (*types
 	return views[0], nil
 }
 
-// CancelOrder 取消订单（仅待支付），事务内关单 + 释放商品
+// CancelOrder 取消订单（待支付 / 已付定金待补尾款），事务内关单 + 释放商品
 func CancelOrder(sc *svc.ServiceContext, memberID int64, orderNo, reason string) error {
 	var o model.Order
 	if err := sc.DB.Where("order_no = ? AND member_id = ?", orderNo, memberID).First(&o).Error; err != nil {
@@ -304,6 +382,9 @@ func CancelOrder(sc *svc.ServiceContext, memberID int64, orderNo, reason string)
 			return common.ErrNotFound
 		}
 		return err
+	}
+	if o.Status == model.OrderDepositPaid {
+		return closeDepositOrder(sc, &o, reason)
 	}
 	return closeOrder(sc, &o, model.OrderCanceled, reason, true)
 }
@@ -395,12 +476,17 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 			Items:           itemMap[o.ID],
 			Reviewed:        isReviewed,
 			AftersaleStatus: aftersaleMap[o.OrderNo],
+			DepositAmount:   o.DepositAmount.StringFixed(2),
+			GuaranteeDays:   o.GuaranteeDays,
 		}
 		if v.Items == nil {
 			v.Items = []types.OrderItemView{}
 		}
 		if o.PaidAt != nil {
 			v.PaidAt = o.PaidAt.Format(time.RFC3339)
+		}
+		if o.TailExpireAt != nil {
+			v.TailExpireAt = o.TailExpireAt.Format(time.RFC3339)
 		}
 		if o.ShippedAt != nil {
 			v.ShippedAt = o.ShippedAt.Format(time.RFC3339)

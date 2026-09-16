@@ -5,6 +5,7 @@ import { deliverOrder, fetchOrders, OrderView, refundOrder, shipOrder } from '..
 
 const STATUS_TAG: Record<number, string> = {
   10: 'gold',
+  15: 'purple',
   20: 'green',
   30: 'blue',
   40: 'default',
@@ -79,6 +80,59 @@ export default function Orders() {
     } catch (e: any) {
       message.error(e.message)
     }
+  }
+
+  // 托运单打印：弹出打印窗口（含订单/活体信息），打完即弃
+  const printWaybill = (o: OrderView) => {
+    const items = o.items
+      .map((it) => `<tr><td>${it.productTitle}</td><td>${it.breedName}</td><td>¥${it.price}</td><td>${it.quantity}</td></tr>`)
+      .join('')
+    const services = (() => {
+      try {
+        return (JSON.parse(o.serviceItems || '[]') as { name: string; price: string }[])
+          .map((s) => `${s.name} ¥${s.price}`)
+          .join('、')
+      } catch {
+        return '-'
+      }
+    })()
+    const html = `<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8"><title>托运单 ${o.orderNo}</title>
+<style>
+  body { font-family: "Microsoft YaHei", sans-serif; padding: 32px; color: #222; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #666; font-size: 12px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th, td { border: 1px solid #999; padding: 6px 10px; text-align: left; }
+  th { background: #f2f2f2; }
+  .kv { font-size: 13px; line-height: 1.9; }
+  .big { font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+</style></head><body>
+<h1>宠物托运单</h1>
+<div class="sub">打印时间 ${new Date().toLocaleString()} · 请随箱粘贴并留存底单</div>
+<div class="kv">
+  订单号：<b class="big">${o.orderNo}</b><br/>
+  运单号：${o.shipNo || '（发货后填写）'}　　配送方式：${o.shipMethod || '-'}<br/>
+  收货人：${o.contactName}　${o.contactPhone}<br/>
+  收货地址：${o.shipAddress || '-'}<br/>
+  下单时间：${o.createdAt?.replace('T', ' ').slice(0, 19)}
+</div>
+<table><tr><th>商品</th><th>品种</th><th>单价</th><th>数量</th></tr>${items}</table>
+<div class="kv">
+  增值服务：${services || '无'}<br/>
+  订单金额：¥${o.payAmount}
+  ${Number(o.depositAmount ?? 0) > 0 ? `（定金 ¥${o.depositAmount} + 尾款 ¥${(Number(o.payAmount) - Number(o.depositAmount ?? 0)).toFixed(2)}）` : ''}
+  ${o.guaranteeDays ? `<br/>健康保障：签收后 ${o.guaranteeDays} 天` : ''}
+</div>
+</body></html>`
+    const win = window.open('', '_blank', 'width=860,height=680')
+    if (!win) {
+      message.error('打印窗口被浏览器拦截，请允许弹窗后重试')
+      return
+    }
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    win.print()
   }
 
   const columns = [
@@ -159,6 +213,22 @@ export default function Orders() {
                 <Tag color={STATUS_TAG[detail.status]}>{detail.statusText}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="实付金额">¥{detail.payAmount}</Descriptions.Item>
+              {Number(detail.depositAmount ?? 0) > 0 && (
+                <>
+                  <Descriptions.Item label="已付定金">¥{detail.depositAmount}</Descriptions.Item>
+                  {detail.status === 15 && (
+                    <Descriptions.Item label="待补尾款">
+                      <span style={{ color: '#722ed1' }}>
+                        ¥{(Number(detail.payAmount) - Number(detail.depositAmount ?? 0)).toFixed(2)}
+                        {detail.tailExpireAt ? `（${detail.tailExpireAt.replace('T', ' ').slice(0, 16)} 前补齐）` : ''}
+                      </span>
+                    </Descriptions.Item>
+                  )}
+                </>
+              )}
+              {detail.guaranteeDays ? (
+                <Descriptions.Item label="健康保障">签收后 {detail.guaranteeDays} 天</Descriptions.Item>
+              ) : null}
               {(Number(detail.serviceFee) > 0 || Number(detail.discountAmount) > 0 || detail.couponInfo) && (
                 <>
                   <Descriptions.Item label="商品金额">¥{detail.totalAmount}</Descriptions.Item>
@@ -199,6 +269,11 @@ export default function Orders() {
             </Descriptions>
             {detail.status === 20 && (
               <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                {detail.shipAddress && (
+                  <Button size="small" onClick={() => printWaybill(detail)}>
+                    打印托运单
+                  </Button>
+                )}
                 {detail.shipStatus === 0 && (
                   <Button
                     type="primary"

@@ -104,6 +104,39 @@ services:
       - "80:80"
       # - "443:443"
 
+  # ───────── 监控：Prometheus 抓取 /metrics + Grafana 看板 ─────────
+  # 启动：docker compose up -d prometheus grafana
+  # 告警规则见 monitoring/alerts.yml（Grafana 内配 Alertmanager/联系点即可收告警）
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: pet-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - promdata:/prometheus
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: pet-grafana
+    restart: unless-stopped
+    environment:
+      # 首次登录 admin / GRAFANA_ADMIN_PASSWORD（默认 admin，生产必须修改）
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:3001:3000"   # Grafana 入口（数据源添加 http://prometheus:9090）
+
 volumes:
   pgdata:
   redisdata:
+  promdata:
+  grafanadata:

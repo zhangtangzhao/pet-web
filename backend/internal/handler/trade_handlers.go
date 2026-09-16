@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -11,6 +13,8 @@ import (
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/trade"
+	"pet/backend/internal/metrics"
+	"pet/backend/internal/ratelimit"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
 )
@@ -22,6 +26,13 @@ func CreateOrder(sc *svc.ServiceContext) http.HandlerFunc {
 			common.Err(w, err)
 			return
 		}
+		// 下单频控（防刷单/脚本抢单）
+		if !ratelimit.Allow(sc.Rdb, "rl:order:"+strconv.FormatInt(memberID(r), 10),
+			sc.Config.RateLimit.OrderPerMinute, time.Minute) {
+			metrics.LimitRejected.WithLabelValues("order").Inc()
+			common.Err(w, common.ErrTooManyRequests)
+			return
+		}
 		resp, err := trade.CreateOrder(sc, memberID(r), &req)
 		if err != nil {
 			common.Err(w, err)
@@ -31,8 +42,21 @@ func CreateOrder(sc *svc.ServiceContext) http.HandlerFunc {
 	})
 }
 
-func ShipMethods(sc *svc.ServiceContext) http.HandlerFunc {
-	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
+// TradeConfig 下单相关公开配置（定金比例/尾款期限），供 checkout 预估展示
+func TradeConfig(sc *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		holdDays := sc.Config.Growth.DepositHoldDays
+		if holdDays <= 0 {
+			holdDays = 3
+		}
+		common.OK(w, &types.TradeConfigResp{
+			DepositPercent:  sc.Config.Growth.DepositPercent,
+			DepositHoldDays: holdDays,
+		})
+	}
+}
+
+func ShipMethods(sc *svc.ServiceContext) http.HandlerFunc {	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
 		list, err := trade.ListMethods(sc)
 		if err != nil {
 			common.Err(w, err)

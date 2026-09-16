@@ -348,3 +348,87 @@
   padding: 60px 0;
   font-size: 26px;
 }
+
+/* 秒杀标签 */
+.co-prod-price {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.co-prod-orig {
+  font-size: 22px;
+  color: #bbb;
+  text-decoration: line-through;
+}
+
+.co-flash-tag {
+  background: linear-gradient(135deg, #f5222d, #ff7a45);
+  color: #fff;
+  font-size: 20px;
+  border-radius: 8px;
+  padding: 2px 10px;
+}
+
+/* 地址簿 */
+.co-addr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.co-addr-chip {
+  font-size: 22px;
+  color: #666;
+  border: 2px solid #eee;
+  border-radius: 999px;
+  padding: 8px 20px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.co-addr-chip-on {
+  border-color: #ff7a45;
+  color: #ff7a45;
+  background: #fff7f2;
+}
+
+/* 定金锁宠 */
+.co-deposit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.co-deposit-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.co-deposit-name {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.co-deposit-desc {
+  font-size: 22px;
+  color: #999;
+  margin-top: 4px;
+  display: block;
+}
+
+.co-coupon-off .co-coupon-arrow {
+  color: #bbb;
+}
+
+.pay-tail {
+  font-size: 22px;
+  color: #999;
+  margin-left: 12px;
+}

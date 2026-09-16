@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/growth"
 	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
@@ -104,8 +105,8 @@ func verifySmsCode(sc *svc.ServiceContext, phone, code string) error {
 	return nil
 }
 
-// SmsLogin 手机号验证码登录，未注册自动注册
-func SmsLogin(sc *svc.ServiceContext, rawPhone, code string) (*types.LoginResp, error) {
+// SmsLogin 手机号验证码登录，未注册自动注册（可携带邀请码归因）
+func SmsLogin(sc *svc.ServiceContext, rawPhone, code, inviteCode string) (*types.LoginResp, error) {
 	phone, err := normalizePhone(rawPhone)
 	if err != nil {
 		return nil, common.ErrParam
@@ -116,19 +117,21 @@ func SmsLogin(sc *svc.ServiceContext, rawPhone, code string) (*types.LoginResp, 
 	if err := verifySmsCode(sc, phone, code); err != nil {
 		return nil, err
 	}
-	return findOrCreateMemberByPhone(sc, phone)
+	return findOrCreateMemberByPhone(sc, phone, inviteCode)
 }
 
-func findOrCreateMemberByPhone(sc *svc.ServiceContext, phone string) (*types.LoginResp, error) {
+func findOrCreateMemberByPhone(sc *svc.ServiceContext, phone, inviteCode string) (*types.LoginResp, error) {
 	var m model.Member
 	isNew := false
 	err := sc.DB.Where("phone = ?", phone).First(&m).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		id := common.NewID()
 		m = model.Member{
-			ID:       common.NewID(),
-			Nickname: "用户" + phone[7:],
-			Phone:    phone,
-			Status:   1,
+			ID:         id,
+			Nickname:   "用户" + phone[7:],
+			Phone:      phone,
+			Status:     1,
+			InviteCode: growth.GenInviteCode(id),
 		}
 		if err := sc.DB.Create(&m).Error; err != nil {
 			// 并发下唯一索引冲突则回查
@@ -146,6 +149,7 @@ func findOrCreateMemberByPhone(sc *svc.ServiceContext, phone string) (*types.Log
 	}
 	if isNew {
 		go marketing.GrantNewUserCoupons(sc, m.ID)
+		go growth.AttachInvite(sc, m.ID, inviteCode)
 	}
 	touchLastLogin(sc.DB, m.ID)
 	return IssueTokens(sc, &m, isNew)

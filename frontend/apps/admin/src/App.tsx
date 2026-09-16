@@ -13,6 +13,9 @@ import Reviews from './pages/Reviews'
 import AfterSale from './pages/AfterSale'
 import Banners from './pages/Banners'
 import ShipMethods from './pages/ShipMethods'
+import FlashSales from './pages/FlashSales'
+import Report from './pages/Report'
+import Ops from './pages/Ops'
 
 export default function App() {
   return (
@@ -24,12 +27,15 @@ export default function App() {
         <Route path="catalog" element={<Catalog />} />
         <Route path="knowledge" element={<Knowledge />} />
         <Route path="marketing" element={<Marketing />} />
+        <Route path="flash-sales" element={<FlashSales />} />
         <Route path="banner" element={<Banners />} />
         <Route path="shipping" element={<ShipMethods />} />
         <Route path="orders" element={<Orders />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="aftersale" element={<AfterSale />} />
         <Route path="members" element={<Members />} />
+        <Route path="report" element={<Report />} />
+        <Route path="ops" element={<Ops />} />
         <Route path="support" element={<Support />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

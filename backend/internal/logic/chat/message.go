@@ -12,6 +12,7 @@ import (
 	"pet/backend/internal/common"
 	"pet/backend/internal/hub"
 	"pet/backend/internal/logic/notify"
+	"pet/backend/internal/logic/sensitive"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -60,6 +61,10 @@ func Send(sc *svc.ServiceContext, senderRole int, actorID, sessionID int64, req 
 	}
 	if len(content) > maxContentLen {
 		return nil, common.ErrParam
+	}
+	// 敏感词拦截（导流线下交易等）；仅文本校验
+	if msgType == model.CsMsgText && sensitive.Contains(sc.DB, content) {
+		return nil, common.ErrSensitive
 	}
 
 	var s *model.CsSession

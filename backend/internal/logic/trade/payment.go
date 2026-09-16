@@ -11,7 +11,9 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/growth"
 	"pet/backend/internal/logic/notify"
+	"pet/backend/internal/metrics"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -58,6 +60,9 @@ func Prepay(sc *svc.ServiceContext, memberID int64, orderNo string) (*types.Crea
 			return nil, common.ErrNotFound
 		}
 		return nil, err
+	}
+	if o.Status == model.OrderDepositPaid {
+		return PayTail(sc, memberID, orderNo)
 	}
 	if o.Status != model.OrderPending {
 		return nil, common.ErrOrderState
@@ -126,14 +131,15 @@ func HandleWxPayNotify(sc *svc.ServiceContext, txn *payments.Transaction) error 
 	return markPaid(sc, &p, txn)
 }
 
-// markPaid 幂等落账：payment 成功 + 订单已支付 + 商品售出
+// markPaid 幂等落账：payment 成功 + 订单状态按分支推进
+// 全款（10→20）/ 定金（10→15，商品保持锁定）/ 尾款（15→20，商品售出）
 func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transaction) error {
 	now := time.Now()
 	txnID := ""
 	if txn.TransactionId != nil {
 		txnID = *txn.TransactionId
 	}
-	return sc.DB.Transaction(func(tx *gorm.DB) error {
+	err := sc.DB.Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&model.Payment{}).
 			Where("payment_no = ? AND status = ?", p.PaymentNo, model.PayStatusPending).
 			Updates(map[string]any{
@@ -147,11 +153,44 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 		if res.RowsAffected == 0 {
 			return nil // 已处理（幂等）
 		}
-		if err := tx.Model(&model.Order{}).
-			Where("order_no = ? AND status = ?", p.OrderNo, model.OrderPending).
-			Updates(map[string]any{"status": model.OrderPaid, "paid_at": &now, "updated_at": now}).
-			Error; err != nil {
+		var o model.Order
+		if err := tx.Where("order_no = ?", p.OrderNo).First(&o).Error; err != nil {
 			return err
+		}
+		switch {
+		case p.PayType == model.PayTypeTail:
+			// 尾款到账 → 待补尾款 15 → 已支付 20（paid_at 保留定金支付时间）
+			if err := tx.Model(&model.Order{}).
+				Where("order_no = ? AND status = ?", p.OrderNo, model.OrderDepositPaid).
+				Updates(map[string]any{"status": model.OrderPaid, "updated_at": now}).
+				Error; err != nil {
+				return err
+			}
+		case o.DepositAmount.GreaterThan(decimal.Zero):
+			// 定金到账 → 待支付 10 → 待补尾款 15，商品保持锁定，尾款截止 = now + N 天
+			holdDays := sc.Config.Growth.DepositHoldDays
+			if holdDays <= 0 {
+				holdDays = 3
+			}
+			tailDeadline := now.AddDate(0, 0, holdDays)
+			if err := tx.Model(&model.Order{}).
+				Where("order_no = ? AND status = ?", p.OrderNo, model.OrderPending).
+				Updates(map[string]any{
+					"status":         model.OrderDepositPaid,
+					"paid_at":        &now,
+					"tail_expire_at": &tailDeadline,
+					"updated_at":     now,
+				}).Error; err != nil {
+				return err
+			}
+			return nil // 定金单禁用券，商品未售出
+		default:
+			if err := tx.Model(&model.Order{}).
+				Where("order_no = ? AND status = ?", p.OrderNo, model.OrderPending).
+				Updates(map[string]any{"status": model.OrderPaid, "paid_at": &now, "updated_at": now}).
+				Error; err != nil {
+				return err
+			}
 		}
 		// 核销锁定的优惠券
 		if err := tx.Exec(
@@ -160,12 +199,109 @@ func markPaid(sc *svc.ServiceContext, p *model.Payment, txn *payments.Transactio
 			return err
 		}
 		// 商品锁定 → 已售出，累计销量
-		return tx.Exec(`
+		if err := tx.Exec(`
 			UPDATE pet_product SET status = ?, sales = sales + 1, updated_at = now()
 			WHERE id IN (SELECT product_id FROM order_item WHERE order_id =
 				(SELECT id FROM orders WHERE order_no = ?)) AND status = ?`,
-			model.ProductSold, p.OrderNo, model.ProductLocked).Error
+			model.ProductSold, p.OrderNo, model.ProductLocked).Error; err != nil {
+			return err
+		}
+		// 支付完成返积分（随本事务仅一次；定金阶段在上分支已返回不返）
+		growth.RewardOrderTx(tx, sc, o.MemberID, o.PayAmount, o.OrderNo)
+		return nil
 	})
+	if err == nil {
+		metrics.OrdersPaid.Inc()
+	}
+	return err
+}
+
+// PayTail 补尾款：复用/创建尾款支付流水并预支付（定金单 status=15 专用）
+func PayTail(sc *svc.ServiceContext, memberID int64, orderNo string) (*types.CreateOrderResp, error) {
+	var o model.Order
+	if err := sc.DB.Where("order_no = ? AND member_id = ?", orderNo, memberID).First(&o).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, common.ErrNotFound
+		}
+		return nil, err
+	}
+	if o.Status != model.OrderDepositPaid {
+		return nil, common.ErrOrderState
+	}
+	if o.TailExpireAt != nil && time.Now().After(*o.TailExpireAt) {
+		return nil, common.ErrOrderState
+	}
+	tailAmount := o.PayAmount.Sub(o.DepositAmount)
+	if tailAmount.LessThanOrEqual(decimal.Zero) {
+		return nil, common.ErrOrderState
+	}
+	var pay model.Payment
+	err := sc.DB.Where("order_no = ? AND pay_type = ?", orderNo, model.PayTypeTail).
+		Order("id DESC").First(&pay).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		pay = model.Payment{
+			ID:        common.NewID(),
+			PaymentNo: common.NewBizNo("PAY"),
+			OrderID:   o.ID,
+			OrderNo:   o.OrderNo,
+			MemberID:  memberID,
+			Amount:    tailAmount,
+			Channel:   model.PayChannelMini,
+			PayType:   model.PayTypeTail,
+			Status:    model.PayStatusPending,
+		}
+		if err := sc.DB.Create(&pay).Error; err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	} else if pay.Status != model.PayStatusPending {
+		return nil, common.ErrOrderState
+	}
+	params, err := prepayOrder(sc, memberID, &o)
+	if err != nil && sc.Config.WeChatPay.MchID != "" {
+		return nil, err
+	}
+	expire := ""
+	if o.TailExpireAt != nil {
+		expire = o.TailExpireAt.Format(time.RFC3339)
+	}
+	return &types.CreateOrderResp{
+		OrderNo:    o.OrderNo,
+		PaymentNo:  pay.PaymentNo,
+		PayAmount:  tailAmount.StringFixed(2),
+		ExpireAt:   expire,
+		PayParams:  params,
+		IsDeposit:  true,
+		TailAmount: tailAmount.StringFixed(2),
+	}, nil
+}
+
+// MockPay 开发演示支付：未配置商户号且非生产时直接落账（生产返回 404）
+func MockPay(sc *svc.ServiceContext, memberID int64, orderNo string) error {
+	if sc.Config.WeChatPay.MchID != "" || sc.Config.IsProd() {
+		return common.ErrNotFound
+	}
+	var o model.Order
+	if err := sc.DB.Where("order_no = ? AND member_id = ?", orderNo, memberID).First(&o).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return common.ErrNotFound
+		}
+		return err
+	}
+	if o.Status != model.OrderPending && o.Status != model.OrderDepositPaid {
+		return common.ErrOrderState
+	}
+	var pay model.Payment
+	err := sc.DB.Where("order_no = ? AND status = ?", orderNo, model.PayStatusPending).
+		Order("id DESC").First(&pay).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return common.NewErr(400, 41202, "未找到待支付流水")
+	}
+	if err != nil {
+		return err
+	}
+	return markPaid(sc, &pay, &payments.Transaction{})
 }
 
 // RefundOrder 发起退款（平台端整单退款 / 售后审核通过共用）。
@@ -180,7 +316,7 @@ func RefundOrder(sc *svc.ServiceContext, orderNo, reason string, amount *decimal
 		}
 		return err
 	}
-	if o.Status != model.OrderPaid && o.Status != model.OrderCompleted {
+	if o.Status != model.OrderPaid && o.Status != model.OrderCompleted && o.Status != model.OrderDepositPaid {
 		return common.ErrOrderState
 	}
 	var pay model.Payment
@@ -239,11 +375,15 @@ func RefundOrder(sc *svc.ServiceContext, orderNo, reason string, amount *decimal
 			return err
 		}
 		return tx.Model(&model.Order{}).
-			Where("id = ? AND status IN ?", o.ID, []int{model.OrderPaid, model.OrderCompleted}).
+			Where("id = ? AND status IN ?", o.ID, []int{model.OrderPaid, model.OrderCompleted, model.OrderDepositPaid}).
 			Updates(map[string]any{"status": model.OrderRefunded, "cancel_reason": reason, "updated_at": now}).Error
 	})
 	if err != nil {
 		return err
+	}
+	// 定金单退款：商品仍在锁定态，回在售并回补秒杀名额
+	if o.Status == model.OrderDepositPaid {
+		releaseOrderStock(sc.DB, o.ID, o.FlashSaleID)
 	}
 	// 退款到账通知（biz_key 幂等：售后与整单退款同单只投一次）
 	if err := notify.Enqueue(sc, o.MemberID, model.NotifySceneOrder,

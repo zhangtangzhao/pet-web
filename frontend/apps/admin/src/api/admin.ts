@@ -70,6 +70,9 @@ export interface OrderView {
   expireAt: string
   paidAt: string
   createdAt: string
+  depositAmount?: string
+  tailExpireAt?: string
+  guaranteeDays?: number
   items: {
     productId: string
     productTitle: string
@@ -309,6 +312,7 @@ export interface ServiceItemRow {
   description: string
   originalPrice: string
   price: string
+  guaranteeDays?: number
   sort?: number
   status: number
 }
@@ -361,6 +365,7 @@ export async function upsertService(payload: {
   description?: string
   originalPrice?: string
   price: string
+  guaranteeDays?: number
   sort?: number
   status?: number
 }) {
@@ -521,4 +526,109 @@ export async function updateShipMethodStatus(id: string, status: number) {
 
 export async function deleteShipMethod(id: string) {
   await client.delete(`/admin/ship-methods/${id}`)
+}
+
+// ───────── 报表 / 秒杀 / 审计 / 敏感词 ─────────
+
+export interface ReportRow {
+  date: string
+  orders: number
+  gmv: string
+}
+
+export interface RankRow {
+  name: string
+  count: number
+  amount: string
+}
+
+export interface ReportResp {
+  summary: {
+    todayGmv: string
+    todayOrders: number
+    monthGmv: string
+    monthOrders: number
+    pendingAfters: number
+  }
+  daily: ReportRow[]
+  topProducts: RankRow[]
+  breeds: RankRow[]
+}
+
+export async function fetchReport(days?: number): Promise<ReportResp> {
+  return (await client.get('/admin/report', { params: { days } })) as any
+}
+
+export interface FlashSaleRow {
+  id: string
+  productId: string
+  productTitle: string
+  salePrice: string
+  stock: number
+  sold: number
+  startAt: string
+  endAt: string
+  status: number
+  createdAt: string
+}
+
+export async function fetchFlashSales(params: { page?: number; pageSize?: number }): Promise<PageResp<FlashSaleRow>> {
+  return (await client.get('/admin/flash-sales', { params })) as any
+}
+
+export async function upsertFlashSale(payload: {
+  id?: string
+  productId: string
+  salePrice: string
+  stock: number
+  startAt: string
+  endAt: string
+  status?: number
+}) {
+  if (payload.id) await client.put(`/admin/flash-sales/${payload.id}`, payload)
+  else await client.post('/admin/flash-sales', payload)
+}
+
+export async function updateFlashSaleStatus(id: string, status: number) {
+  await client.put(`/admin/flash-sales/${id}/status`, { status })
+}
+
+export async function deleteFlashSale(id: string) {
+  await client.delete(`/admin/flash-sales/${id}`)
+}
+
+export interface AuditLogRow {
+  id: string
+  adminName: string
+  method: string
+  path: string
+  ip: string
+  createdAt: string
+}
+
+export async function fetchAuditLogs(params: { page?: number; pageSize?: number }): Promise<PageResp<AuditLogRow>> {
+  return (await client.get('/admin/audit-logs', { params })) as any
+}
+
+export interface SensitiveWordRow {
+  id: string
+  word: string
+  status: number
+  createdAt: string
+}
+
+export async function fetchSensitiveWords(params: { page?: number; pageSize?: number }): Promise<PageResp<SensitiveWordRow>> {
+  return (await client.get('/admin/sensitive-words', { params })) as any
+}
+
+export async function saveSensitiveWord(word: string) {
+  await client.post('/admin/sensitive-words', { word })
+}
+
+export async function updateSensitiveWordStatus(id: string, status: number) {
+  await client.put(`/admin/sensitive-words/${id}/status`, { status })
+}
+
+export async function deleteSensitiveWord(id: string) {
+  await client.delete(`/admin/sensitive-words/${id}`)
 }

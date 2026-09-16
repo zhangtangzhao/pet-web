@@ -65,6 +65,7 @@ func OrderReview(sc *svc.ServiceContext) http.HandlerFunc {
 	return memberAuth(sc, func(w http.ResponseWriter, r *http.Request) {
 		var path types.OrderNoPathReq
 		if err := httpx.ParsePath(r, &path); err != nil {
+			println("DEBUG ParsePath fail:", err.Error())
 			common.Err(w, common.ErrParam)
 			return
 		}

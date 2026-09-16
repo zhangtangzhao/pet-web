@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"net/http"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -14,6 +15,7 @@ import (
 	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/logic/trade"
+	"pet/backend/internal/metrics"
 	"pet/backend/internal/svc"
 )
 
@@ -34,6 +36,14 @@ func main() {
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
+
+	// Prometheus 指标埋点 + 抓取端点
+	server.Use(metrics.Middleware)
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/metrics",
+		Handler: metrics.Handler().ServeHTTP,
+	}, rest.WithPrefix("/"))
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)

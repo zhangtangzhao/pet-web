@@ -1,6 +1,6 @@
 # backend · pet-api 后端服务
 
-Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时承载用户端（小程序 / H5）与平台管理端全部业务域。单一部署单元，含 10 个业务域：`auth / pet / trade / favorite / ai / marketing / chat / review / aftersale / notify`。
+Go 1.25 + [go-zero](https://github.com/zeromicro/go-zero) 单体后端，同时承载用户端（小程序 / H5）与平台管理端全部业务域。单一部署单元，含 13 个业务域：`auth / pet / trade / favorite / ai / marketing / chat / review / aftersale / notify / growth / manage / ops`。
 
 ## 架构
 
@@ -30,15 +30,19 @@ backend/
     ├── logic/          # 业务逻辑（按域分包）
     │   ├── auth/       # 短信 / 微信登录，双端独立 JWT + RefreshToken 轮换
     │   ├── pet/        # 分类 / 品种 / 商品 / 收藏 / 首页
-    │   ├── trade/      # 下单防超卖、微信支付 V3、回调幂等、超时关单（PayTimeoutMinutes 可调）、退款、配送方式 / 托运发货送达
+    │   ├── trade/      # 下单防超卖、微信支付 V3、回调幂等、超时关单（PayTimeoutMinutes 可调）、定金锁宠 / 补尾款、秒杀价快照、地址簿、退款、配送方式 / 托运发货送达
     │   ├── marketing/  # 优惠券（满减/折扣/立减）、增值服务、金额计算、首页 Banner 运营位管理
     │   ├── ai/         # AI 问宠（知识库 RAG + 档案增强、频控）+ 智能选宠推荐（LLM 结构化推荐，未配置降级规则打分）
-    │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 图形验证码
+    │   ├── manage/     # 平台端：看板 / 商品 / 会员 / 秒杀 / 经营报表 / 审计日志 / 图形验证码
     │   ├── chat/       # 人工客服：会话 / 消息 / 未读 / 已读，发送走 REST、WS 仅推送
     │   ├── review/     # 订单评价：一单一评（仅已完成单）、公开列表 / 评分摘要 / 我的评价、管理端隐藏 / 删除 / 官方回复
     │   ├── aftersale/  # 售后：申请（默认全额）/ 我的售后列表 / 撤销 / 审核（CAS + 可调金额退款，失败自动回滚重审）
-    │   └── notify/     # 通知：微信投递队列（客服回复/订单事件，biz_key 幂等、失败重试、未配置模板降级）+ 站内消息中心列表 / 单条已读 / 全部已读
+    │   ├── notify/     # 通知：微信投递队列（客服回复/订单事件，biz_key 幂等、失败重试、未配置模板降级）+ 站内消息中心列表 / 单条已读 / 全部已读
+    │   ├── growth/     # 用户增长：积分（签到/评价/订单/邀请/兑换，append-only 流水 + 余额守卫）、邀请码归因、地址簿
+    │   └── sensitive/  # 敏感词过滤（聊天拦截 41802、评价/售后打码 ***，60s 进程内缓存）
     ├── hub/            # 客服 WebSocket 连接注册表：多端推送、心跳判死（30s 预警 + 30s 宽限）
+    ├── ratelimit/      # Redis 日限流（下单 / 登录 / 短信 IP / 演示支付，fail-open，超限 41801）
+    ├── metrics/        # Prometheus 业务指标埋点（GET /metrics：订单 / 支付回调 / 通知投递 / 限流计数）
     ├── middleware/     # JWT 鉴权等中间件
     ├── model/          # GORM 模型（表结构见 scripts/sql）
     ├── svc/            # ServiceContext：DB / Redis / Hub / 微信 / AI 客户端
@@ -66,7 +70,7 @@ flowchart LR
 依赖：Go 1.25+、PostgreSQL 16、Redis 7（默认连 `127.0.0.1:5432` / `127.0.0.1:6379`，可在 `etc/pet-api.yaml` 调整）。
 
 ```bash
-# 1. 初始化数据库（在仓库根执行，共 11 个迁移）
+# 1. 初始化数据库（在仓库根执行，共 14 个迁移）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
@@ -78,6 +82,9 @@ psql -U pet -d pet -f scripts/sql/008_notify.up.sql
 psql -U pet -d pet -f scripts/sql/010_banner.up.sql
 psql -U pet -d pet -f scripts/sql/011_review_reply.up.sql
 psql -U pet -d pet -f scripts/sql/012_delivery.up.sql
+psql -U pet -d pet -f scripts/sql/013_member_growth.up.sql
+psql -U pet -d pet -f scripts/sql/014_trade_ext.up.sql
+psql -U pet -d pet -f scripts/sql/015_ops.up.sql
 
 # 2. 运行（默认读取 etc/pet-api.yaml，监听 :8888）
 go run .
@@ -86,6 +93,8 @@ go run . -f etc/pet-api.test.yaml
 ```
 
 接口自检：`curl http://127.0.0.1:8888/api/home`。dev 模式短信不发真实短信，验证码见服务日志，或用测试公共验证码 `888888`。
+
+监控指标：`GET /metrics` 暴露 Prometheus 业务指标（订单事件 / 支付回调 / 通知投递 / 限流命中 / 请求时延直方图），告警规则与一键 Prometheus + Grafana 编排见 [scripts/deploy/monitoring/](../scripts/deploy/monitoring/)。
 
 ## 编译与打包
 

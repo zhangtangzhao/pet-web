@@ -24,6 +24,11 @@ function buildTimeline(o: OrderView) {
 
 const fmtTime = (s: string) => (s ? s.slice(0, 16).replace('T', ' ') : '')
 
+const fmtShort = (iso: string) => {
+  const d = new Date(iso)
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 export default function OrderDetail() {
   const { params } = useRouter()
   const orderNo = params.orderNo || ''
@@ -62,6 +67,8 @@ export default function OrderDetail() {
 
   const reload = () => load()
   const asStatus = o.aftersaleStatus ?? 0
+  const deposit = Number(o.depositAmount ?? '0')
+  const tail = (Number(o.payAmount) - deposit).toFixed(2)
   const goodsAmount = (Number(o.totalAmount) - Number(o.serviceFee)).toFixed(2)
   const nodes = buildTimeline(o)
   const doneCount = nodes.filter((n) => n.time).length
@@ -79,6 +86,16 @@ export default function OrderDetail() {
             </View>
             <View className='odt-btn odt-btn-primary' onClick={() => payOrder(o.orderNo, reload)}>
               去支付
+            </View>
+          </>
+        )}
+        {o.status === 15 && (
+          <>
+            <View className='odt-btn' onClick={() => cancelOrder(o.orderNo, reload)}>
+              取消并退定金
+            </View>
+            <View className='odt-btn odt-btn-primary' onClick={() => payOrder(o.orderNo, reload)}>
+              补尾款
             </View>
           </>
         )}
@@ -139,8 +156,15 @@ export default function OrderDetail() {
         {o.status === 10 && (
           <Text className='odt-hero-tip'>{leftSec > 0 ? `请在 ${mm}分${ss}秒 内完成支付` : '订单已超时，即将自动关闭'}</Text>
         )}
+        {o.status === 15 && (
+          <Text className='odt-hero-tip'>{o.tailExpireAt ? `定金已付，请在 ${fmtShort(o.tailExpireAt)} 前补齐尾款` : '定金已付，请尽快补齐尾款'}</Text>
+        )}
         {o.status === 20 && o.shipAddress && <Text className='odt-hero-tip'>{SHIP_TEXT[o.shipStatus]}，请保持电话畅通</Text>}
-        {o.status === 30 && <Text className='odt-hero-tip'>感谢您的信任，欢迎评价本次交易</Text>}
+        {o.status === 30 && (
+          <Text className='odt-hero-tip'>
+            感谢您的信任，欢迎评价本次交易{o.guaranteeDays ? ` · 健康保障期 ${o.guaranteeDays} 天` : ''}
+          </Text>
+        )}
         {terminal && <Text className='odt-hero-tip'>{o.status === 60 ? '退款已原路退回' : '订单已关闭'}</Text>}
       </View>
 
@@ -213,10 +237,23 @@ export default function OrderDetail() {
             <Text>-¥{o.discountAmount}</Text>
           </View>
         )}
-        <View className='odt-amt-row odt-amt-pay'>
-          <Text>实付款</Text>
-          <Text className='odt-amt-pay-num'>¥{o.payAmount}</Text>
-        </View>
+        {deposit > 0 && (
+          <View className='odt-amt-row'>
+            <Text>已付定金</Text>
+            <Text>¥{o.depositAmount}</Text>
+          </View>
+        )}
+        {o.status === 15 ? (
+          <View className='odt-amt-row odt-amt-pay'>
+            <Text>待补尾款</Text>
+            <Text className='odt-amt-pay-num'>¥{tail}</Text>
+          </View>
+        ) : (
+          <View className='odt-amt-row odt-amt-pay'>
+            <Text>实付款</Text>
+            <Text className='odt-amt-pay-num'>¥{o.payAmount}</Text>
+          </View>
+        )}
       </View>
 
       {/* 配送信息 */}

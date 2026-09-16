@@ -116,6 +116,9 @@ export interface OrderView {
   completedAt?: string
   reviewed?: boolean
   aftersaleStatus?: number
+  depositAmount?: string // 定金，0=非定金单
+  tailExpireAt?: string // 尾款截止
+  guaranteeDays?: number // 健康保障天数，0=无
   items: { productId: string; productTitle: string; productImage: string; breedName: string; price: string; quantity: number }[]
 }
 
@@ -150,6 +153,7 @@ export interface CouponTemplateView {
   issuedCount: number
   perLimit: number
   newUserOnly: number
+  pointsCost?: number // >0 积分兑换
   validStart: string
   validEnd: string
 }
@@ -182,10 +186,62 @@ export interface UsableCouponView {
 
 export interface CreateOrderResult {
   orderNo: string
+  paymentNo?: string
   payAmount: string
   expireAt: string
   payParams: unknown | null
   h5PayUrl: string
+  isDeposit?: boolean
+  tailAmount?: string
+}
+
+// ───────── 增长（积分/邀请/秒杀/地址簿） ─────────
+
+export interface AddressView {
+  id: string
+  name: string
+  phone: string
+  address: string
+  isDefault: number
+}
+
+export interface PointsLogView {
+  id: string
+  change: number
+  balance: number
+  reason: string
+  ref: string
+  createdAt: string
+}
+
+export interface PointsResp {
+  points: number
+  total: number
+  list: PointsLogView[]
+}
+
+export interface SignInResp {
+  ok: boolean
+  balance: number
+}
+
+export interface InviteResp {
+  inviteCode: string
+  invited: number
+  rewardEach: number
+}
+
+export interface FlashSaleInfo {
+  id: string
+  productId: string
+  productTitle: string
+  productImage: string
+  salePrice: string
+  stock: number
+  sold: number
+  startAt: string
+  endAt: string
+  status: number
 }
 
 

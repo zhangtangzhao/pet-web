@@ -44,6 +44,7 @@ type ServiceItem struct {
 	Description   string          `json:"description"`
 	OriginalPrice decimal.Decimal `gorm:"type:numeric(10,2)" json:"originalPrice"`
 	Price         decimal.Decimal `gorm:"type:numeric(10,2)" json:"price"`
+	GuaranteeDays int             `json:"guaranteeDays"` // >0 为健康保障服务，随单快照延长售后窗口
 	Sort          int             `json:"sort"`
 	Status        int             `json:"status"`
 	CreatedAt     time.Time       `json:"createdAt"`
@@ -64,6 +65,7 @@ type CouponTemplate struct {
 	IssuedCount       int             `json:"issuedCount"`
 	PerLimit          int             `json:"perLimit"`
 	NewUserOnly       int             `json:"newUserOnly"`
+	PointsCost        int             `json:"pointsCost"` // >0 需用积分兑换领取
 	PickupStart       *time.Time      `json:"pickupStart"`
 	PickupEnd         *time.Time      `json:"pickupEnd"`
 	ValidStart        *time.Time      `json:"validStart"`

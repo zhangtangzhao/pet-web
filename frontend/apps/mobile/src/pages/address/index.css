@@ -1,0 +1,167 @@
+.ab {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #f5f5f5;
+}
+
+.ab-empty {
+  text-align: center;
+  color: #999;
+  font-size: 26px;
+  padding: 80px 0;
+}
+
+.ab-item {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.ab-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-line1 {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ab-name {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.ab-phone {
+  font-size: 24px;
+  color: #999;
+}
+
+.ab-def {
+  font-size: 20px;
+  color: #ff7a45;
+  border: 1px solid #ff7a45;
+  border-radius: 8px;
+  padding: 2px 10px;
+}
+
+.ab-addr {
+  font-size: 26px;
+  color: #595959;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.ab-ops {
+  display: flex;
+  justify-content: flex-end;
+  gap: 32px;
+  margin-top: 16px;
+}
+
+.ab-op {
+  font-size: 24px;
+  color: #666;
+}
+
+.ab-op-del {
+  color: #ff4d4f;
+}
+
+.ab-add {
+  background: #ff7a45;
+  color: #fff;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  padding: 20px 0;
+  margin-top: 32px;
+}
+
+.ab-form {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 32px;
+}
+
+.ab-form-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.ab-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 18px 20px;
+  font-size: 26px;
+  margin-bottom: 16px;
+}
+
+.ab-form-default {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 26px;
+  color: #595959;
+  padding: 8px 0 20px;
+}
+
+.ab-switch {
+  width: 84px;
+  height: 44px;
+  border-radius: 999px;
+  background: #ddd;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.ab-switch::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.2s;
+}
+
+.ab-switch-on {
+  background: #ff7a45;
+}
+
+.ab-switch-on::after {
+  left: 44px;
+}
+
+.ab-form-btns {
+  display: flex;
+  gap: 20px;
+}
+
+.ab-btn {
+  flex: 1;
+  text-align: center;
+  border-radius: 999px;
+  padding: 18px 0;
+  font-size: 28px;
+  border: 1px solid #ddd;
+  color: #595959;
+}
+
+.ab-btn-primary {
+  background: #ff7a45;
+  border-color: #ff7a45;
+  color: #fff;
+  font-weight: 600;
+}

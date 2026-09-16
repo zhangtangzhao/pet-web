@@ -3,7 +3,9 @@ import { Image, Input, Text, Textarea, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { get, getToken, post } from '../../request'
 import {
+  AddressView,
   CreateOrderResult,
+  FlashSaleInfo,
   ProductDetail,
   ServiceItemView,
   ShipMethod,
@@ -28,6 +30,11 @@ export default function Checkout() {
   const [shipMethods, setShipMethods] = useState<ShipMethod[]>([])
   const [shipMethodId, setShipMethodId] = useState('')
   const [address, setAddress] = useState('')
+  const [flash, setFlash] = useState<FlashSaleInfo | null>(null)
+  const [addrs, setAddrs] = useState<AddressView[]>([])
+  const [addrId, setAddrId] = useState('')
+  const [depositPercent, setDepositPercent] = useState(0)
+  const [useDeposit, setUseDeposit] = useState(false)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -48,6 +55,19 @@ export default function Checkout() {
         setShipMethods(list ?? [])
         setShipMethodId((cur) => (list?.some((m) => m.id === cur) ? cur : (list?.[0]?.id ?? '')))
       })
+      .catch(() => {})
+    get<FlashSaleInfo[]>('/flash-sales')
+      .then((list) => setFlash((list ?? []).find((f) => f.productId === params.id) ?? null))
+      .catch(() => {})
+    get<AddressView[]>('/addresses')
+      .then((list) => {
+        setAddrs(list ?? [])
+        const def = (list ?? []).find((a) => a.isDefault === 1)
+        if (def) setAddrId(def.id)
+      })
+      .catch(() => {})
+    get<{ depositPercent: number; depositHoldDays: number }>('/trade-config')
+      .then((t) => setDepositPercent(t.depositPercent || 0))
       .catch(() => {})
   }, [params.id])
 
@@ -72,14 +92,17 @@ export default function Checkout() {
     () => services.filter((s) => pickedSvc.includes(s.id)).reduce((n, s) => n + Number(s.price), 0),
     [services, pickedSvc],
   )
-  const goodsPrice = d ? Number(d.price) : 0
+  const goodsPrice = flash ? Number(flash.salePrice) : d ? Number(d.price) : 0
   const total = goodsPrice + serviceFee
   const coupon = coupons.find((c) => c.id === couponId)
-  const discount = coupon ? Number(coupon.discount) : 0
+  const discount = useDeposit ? 0 : coupon ? Number(coupon.discount) : 0
   const shipMethod = shipMethods.find((m) => m.id === shipMethodId)
   const shipFee = shipMethod ? Number(shipMethod.fee) : 0
   // 与后端一致：券抵扣商品+服务费（保底 0.01），运费不参与折扣
   const pay = Math.max(total - discount, 0.01) + shipFee
+  // 定金锁宠：定金 = 商品+服务费的 N%（不支持用券），尾款 = 总额-定金
+  const depositAmt = Math.round(Math.max(total, 0.01) * depositPercent) / 100
+  const tailAmt = Math.max(pay - depositAmt, 0)
 
   const submit = async () => {
     if (submitting) return
@@ -91,7 +114,7 @@ export default function Checkout() {
       Taro.showToast({ title: '请选择配送方式', icon: 'none' })
       return
     }
-    if (shipMethod?.kind === 2 && !address.trim()) {
+    if (shipMethod?.kind === 2 && !addrId && !address.trim()) {
       Taro.showToast({ title: '请填写收货地址', icon: 'none' })
       return
     }
@@ -100,15 +123,19 @@ export default function Checkout() {
       const r = await post<CreateOrderResult>('/orders', {
         productId: params.id,
         serviceIds: pickedSvc,
-        couponId,
+        couponId: useDeposit ? '' : couponId,
         shipMethodId,
-        shipAddress: address.trim(),
+        shipAddress: addrId ? '' : address.trim(),
+        addressId: addrId,
+        useDeposit,
         contactName: name,
         contactPhone: phone,
       })
       Taro.showModal({
         title: '订单已创建',
-        content: `订单号 ${r.orderNo}，实付 ¥${r.payAmount}。微信支付待商户号联调后开放。`,
+        content: r.isDeposit
+          ? `订单号 ${r.orderNo}，已付定金 ¥${r.payAmount}，尾款 ¥${r.tailAmount} 请尽快补齐。`
+          : `订单号 ${r.orderNo}，实付 ¥${r.payAmount}。微信支付待商户号联调后开放。`,
         cancelText: '返回首页',
         confirmText: '查看订单',
         success: (m) => {
@@ -137,7 +164,11 @@ export default function Checkout() {
           )}
           <View className='co-prod-main'>
             <Text className='co-prod-title'>{d.title}</Text>
-            <Text className='price'>¥{d.price}</Text>
+            <View className='co-prod-price'>
+              <Text className='price'>¥{goodsPrice.toFixed(2)}</Text>
+              {flash && <Text className='co-flash-tag'>秒杀</Text>}
+              {flash && Number(d.price) > goodsPrice && <Text className='co-prod-orig'>¥{Number(d.price).toFixed(2)}</Text>}
+            </View>
           </View>
         </View>
       </View>
@@ -185,11 +216,29 @@ export default function Checkout() {
           </View>
           {shipMethod?.kind === 2 && (
             <View className='co-addr'>
+              {addrs.length > 0 && (
+                <View className='co-addr-chips'>
+                  {addrs.map((a) => (
+                    <View
+                      key={a.id}
+                      className={`co-addr-chip ${addrId === a.id ? 'co-addr-chip-on' : ''}`}
+                      onClick={() => {
+                        setAddrId(addrId === a.id ? '' : a.id)
+                        setAddress('')
+                      }}
+                    >
+                      {a.name}·{a.address.length > 14 ? `${a.address.slice(0, 14)}…` : a.address}
+                      {a.isDefault === 1 ? ' (默认)' : ''}
+                    </View>
+                  ))}
+                </View>
+              )}
               <Textarea
                 className='co-addr-input'
-                placeholder='请填写收货地址（含城市 / 到达机场或门牌号）'
+                placeholder={addrId ? '已选用地址簿地址' : '请填写收货地址（含城市 / 到达机场或门牌号）'}
                 maxlength={255}
-                value={address}
+                value={addrId ? addrs.find((a) => a.id === addrId)?.address ?? '' : address}
+                disabled={!!addrId}
                 onInput={(e) => setAddress(e.detail.value)}
               />
             </View>
@@ -198,17 +247,33 @@ export default function Checkout() {
       )}
 
       <View className='co-card card'>
-        <View className='co-coupon' onClick={() => setSheetOpen(true)}>
-          <Text className='co-coupon-left'>优惠券</Text>
-          <Text className='co-coupon-arrow'>
-            {coupon ? `-¥${coupon.discount}` : `${coupons.length > 0 ? `${coupons.length} 张可用` : '暂无可用'} >`}
-          </Text>
-        </View>
+        {depositPercent > 0 && (
+          <View className='co-deposit' onClick={() => setUseDeposit((v) => !v)}>
+            <View className='co-deposit-main'>
+              <Text className='co-deposit-name'>定金锁宠</Text>
+              <Text className='co-deposit-desc'>先付 {depositPercent}% 定金锁定宝贝，超时未补尾款定金不退</Text>
+            </View>
+            <View className={`co-svc-check ${useDeposit ? 'co-svc-check-on' : ''}`}>{useDeposit ? '✓' : ''}</View>
+          </View>
+        )}
+        {useDeposit ? (
+          <View className='co-coupon co-coupon-off'>
+            <Text className='co-coupon-left'>优惠券</Text>
+            <Text className='co-coupon-arrow'>定金锁宠暂不支持优惠券</Text>
+          </View>
+        ) : (
+          <View className='co-coupon' onClick={() => setSheetOpen(true)}>
+            <Text className='co-coupon-left'>优惠券</Text>
+            <Text className='co-coupon-arrow'>
+              {coupon ? `-¥${coupon.discount}` : `${coupons.length > 0 ? `${coupons.length} 张可用` : '暂无可用'} >`}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View className='co-card card'>
         <View className='co-sum-row'>
-          <Text>商品价</Text>
+          <Text>商品价{flash ? '（秒杀价）' : ''}</Text>
           <Text>¥{goodsPrice.toFixed(2)}</Text>
         </View>
         {serviceFee > 0 && (
@@ -229,6 +294,12 @@ export default function Checkout() {
             <Text className='co-sum-discount'>-¥{discount.toFixed(2)}</Text>
           </View>
         )}
+        {useDeposit && (
+          <View className='co-sum-row'>
+            <Text>定金（{depositPercent}%）</Text>
+            <Text>¥{depositAmt.toFixed(2)}</Text>
+          </View>
+        )}
       </View>
 
       <View className='co-card card'>
@@ -239,10 +310,19 @@ export default function Checkout() {
 
       <View className='footer'>
         <View className='pay'>
-          实付 <Text className='pay-num'>¥{pay.toFixed(2)}</Text>
+          {useDeposit ? (
+            <>
+              定金 <Text className='pay-num'>¥{depositAmt.toFixed(2)}</Text>
+              <Text className='pay-tail'>尾款 ¥{tailAmt.toFixed(2)}</Text>
+            </>
+          ) : (
+            <>
+              实付 <Text className='pay-num'>¥{pay.toFixed(2)}</Text>
+            </>
+          )}
         </View>
         <View className={`btn-submit ${submitting ? 'btn-submit-off' : ''}`} onClick={submit}>
-          提交订单
+          {useDeposit ? '付定金锁宠' : '提交订单'}
         </View>
       </View>
 

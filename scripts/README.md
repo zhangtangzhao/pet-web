@@ -17,6 +17,7 @@
 | [nginx.conf](deploy/nginx.conf) | H5 / 管理端静态托管 + `/api`、`/admin/api` 反向代理（含客服 WebSocket `/api/ws/` 升级配置） |
 | [config/pet-api.yaml.example](deploy/config/pet-api.yaml.example) | 服务配置模板，敏感项全部为 `${VAR}` 占位（JWT/PG/Redis/微信登录/支付/短信/COS） |
 | [.env.example](deploy/.env.example) | 环境变量模板（全部密钥的唯一填写入口，勿提交） |
+| [monitoring/](deploy/monitoring/) | Prometheus 抓取配置与告警规则（接口错误率 / 时延 / 关单激增 / 支付回调失败 / 限流命中），compose 一键附带 Prometheus(:9090) + Grafana(:3001) |
 
 ### 环境变量注入流程
 
@@ -67,6 +68,18 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/008_notify.down.sql](sql/008_notify.down.sql) | 回滚通知表 |
 | [sql/009_notify_read.up.sql](sql/009_notify_read.up.sql) | 站内消息中心：notification 加 read_at 已读列 + 未读部分索引 |
 | [sql/009_notify_read.down.sql](sql/009_notify_read.down.sql) | 回滚已读列与未读索引 |
+| [sql/010_banner.up.sql](sql/010_banner.up.sql) | 首页 Banner 运营位表 home_banner（jump_type 白名单 + 上架部分索引）+ 种子 |
+| [sql/010_banner.down.sql](sql/010_banner.down.sql) | 回滚 Banner 表 |
+| [sql/011_review_reply.up.sql](sql/011_review_reply.up.sql) | order_review 加官方回复列（reply / replied_at） |
+| [sql/011_review_reply.down.sql](sql/011_review_reply.down.sql) | 回滚官方回复列 |
+| [sql/012_delivery.up.sql](sql/012_delivery.up.sql) | 配送：ship_method 表（自提/托运 + 种子 3 条）+ orders 配送快照 8 列（方式/运费/地址/子状态/运单号/时间） |
+| [sql/012_delivery.down.sql](sql/012_delivery.down.sql) | 回滚 ship_method 与 orders 配送列 |
+| [sql/013_member_growth.up.sql](sql/013_member_growth.up.sql) | 用户增长：member_address 地址簿 + points_log 积分流水（append-only）+ member 加积分/邀请码列 + 种子 |
+| [sql/013_member_growth.down.sql](sql/013_member_growth.down.sql) | 回滚增长表与 member 列 |
+| [sql/014_trade_ext.up.sql](sql/014_trade_ext.up.sql) | 交易扩展：flash_sale 秒杀表（每商品至多一个启用中部分唯一索引）+ orders 定金/保障卡列 + service_item 保障天数 + coupon_template 积分兑换 |
+| [sql/014_trade_ext.down.sql](sql/014_trade_ext.down.sql) | 回滚秒杀表与交易扩展列 |
+| [sql/015_ops.up.sql](sql/015_ops.up.sql) | 运营保障：admin_audit_log 管理端操作审计 + sensitive_word 敏感词库（种子 3 条） |
+| [sql/015_ops.down.sql](sql/015_ops.down.sql) | 回滚审计与敏感词表 |
 
 说明：
 

@@ -52,6 +52,7 @@ func AdminServiceUpsert(sc *svc.ServiceContext, req *types.ServiceUpsertReq) err
 		Description:   req.Description,
 		OriginalPrice: orig,
 		Price:         price,
+		GuaranteeDays: req.GuaranteeDays,
 		Sort:          req.Sort,
 		Status:        normStatus(req.Status),
 	}
@@ -67,7 +68,8 @@ func AdminServiceUpsert(sc *svc.ServiceContext, req *types.ServiceUpsertReq) err
 	res := sc.DB.Model(&model.ServiceItem{}).Where("id = ?", id).Updates(map[string]any{
 		"name": item.Name, "description": item.Description,
 		"original_price": item.OriginalPrice, "price": item.Price,
-		"sort": item.Sort, "status": item.Status, "updated_at": time.Now(),
+		"guarantee_days": item.GuaranteeDays,
+		"sort":           item.Sort, "status": item.Status, "updated_at": time.Now(),
 	})
 	if res.Error != nil {
 		return res.Error
@@ -98,6 +100,7 @@ func serviceViews(items []model.ServiceItem) []types.ServiceItemView {
 			Description:   it.Description,
 			OriginalPrice: it.OriginalPrice.StringFixed(2),
 			Price:         it.Price.StringFixed(2),
+			GuaranteeDays: it.GuaranteeDays,
 		})
 	}
 	return list

@@ -1,0 +1,61 @@
+# scripts/deploy/monitoring/alerts.yml
+# 告警规则：基于 pet_api_* 业务指标，Prometheus 评估后可在 Grafana/Alertmanager 消费
+groups:
+  - name: pet-api-availability
+    rules:
+      - alert: PetApiHighErrorRate
+        expr: |
+          sum(rate(pet_api_http_requests_total{code=~"5.."}[5m]))
+            / sum(rate(pet_api_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "pet-api 5xx 错误率超过 5%"
+          description: "近 5 分钟 5xx 占比 {{ $value | humanizePercentage }}，持续 5 分钟。"
+
+      - alert: PetApiSlowRequests
+        expr: histogram_quantile(0.95, sum(rate(pet_api_http_request_seconds_bucket[5m])) by (le)) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "pet-api P95 延迟超过 2s"
+          description: "P95 延迟 {{ $value | humanizeDuration }}，持续 10 分钟。"
+
+  - name: pet-api-trade
+    rules:
+      - alert: PetOrderCloseSpike
+        expr: sum(rate(pet_api_orders_closed_total[15m])) > 0.2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "自动关单激增（待支付/尾款超时）"
+          description: "近 15 分钟关单速率 {{ $value | humanize }} 单/秒，检查支付链路或定价策略。"
+
+      - alert: PetPayNotifyFailing
+        expr: increase(pet_api_pay_notify_total{result!="ok"}[10m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "微信支付回调异常落账"
+          description: "10 分钟内出现 {{ $value }} 次非 ok 回调（金额不符/订单未知），可能存在资损风险。"
+
+      - alert: PetNotifyDeliveryFailing
+        expr: increase(pet_api_notify_delivery_fail_total[30m]) > 5
+        labels:
+          severity: warning
+        annotations:
+          summary: "站内/订阅消息投递持续失败"
+          description: "30 分钟内 {{ $value }} 条通知最终投递失败，检查微信接口配置与配额。"
+
+  - name: pet-api-abuse
+    rules:
+      - alert: PetRateLimitAbuse
+        expr: sum(increase(pet_api_ratelimit_rejected_total[10m])) by (scope) > 100
+        labels:
+          severity: warning
+        annotations:
+          summary: "限流拦截突增（scope={{ $labels.scope }}）"
+          description: "10 分钟内拦截 {{ $value }} 次，疑似刷单/撞库/短信轰炸，建议核对来源 IP。"

@@ -65,14 +65,14 @@ type Config struct {
 
 	// AI 客服：OpenAI 兼容接口（DeepSeek/通义/智谱等均可），三者全非空即启用真实大模型
 	AI struct {
-		BaseURL                 string `json:",optional"` // 如 https://api.deepseek.com/v1
-		ApiKey                  string `json:",optional"`
-		Model                   string `json:",optional"` // 如 deepseek-chat
-		TimeoutSeconds          int    `json:",default=60"`
-		AskIntervalSeconds      int    `json:",default=5"`
-		DailyLimit              int    `json:",default=20"`
-		RecommendIntervalSeconds int   `json:",default=10"` // 智能选宠 LLM 推荐最小间隔；≤0 回落 AskIntervalSeconds
-		RecommendDailyLimit      int   `json:",default=5"`  // 智能选宠 LLM 推荐每日限额；≤0 回落 DailyLimit
+		BaseURL                  string `json:",optional"` // 如 https://api.deepseek.com/v1
+		ApiKey                   string `json:",optional"`
+		Model                    string `json:",optional"` // 如 deepseek-chat
+		TimeoutSeconds           int    `json:",default=60"`
+		AskIntervalSeconds       int    `json:",default=5"`
+		DailyLimit               int    `json:",default=20"`
+		RecommendIntervalSeconds int    `json:",default=10"` // 智能选宠 LLM 推荐最小间隔；≤0 回落 AskIntervalSeconds
+		RecommendDailyLimit      int    `json:",default=5"`  // 智能选宠 LLM 推荐每日限额；≤0 回落 DailyLimit
 	}
 
 	// 微信通知模板：小程序订阅消息 / 公众号模板消息；未配置时通知降级为仅落库留痕
@@ -88,6 +88,23 @@ type Config struct {
 	Trade struct {
 		AutoConfirmDays   int `json:",default=7"`  // 已支付订单 N 天后自动确认完成；≤0 关闭
 		PayTimeoutMinutes int `json:",default=15"` // 待支付订单 N 分钟后自动关单；≤0 取 15
+	}
+
+	// 增长运营：积分 / 邀请 / 定金
+	Growth struct {
+		SignPoints         int `json:",default=5"`  // 每日签到积分
+		ReviewPoints       int `json:",default=10"` // 首次评价积分
+		OrderPointsPerYuan int `json:",default=1"`  // 每实付 1 元得积分（向下取整）
+		InviteRewardPoints int `json:",default=50"` // 邀请成功双方各得积分
+		DepositPercent     int `json:",default=10"` // 定金比例（%实付金额，向上保底 0.01）
+		DepositHoldDays    int `json:",default=3"`  // 付定金后 N 天内需补尾款；≤0 取 3
+	}
+
+	// 接口限流（Redis 计数器；≤0 关闭对应项）
+	RateLimit struct {
+		LoginPerMinute int `json:",default=10"` // 每 IP 每分钟登录/验证码尝试上限
+		OrderPerMinute int `json:",default=5"`  // 每用户每分钟下单上限
+		SmsIPDaily     int `json:",default=20"` // 每 IP 每日短信发送上限
 	}
 }
 

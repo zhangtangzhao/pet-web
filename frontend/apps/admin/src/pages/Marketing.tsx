@@ -64,6 +64,7 @@ interface ServiceFormValues {
   description?: string
   originalPrice?: number
   price: number
+  guaranteeDays?: number
   sort?: number
   status?: boolean
 }
@@ -426,7 +427,7 @@ function ServiceTab() {
   }, [load])
 
   const openCreate = () => {
-    form.setFieldsValue({ id: undefined, name: '', description: '', originalPrice: undefined, price: undefined, sort: 0, status: true })
+    form.setFieldsValue({ id: undefined, name: '', description: '', originalPrice: undefined, price: undefined, guaranteeDays: 0, sort: 0, status: true })
     setModal(true)
   }
 
@@ -437,6 +438,7 @@ function ServiceTab() {
       description: r.description,
       originalPrice: Number(r.originalPrice) || undefined,
       price: Number(r.price),
+      guaranteeDays: r.guaranteeDays ?? 0,
       sort: r.sort ?? 0,
       status: r.status === 1,
     })
@@ -452,6 +454,7 @@ function ServiceTab() {
         description: v.description,
         originalPrice: v.originalPrice?.toFixed(2),
         price: v.price.toFixed(2),
+        guaranteeDays: v.guaranteeDays ?? 0,
         sort: v.sort,
         status: v.status === false ? 0 : 1,
       })
@@ -487,6 +490,12 @@ function ServiceTab() {
           )}
         </span>
       ),
+    },
+    {
+      title: '健康保障',
+      dataIndex: 'guaranteeDays',
+      width: 90,
+      render: (_: unknown, r: ServiceItemRow) => (r.guaranteeDays && r.guaranteeDays > 0 ? `${r.guaranteeDays} 天` : '-'),
     },
     {
       title: '状态',
@@ -529,6 +538,9 @@ function ServiceTab() {
             </Form.Item>
             <Form.Item name="price" label="服务价（下单计费）" rules={[{ required: true, message: '请输入服务价' }]}>
               <InputNumber style={{ width: 160 }} min={0.01} precision={2} placeholder="如 200" />
+            </Form.Item>
+            <Form.Item name="guaranteeDays" label="健康保障天数（0=无）">
+              <InputNumber style={{ width: 160 }} min={0} max={365} precision={0} placeholder="如 30" />
             </Form.Item>
           </Space>
           <Space size="large">

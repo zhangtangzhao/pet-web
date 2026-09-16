@@ -26,7 +26,13 @@ export function payOrder(orderNo: string, onDone: () => void) {
     .then((r: any) => {
       const p = r?.payParams
       if (!p) {
-        Taro.showToast({ title: '微信支付待商户号联调后开放', icon: 'none' })
+        // 演示环境（未配商户号）走 mock 支付；生产端点 404 → 原有提示
+        post(`/orders/${orderNo}/mock-pay`)
+          .then(() => {
+            Taro.showToast({ title: '支付成功', icon: 'success' })
+            onDone()
+          })
+          .catch(() => Taro.showToast({ title: '微信支付待商户号联调后开放', icon: 'none' }))
         return
       }
       Taro.requestPayment({

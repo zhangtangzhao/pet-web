@@ -152,3 +152,74 @@
   margin-left: auto;
   font-size: 26px;
 }
+
+/* 秒杀专区 */
+.section-flash-tip {
+  font-size: 20px;
+  color: #fff;
+  background: linear-gradient(135deg, #f5222d, #ff7a45);
+  border-radius: 999px;
+  padding: 2px 14px;
+  margin-left: 12px;
+  font-weight: 400;
+}
+
+.flash-row {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.flash-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.flash-img {
+  width: 100%;
+  height: 240px;
+  border-radius: 12px;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+}
+
+.flash-main {
+  margin-top: 12px;
+}
+
+.flash-title {
+  font-size: 24px;
+  color: #262626;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 248px;
+}
+
+.flash-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.flash-price {
+  color: #f5222d;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.flash-stock {
+  font-size: 20px;
+  color: #999;
+}

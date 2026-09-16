@@ -17,6 +17,7 @@ import (
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/notify"
+	"pet/backend/internal/logic/sensitive"
 	"pet/backend/internal/logic/trade"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
@@ -31,9 +32,10 @@ const (
 
 // ─────────────────────────── 会员侧 ───────────────────────────
 
-// Apply 发起售后：订单归属 + 已支付/已完成 + 无进行中售后；金额默认全额
+// Apply 发起售后：订单归属 + 已支付/保障期内已完成 + 无进行中售后；金额默认全额。
+// 健康保障：已完成订单须在保障期（完成时间 + GuaranteeDays 天）内方可申请。
 func Apply(sc *svc.ServiceContext, memberID int64, req *types.AfterSaleApplyReq) (*types.AfterSaleView, error) {
-	reason := trimSpace(req.Reason)
+	reason := sensitive.Filter(sc.DB, trimSpace(req.Reason))
 	if reason == "" || utf8.RuneCountInString(reason) > maxReasonRunes {
 		return nil, common.ErrParam
 	}
@@ -44,8 +46,12 @@ func Apply(sc *svc.ServiceContext, memberID int64, req *types.AfterSaleApplyReq)
 		}
 		return nil, err
 	}
-	if o.Status != model.OrderPaid && o.Status != model.OrderCompleted {
-		return nil, common.ErrAfterSaleOrder
+	if o.Status != model.OrderPaid {
+		within := o.Status == model.OrderCompleted && o.GuaranteeDays > 0 &&
+			o.CompletedAt != nil && time.Now().Before(o.CompletedAt.AddDate(0, 0, o.GuaranteeDays))
+		if !within {
+			return nil, common.ErrAfterSaleOrder
+		}
 	}
 	var cnt int64
 	if err := sc.DB.Model(&model.AfterSale{}).

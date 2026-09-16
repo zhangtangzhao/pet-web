@@ -1,0 +1,101 @@
+.iv {
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #f5f5f5;
+}
+
+.iv-hero {
+  background: linear-gradient(135deg, #722ed1, #9254de);
+  border-radius: 20px;
+  padding: 48px 32px;
+  color: #fff;
+  text-align: center;
+}
+
+.iv-title {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.iv-desc {
+  font-size: 24px;
+  opacity: 0.9;
+  margin-top: 12px;
+}
+
+.iv-code-box {
+  margin: 36px auto 0;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 24px 0;
+  letter-spacing: 8px;
+}
+
+.iv-code {
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.iv-copy {
+  margin: 28px auto 0;
+  background: #fff;
+  color: #722ed1;
+  font-size: 28px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 16px 0;
+  width: 320px;
+}
+
+.iv-card {
+  background: #fff;
+  border-radius: 16px;
+  margin-top: 24px;
+  padding: 32px 0;
+  display: flex;
+}
+
+.iv-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.iv-stat + .iv-stat {
+  border-left: 1px solid #f0f0f0;
+}
+
+.iv-stat-num {
+  font-size: 40px;
+  font-weight: 700;
+  color: #722ed1;
+}
+
+.iv-stat-label {
+  font-size: 24px;
+  color: #999;
+}
+
+.iv-tips {
+  background: #fff;
+  border-radius: 16px;
+  margin-top: 24px;
+  padding: 24px;
+}
+
+.iv-tips-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.iv-tip {
+  display: block;
+  font-size: 24px;
+  color: #666;
+  line-height: 1.8;
+}

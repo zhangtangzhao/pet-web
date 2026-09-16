@@ -26,7 +26,7 @@
 | ------- | ---- |
 | 0 | 成功 |
 | 40xxx | 客户端错误：40100 未登录 / 40101 过期 / 40300 无权限 / 40400 资源不存在 |
-| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 / 41401 优惠券不可用 / 41402 未达用券门槛 / 41403 券已领完 / 41404 超过限领 / 41405 不在可领时段 / 41406 增值服务不可用 / 41501 会话不存在（含越权访问他人会话）/ 41601 该订单已评价过 / 41602 订单当前不可评价 / 41701 售后单不存在（含越权）/ 41702 已有进行中售后 / 41703 订单不可售后 / 41704 售后状态不允许此操作 / 41705 审核状态冲突请刷新 |
+| 41xxx | 业务错误：41001 商品已下架 / 41002 商品已被下单 / 41003 订单状态不允许此操作 / 41004 重复收藏 / 41101 验证码错误或已过期 / 41102 发送过于频繁 / 41103 超过当日发送上限 / 41104 验证码尝试次数过多 / 41203-41209 管理端业务（验证码、密码、引用约束等）/ 41301 AI 提问太频繁 / 41302 AI 当日提问达上限 / 41401 优惠券不可用 / 41402 未达用券门槛 / 41403 券已领完 / 41404 超过限领 / 41405 不在可领时段 / 41406 增值服务不可用 / 41501 会话不存在（含越权访问他人会话）/ 41601 该订单已评价过 / 41602 订单当前不可评价 / 41701 售后单不存在（含越权）/ 41702 已有进行中售后 / 41703 订单不可售后 / 41704 售后状态不允许此操作 / 41705 审核状态冲突请刷新 / 41801 请求过于频繁（限流）/ 41802 内容包含敏感词 / 41803 积分不足 / 41804 定金模式不支持优惠券 / 41805 邀请码无效 |
 | 50xxx | 服务端错误：50000 系统异常 / 50001 微信接口异常 / 50002 支付下单失败 / 50003 短信发送失败 / 50005 AI 服务不可用 |
 
 ### 1.3 通用约定
@@ -167,6 +167,8 @@
 > 已实现订单视图新增 `reviewed`（是否已评价）与 `aftersaleStatus`（最新售后状态，0=无售后；1待审核 2已同意 3已拒绝 4已撤销），供订单列表/详情回显「去评价 / 申请售后 / 撤销售后」入口态。
 >
 > 迁移 012 起订单视图附带配送字段：`shipMethod`（方式名快照）、`shipFee`、`shipAddress`、`shipStatus`（0待配送 1配送中 2已送达）、`shipNo`、`shippedAt` / `deliveredAt` / `completedAt`（有值才返回）；下单请求新增 `shipMethodId`（必填）与 `shipAddress`（托运方式 kind=2 必填，≤255）。实付公式：`max(商品价+服务费-券抵扣, 0.01) + 运费`，运费不参与券抵扣；待支付关单时长 `Trade.PayTimeoutMinutes`（默认 15 分钟，`expireAt` 随之）。
+>
+> 迁移 014 起下单请求再增 `addressId`（地址簿 ID，优先于手填地址）与 `useDeposit`（定金锁宠：定金 = `（商品价+服务费）× DepositPercent%` 四舍五入 2 位，禁用优惠券；响应 `isDeposit=true` + `tailAmount`）；订单视图附带 `depositAmount / tailExpireAt / guaranteeDays`。命中秒杀的商品以 `salePrice` 计价并记 `flashSaleId`（响应自动体现为更低的 payAmount）。
 | POST | `/api/v1/payments/wechat/prepay` | 待支付单重新拉起支付 `{orderNo}` → 支付参数 |
 | GET | `/api/v1/payments/:paymentNo/status` | 轮询支付结果（前端支付后 2s 间隔轮询） |
 | POST | `/api/v1/payment/notify` | **微信回调**（无鉴权，验签；不走统一响应格式） |
@@ -344,6 +346,38 @@
 
 > 小程序端必须在**用户点击回调内同步**调用 `wx.requestSubscribeMessage`（Taro 同名 API）订阅，模板 ID 从本接口预取（进入页面时缓存）；H5 端公众号模板消息无需订阅动作。已支付订单超过 `Trade.AutoConfirmDays`（默认 7 天，配置 ≤0 关闭）天未确认将自动完成并产生「订单已确认完成」通知。
 
+### 2.12 用户增长（已实现，实际路径前缀为 /api，迁移 013/014）
+
+**地址簿**
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/addresses` | 我的地址（默认在前，更新时间倒序） |
+| POST | `/api/addresses` | 新建/编辑 `{id?, name, phone, address, isDefault?}`（设默认在同会员内先清后设） |
+| PUT | `/api/addresses/:id/default` | 设为默认 |
+| DELETE | `/api/addresses/:id` | 删除 |
+
+**积分 / 邀请**
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| POST | `/api/points/signin` | 每日签到 `{ok, balance}`（ok=false=今日已签） |
+| GET | `/api/points?page=` | 积分余额 + 流水（append-only：sign/review/order/invite/exchange） |
+| GET | `/api/invite` | 邀请概览 `{inviteCode, invited, rewardEach}`；新用户注册填邀请码，双方各得积分 |
+
+**秒杀（迁移 014）**
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/flash-sales` | 生效中的秒杀活动（公开）：`{id, productId, productTitle, productImage, salePrice, stock, sold, startAt, endAt}`；下单自动按秒杀价计价，无需传参 |
+
+**交易配置 / 演示支付**
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/trade-config` | 公开配置 `{depositPercent, depositHoldDays}`（checkout 定金预估） |
+| POST | `/api/orders/:orderNo/mock-pay` | **演示支付**：未配商户号且非生产时直接落账（生产 404，前端自动回退微信支付提示） |
+
 ---
 
 ## 3. 平台端接口（/admin/api/v1，PC）
@@ -416,10 +450,10 @@
 | GET / POST | `/api/admin/marketing/coupons` | 券模板分页（status/keyword） / 新建 |
 | PUT / DELETE | `/api/admin/marketing/coupons/:id` | 编辑（已发放量不可改）/ 删除（有发放记录禁删 41206） |
 | POST | `/api/admin/marketing/coupons/:id/issue` | 定向发放 `{memberIds[]}` → `{issued, failed}`（逐人按限领） |
-| GET / POST | `/api/admin/marketing/services` | 增值服务列表 / 新建 `{name, description?, originalPrice?, price, sort?, status?}` |
+| GET / POST | `/api/admin/marketing/services` | 增值服务列表 / 新建 `{name, description?, originalPrice?, price, guaranteeDays?(健康保障天数,0=无), sort?, status?}` |
 | PUT / DELETE | `/api/admin/marketing/services/:id` | 编辑 / 删除 |
 
-券模板入参：`{name, type(1满减/2折扣/3立减), thresholdAmount?, discountAmount?, discountPercent?, maxDiscountAmount?, totalCount?(0不限), perLimit?, newUserOnly?, pickupStart?, pickupEnd?, validStart?, validEnd?, status?}`，时段格式 `YYYY-MM-DD HH:mm:ss` 或 RFC3339，空 = 不限。
+券模板入参：`{name, type(1满减/2折扣/3立减), thresholdAmount?, discountAmount?, discountPercent?, maxDiscountAmount?, totalCount?(0不限), perLimit?, newUserOnly?, pointsCost?(>0 需积分兑换，领取时事务内扣分), pickupStart?, pickupEnd?, validStart?, validEnd?, status?}`，时段格式 `YYYY-MM-DD HH:mm:ss` 或 RFC3339，空 = 不限。
 
 ### 3.8 人工客服工作台（已实现，实际路径前缀为 /api/admin）
 
@@ -474,6 +508,37 @@
 | PUT | `/api/admin/ship-methods/:id` | 编辑（改价只影响新订单） |
 | PUT | `/api/admin/ship-methods/:id/status` | 启用/停用 `{status: 1/0}` |
 | DELETE | `/api/admin/ship-methods/:id` | 删除（历史订单靠快照回显） |
+
+### 3.13 秒杀活动管理（已实现，实际路径前缀为 /api/admin，迁移 014）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/flash-sales?page=&pageSize=` | 全量活动（含未启用，id 倒序，带商品标题） |
+| POST | `/api/admin/flash-sales` | 新建 `{productId, salePrice(≤商品原价), stock(1-9999), startAt, endAt, status?}` |
+| PUT | `/api/admin/flash-sales/:id` | 编辑 |
+| PUT | `/api/admin/flash-sales/:id/status` | 启用/停用（启用撞「每商品至多一个启用中」唯一索引 → 明确报错） |
+| DELETE | `/api/admin/flash-sales/:id` | 删除（订单已快照秒杀价，名额回补按 ID 静默失效） |
+
+### 3.14 经营报表（已实现，实际路径前缀为 /api/admin）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/report?days=30` | 报表（days 1-90 默认 30）：`summary{todayGmv, todayOrders, monthGmv, monthOrders, pendingAfters}` + `daily[]`（日期/订单/成交额）+ `topProducts[]`（销量 Top10）+ `breeds[]`（品类分布）；GMV = `status IN (20,30,60)` 按 `paid_at` 汇总 |
+
+### 3.15 审计日志与敏感词（已实现，实际路径前缀为 /api/admin，迁移 015）
+
+| 方法 | 路径 | 说明 |
+| ---- | ---- | ---- |
+| GET | `/api/admin/audit-logs?page=&pageSize=` | 管理端操作审计（非 GET 请求由中间件自动落库：管理员/方法/路径/IP，id 倒序） |
+| GET / POST | `/api/admin/sensitive-words` | 敏感词分页 / 新增 `{word(≤64)}`（重复添加报错） |
+| PUT | `/api/admin/sensitive-words/:id/status` | 启用/停用（进程内缓存 60s 刷新） |
+| DELETE | `/api/admin/sensitive-words/:id` | 删除 |
+
+> 敏感词生效点：客服聊天文本命中 → 拒绝发送；评价内容 / 售后理由命中 → `***` 打码后落库。
+
+### 3.16 监控指标（运维）
+
+`GET /metrics`（Prometheus 文本格式，容器网络内抓取）：`pet_api_http_requests_total{method,path,code}`、`pet_api_http_request_seconds_bucket`、`pet_api_orders_created_total`、`pet_api_orders_paid_total`、`pet_api_orders_closed_total{kind=pending|tail}`、`pet_api_pay_notify_total{result}`、`pet_api_notify_delivery_fail_total`、`pet_api_ratelimit_rejected_total{scope}`。部署编排见 `scripts/deploy/monitoring/`（Prometheus 抓取 + 告警规则 + Grafana）。
 
 ---
 

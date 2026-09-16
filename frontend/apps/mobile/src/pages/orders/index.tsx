@@ -9,6 +9,7 @@ import './index.css'
 const CHIPS = [
   { status: 0, label: '全部' },
   { status: 10, label: '待支付' },
+  { status: 15, label: '待补尾款' },
   { status: 20, label: '已支付' },
   { status: 30, label: '已完成' },
   { status: 60, label: '已退款' },
@@ -22,6 +23,11 @@ const fmtLeft = (expireAt: string, now: number) => {
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return m > 0 ? `${m}分${String(s).padStart(2, '0')}秒内支付` : `${s}秒内支付`
+}
+
+const fmtShort = (iso: string) => {
+  const d = new Date(iso)
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 export default function Orders() {
@@ -108,6 +114,16 @@ export default function Orders() {
             </View>
             <View className='od-btn od-btn-primary' onClick={stop(() => payOrder(o.orderNo, reload))}>
               去支付
+            </View>
+          </>
+        )}
+        {o.status === 15 && (
+          <>
+            <View className='od-btn' onClick={stop(() => cancelOrder(o.orderNo, reload))}>
+              取消并退定金
+            </View>
+            <View className='od-btn od-btn-primary' onClick={stop(() => payOrder(o.orderNo, reload))}>
+              补尾款
             </View>
           </>
         )}
@@ -198,9 +214,24 @@ export default function Orders() {
               </Text>
             </View>
           )}
+          {o.status === 15 && (
+            <View className='od-left'>
+              <Text className='od-left-text'>
+                尾款 {Number(o.payAmount) - Number(o.depositAmount ?? '0')} 元，{o.tailExpireAt ? `${fmtShort(o.tailExpireAt)} 前补齐` : '请尽快补齐'}
+              </Text>
+            </View>
+          )}
           <View className='od-foot'>
             <Text className='od-pay'>
-              实付 <Text className='od-pay-num'>¥{o.payAmount}</Text>
+              {o.status === 15 ? (
+                <>
+                  已付定金 <Text className='od-pay-num'>¥{o.depositAmount}</Text>
+                </>
+              ) : (
+                <>
+                  实付 <Text className='od-pay-num'>¥{o.payAmount}</Text>
+                </>
+              )}
             </Text>
             {(o.aftersaleStatus ?? 0) > 0 && <Text className='od-as'>{AS_TEXT[o.aftersaleStatus!]}</Text>}
           </View>

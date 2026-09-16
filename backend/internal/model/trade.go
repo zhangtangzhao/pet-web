@@ -8,19 +8,22 @@ import (
 
 // 订单状态
 const (
-	OrderPending   = 10 // 待支付
-	OrderPaid      = 20 // 已支付
-	OrderCompleted = 30 // 已完成
-	OrderCanceled  = 40 // 已取消
-	OrderClosed    = 45 // 已关闭(超时)
-	OrderRefunding = 50 // 退款中
-	OrderRefunded  = 60 // 已退款
+	OrderPending     = 10 // 待支付（全款单待付全款 / 定金单待付定金）
+	OrderDepositPaid = 15 // 已付定金，待补尾款
+	OrderPaid        = 20 // 已支付（全款 / 尾款已补齐）
+	OrderCompleted   = 30 // 已完成
+	OrderCanceled    = 40 // 已取消
+	OrderClosed      = 45 // 已关闭(超时)
+	OrderRefunding   = 50 // 退款中
+	OrderRefunded    = 60 // 已退款
 )
 
 func OrderStatusText(s int) string {
 	switch s {
 	case OrderPending:
 		return "待支付"
+	case OrderDepositPaid:
+		return "待补尾款"
 	case OrderPaid:
 		return "已支付"
 	case OrderCompleted:
@@ -69,8 +72,9 @@ const (
 )
 
 const (
-	PayTypePurchase = 1 // 支付
+	PayTypePurchase = 1 // 支付（全款 / 定金首笔）
 	PayTypeRefund   = 2 // 退款
+	PayTypeTail     = 3 // 定金单补尾款
 )
 
 type Order struct {
@@ -85,6 +89,10 @@ type Order struct {
 	CouponInfo     string          `json:"couponInfo"`
 	ServiceItems   string          `json:"serviceItems"`
 	Status         int             `json:"status"`
+	DepositAmount  decimal.Decimal `gorm:"type:numeric(10,2)" json:"depositAmount"` // >0 即定金单
+	TailExpireAt   *time.Time      `json:"tailExpireAt"`                            // 尾款补款截止（付定金起 N 天）
+	FlashSaleID    int64           `json:"flashSaleId"`                             // 命中的秒杀活动，0=无
+	GuaranteeDays  int             `json:"guaranteeDays"`                           // 健康保障天数快照
 	ContactName    string          `json:"contactName"`
 	ContactPhone   string          `json:"contactPhone"`
 	Remark         string          `json:"remark"`

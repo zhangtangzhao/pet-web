@@ -24,6 +24,8 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/products/:id/reviews", Handler: ProductReviews(sc)},
 		{Method: "GET", Path: "/api/products/:id/review-summary", Handler: ProductReviewSummary(sc)},
 		{Method: "GET", Path: "/api/services", Handler: ServiceList(sc)},
+		{Method: "GET", Path: "/api/flash-sales", Handler: FlashSales(sc)},
+		{Method: "GET", Path: "/api/trade-config", Handler: TradeConfig(sc)},
 		{Method: "POST", Path: "/api/pay/notify/wx", Handler: WxPayNotify(sc)},
 	})
 
@@ -65,6 +67,14 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "GET", Path: "/api/cs/messages", Handler: CsMemberMessages(sc)},
 		{Method: "POST", Path: "/api/cs/read", Handler: CsMemberRead(sc)},
 		{Method: "POST", Path: "/api/upload-token", Handler: MemberUploadToken(sc)},
+		{Method: "GET", Path: "/api/addresses", Handler: AddressList(sc)},
+		{Method: "POST", Path: "/api/addresses", Handler: AddressSave(sc)},
+		{Method: "PUT", Path: "/api/addresses/:id/default", Handler: AddressSetDefault(sc)},
+		{Method: "DELETE", Path: "/api/addresses/:id", Handler: AddressDelete(sc)},
+		{Method: "POST", Path: "/api/points/signin", Handler: SignIn(sc)},
+		{Method: "GET", Path: "/api/points", Handler: MyPoints(sc)},
+		{Method: "GET", Path: "/api/invite", Handler: Invite(sc)},
+		{Method: "POST", Path: "/api/orders/:orderNo/mock-pay", Handler: MockPay(sc)},
 	})
 
 	// ───────── 平台端 · 登录/刷新（无需 token）─────────
@@ -79,6 +89,19 @@ func RegisterHandlers(server *rest.Server, sc *svc.ServiceContext) {
 		{Method: "POST", Path: "/api/admin/logout", Handler: AdminLogout(sc)},
 		{Method: "PUT", Path: "/api/admin/password", Handler: AdminChangePassword(sc)},
 		{Method: "GET", Path: "/api/admin/overview", Handler: AdminOverview(sc)},
+		{Method: "GET", Path: "/api/admin/report", Handler: AdminReport(sc)},
+
+		{Method: "GET", Path: "/api/admin/flash-sales", Handler: AdminFlashSaleList(sc)},
+		{Method: "POST", Path: "/api/admin/flash-sales", Handler: AdminFlashSaleUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/flash-sales/:id", Handler: AdminFlashSaleUpsert(sc)},
+		{Method: "PUT", Path: "/api/admin/flash-sales/:id/status", Handler: AdminFlashSaleStatus(sc)},
+		{Method: "DELETE", Path: "/api/admin/flash-sales/:id", Handler: AdminFlashSaleDelete(sc)},
+
+		{Method: "GET", Path: "/api/admin/audit-logs", Handler: AdminAuditList(sc)},
+		{Method: "GET", Path: "/api/admin/sensitive-words", Handler: AdminSensitiveList(sc)},
+		{Method: "POST", Path: "/api/admin/sensitive-words", Handler: AdminSensitiveSave(sc)},
+		{Method: "PUT", Path: "/api/admin/sensitive-words/:id/status", Handler: AdminSensitiveStatus(sc)},
+		{Method: "DELETE", Path: "/api/admin/sensitive-words/:id", Handler: AdminSensitiveDelete(sc)},
 
 		{Method: "POST", Path: "/api/admin/categories", Handler: AdminCategoryUpsert(sc)},
 		{Method: "PUT", Path: "/api/admin/categories/:id", Handler: AdminCategoryUpdate(sc)},

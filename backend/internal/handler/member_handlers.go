@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
 
@@ -9,6 +10,8 @@ import (
 	"pet/backend/internal/logic/ai"
 	"pet/backend/internal/logic/auth"
 	"pet/backend/internal/logic/pet"
+	"pet/backend/internal/metrics"
+	"pet/backend/internal/ratelimit"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
 )
@@ -79,6 +82,13 @@ func SmsSend(sc *svc.ServiceContext) http.HandlerFunc {
 			common.Err(w, err)
 			return
 		}
+		// IP 维度日级限流（验证码轰炸防护）
+		if !ratelimit.Allow(sc.Rdb, "rl:smsip:"+clientIP(r)+":"+time.Now().Format("20060102"),
+			sc.Config.RateLimit.SmsIPDaily, 24*time.Hour) {
+			metrics.LimitRejected.WithLabelValues("sms").Inc()
+			common.Err(w, common.ErrTooManyRequests)
+			return
+		}
 		interval, err := auth.SendSmsCode(sc, req.Phone)
 		if err != nil {
 			common.Err(w, err)
@@ -95,7 +105,12 @@ func SmsLogin(sc *svc.ServiceContext) http.HandlerFunc {
 			common.Err(w, err)
 			return
 		}
-		resp, err := auth.SmsLogin(sc, req.Phone, req.Code)
+		if !ratelimit.Allow(sc.Rdb, "rl:login:"+clientIP(r), sc.Config.RateLimit.LoginPerMinute, time.Minute) {
+			metrics.LimitRejected.WithLabelValues("login").Inc()
+			common.Err(w, common.ErrTooManyRequests)
+			return
+		}
+		resp, err := auth.SmsLogin(sc, req.Phone, req.Code, req.InviteCode)
 		if err != nil {
 			common.Err(w, err)
 			return

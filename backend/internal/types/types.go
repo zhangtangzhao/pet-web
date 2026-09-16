@@ -35,8 +35,9 @@ type SmsSendReq struct {
 }
 
 type SmsLoginReq struct {
-	Phone string `json:"phone"`
-	Code  string `json:"code"`
+	Phone      string `json:"phone"`
+	Code       string `json:"code"`
+	InviteCode string `json:"inviteCode,optional"` // 邀请码（新注册归因）
 }
 
 type SmsSendResp struct {
@@ -201,6 +202,8 @@ type CreateOrderReq struct {
 	CouponID     string   `json:"couponId,optional"`    // 用户券 ID，空 = 不用券
 	ShipMethodID string   `json:"shipMethodId"`         // 配送方式
 	ShipAddress  string   `json:"shipAddress,optional"` // 收货地址（托运配送类必填）
+	AddressID    string   `json:"addressId,optional"`   // 地址簿地址，优先于手填
+	UseDeposit   bool     `json:"useDeposit,optional"`  // 定金锁宠模式
 	ContactName  string   `json:"contactName"`
 	ContactPhone string   `json:"contactPhone"`
 	Remark       string   `json:"remark,optional"`
@@ -215,11 +218,14 @@ type WxPayParams struct {
 }
 
 type CreateOrderResp struct {
-	OrderNo   string       `json:"orderNo"`
-	PayAmount string       `json:"payAmount"`
-	ExpireAt  string       `json:"expireAt"`
-	PayParams *WxPayParams `json:"payParams"` // 小程序 JSAPI 支付参数
-	H5PayURL  string       `json:"h5PayUrl"`  // H5 支付跳转地址
+	OrderNo    string       `json:"orderNo"`
+	PaymentNo  string       `json:"paymentNo,optional"`
+	PayAmount  string       `json:"payAmount"` // 定金单为定金金额
+	ExpireAt   string       `json:"expireAt"`
+	PayParams  *WxPayParams `json:"payParams"`           // 小程序 JSAPI 支付参数
+	H5PayURL   string       `json:"h5PayUrl"`            // H5 支付跳转地址
+	IsDeposit  bool         `json:"isDeposit"`           // 定金锁宠单
+	TailAmount string       `json:"tailAmount,optional"` // 尾款金额（定金单）
 }
 
 type OrderListReq struct {
@@ -263,6 +269,9 @@ type OrderView struct {
 	Items           []OrderItemView `json:"items"`
 	Reviewed        bool            `json:"reviewed"`        // 已评价（status=30 入口态）
 	AftersaleStatus int             `json:"aftersaleStatus"` // 最新售后单状态，0=无售后
+	DepositAmount   string          `json:"depositAmount"`   // 定金，0=非定金单
+	TailExpireAt    string          `json:"tailExpireAt,optional"`
+	GuaranteeDays   int             `json:"guaranteeDays"` // 健康保障天数快照，0=无
 }
 
 type ShipMethodView struct {
@@ -274,6 +283,11 @@ type ShipMethodView struct {
 	Sort        int    `json:"sort"`
 	Status      int    `json:"status"`
 	CreatedAt   string `json:"createdAt"`
+}
+
+type TradeConfigResp struct {
+	DepositPercent  int `json:"depositPercent"`  // 定金比例（%），0=未开启定金模式
+	DepositHoldDays int `json:"depositHoldDays"` // 尾款补款期限（天）
 }
 
 type ShipMethodListReq struct {
@@ -561,6 +575,7 @@ type ServiceItemView struct {
 	Description   string `json:"description"`
 	OriginalPrice string `json:"originalPrice"`
 	Price         string `json:"price"`
+	GuaranteeDays int    `json:"guaranteeDays"` // >0 为健康保障服务（完成 N 天内可申请售后）
 }
 
 type ServiceUpsertReq struct {
@@ -569,6 +584,7 @@ type ServiceUpsertReq struct {
 	Description   string `json:"description,optional"`
 	OriginalPrice string `json:"originalPrice,optional"`
 	Price         string `json:"price"`
+	GuaranteeDays int    `json:"guaranteeDays,optional"` // >0 为健康保障服务
 	Sort          int    `json:"sort,optional"`
 	Status        int    `json:"status,optional"`
 }
@@ -586,6 +602,7 @@ type CouponTemplateView struct {
 	IssuedCount       int    `json:"issuedCount"`
 	PerLimit          int    `json:"perLimit"`
 	NewUserOnly       int    `json:"newUserOnly"`
+	PointsCost        int    `json:"pointsCost"` // >0 需用积分兑换领取
 	PickupStart       string `json:"pickupStart"`
 	PickupEnd         string `json:"pickupEnd"`
 	ValidStart        string `json:"validStart"`
@@ -605,6 +622,7 @@ type CouponUpsertReq struct {
 	TotalCount        int    `json:"totalCount,optional"`
 	PerLimit          int    `json:"perLimit,optional"`
 	NewUserOnly       int    `json:"newUserOnly,optional"`
+	PointsCost        int    `json:"pointsCost,optional"` // >0 积分兑换券
 	PickupStart       string `json:"pickupStart,optional"`
 	PickupEnd         string `json:"pickupEnd,optional"`
 	ValidStart        string `json:"validStart,optional"`
@@ -697,7 +715,7 @@ type CsSessionItem struct {
 // ─────────────────────────── 订单评价 ───────────────────────────
 
 type ReviewCreateReq struct {
-	OrderNo string   `json:"orderNo"`
+	OrderNo string   `json:"orderNo,optional"` // 实际取 path 参数，optional 仅为满足 go-zero mapping 必填校验
 	Rating  int      `json:"rating"`
 	Content string   `json:"content,optional"`
 	Images  []string `json:"images,optional"`
@@ -797,7 +815,7 @@ type NotifyTmplResp struct {
 }
 
 type NotifyView struct {
-	ID        string `json:"id"` // 字符串 ID，避免 JS 精度丢失
+	ID        string `json:"id"`    // 字符串 ID，避免 JS 精度丢失
 	Scene     int    `json:"scene"` // 1客服回复 2订单 3优惠券
 	Title     string `json:"title"`
 	Content   string `json:"content"`
@@ -809,4 +827,133 @@ type NotifyView struct {
 type NotifyListResp struct {
 	PageResp
 	Unread int `json:"unread"`
+}
+
+// ─────────────────────────── 用户端 · 地址簿 ───────────────────────────
+
+type AddressView struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Phone     string `json:"phone"`
+	Address   string `json:"address"`
+	IsDefault int    `json:"isDefault"`
+}
+
+type AddressSaveReq struct {
+	ID        string `json:"id,optional"`
+	Name      string `json:"name"`
+	Phone     string `json:"phone"`
+	Address   string `json:"address"`
+	IsDefault bool   `json:"isDefault,optional"`
+}
+
+type AddressIDReq struct {
+	ID string `path:"id"`
+}
+
+// ─────────────────────────── 用户端 · 积分 / 邀请 ───────────────────────────
+
+type PointsLogView struct {
+	ID        string `json:"id"`
+	Change    int64  `json:"change"` // 正负
+	Balance   int64  `json:"balance"`
+	Reason    string `json:"reason"`
+	Ref       string `json:"ref"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type PointsResp struct {
+	Points int64           `json:"points"`
+	Total  int64           `json:"total"`
+	List   []PointsLogView `json:"list"`
+}
+
+type PointsPageReq struct {
+	PageReq
+}
+
+type SignInResp struct {
+	OK      bool  `json:"ok"`      // false=今日已签到
+	Balance int64 `json:"balance"` // 签到后余额（未开启活动时 0）
+}
+
+type InviteResp struct {
+	InviteCode string `json:"inviteCode"`
+	Invited    int64  `json:"invited"`
+	RewardEach int64  `json:"rewardEach"` // 每邀请一人双方各得积分
+}
+
+// ─────────────────────────── 秒杀 ───────────────────────────
+
+type FlashSaleView struct {
+	ID           string `json:"id"`
+	ProductID    string `json:"productId"`
+	ProductTitle string `json:"productTitle"`
+	ProductImage string `json:"productImage"` // 主图（首页秒杀专区展示）
+	SalePrice    string `json:"salePrice"`
+	Stock        int    `json:"stock"`
+	Sold         int    `json:"sold"`
+	StartAt      string `json:"startAt"`
+	EndAt        string `json:"endAt"`
+	Status       int    `json:"status"`
+	CreatedAt    string `json:"createdAt"`
+}
+
+type FlashSaleUpsertReq struct {
+	ID        string `json:"id,optional"`
+	ProductID string `json:"productId"`
+	SalePrice string `json:"salePrice"`
+	Stock     int    `json:"stock"`
+	StartAt   string `json:"startAt"`
+	EndAt     string `json:"endAt"`
+	Status    int    `json:"status,optional"`
+}
+
+// ─────────────────────────── 平台端 · 报表 / 审计 / 敏感词 ───────────────────────────
+
+type AdminDailyRow struct {
+	Date   string `json:"date"`
+	Orders int64  `json:"orders"`
+	GMV    string `json:"gmv"`
+}
+
+type AdminRankRow struct {
+	Name   string `json:"name"`
+	Count  int64  `json:"count"`
+	Amount string `json:"amount"`
+}
+
+type AdminReportResp struct {
+	Summary     AdminReportSummary `json:"summary"`
+	Daily       []AdminDailyRow    `json:"daily"`       // 近 N 天成交
+	TopProducts []AdminRankRow     `json:"topProducts"` // 商品销量 Top10
+	Breeds      []AdminRankRow     `json:"breeds"`      // 品类成交分布
+}
+
+type AdminReportSummary struct {
+	TodayGMV      string `json:"todayGmv"`
+	TodayOrders   int64  `json:"todayOrders"`
+	MonthGMV      string `json:"monthGmv"`
+	MonthOrders   int64  `json:"monthOrders"`
+	PendingAfters int64  `json:"pendingAfters"`
+}
+
+type AuditLogRow struct {
+	ID        string `json:"id"`
+	AdminName string `json:"adminName"`
+	Method    string `json:"method"`
+	Path      string `json:"path"`
+	IP        string `json:"ip"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type SensitiveWordRow struct {
+	ID        string `json:"id"`
+	Word      string `json:"word"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type SensitiveWordSaveReq struct {
+	Word string `json:"word"`
 }

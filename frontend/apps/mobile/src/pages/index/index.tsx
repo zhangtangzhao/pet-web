@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { get } from '../../request'
-import { BannerView, HomeResp, ProductCard } from '../../types'
+import { BannerView, FlashSaleInfo, HomeResp, ProductCard } from '../../types'
 import './index.css'
 
 // banner jump_type → 跳转（与后端 jumpTypes 白名单、管理端选项一一对应）
@@ -23,6 +23,7 @@ const BANNER_NAV: Record<string, (target: string) => void> = {
 
 export default function Home() {
   const [data, setData] = useState<HomeResp>()
+  const [flash, setFlash] = useState<FlashSaleInfo[]>([])
 
   const load = () =>
     get<HomeResp>('/home')
@@ -32,6 +33,10 @@ export default function Home() {
 
   useEffect(() => {
     load()
+    // 秒杀专区：公开接口已过滤（启用中 + 时间窗内 + 有余量）
+    get<FlashSaleInfo[]>('/flash-sales')
+      .then((l) => setFlash((l ?? []).slice(0, 6)))
+      .catch(() => {})
   }, [])
 
   usePullDownRefresh(load)
@@ -74,6 +79,33 @@ export default function Home() {
           </View>
         ))}
       </View>
+
+      {flash.length > 0 && (
+        <>
+          <View className='section-title section-flash'>
+            ⚡ 限时秒杀
+            <Text className='section-flash-tip'>手慢无</Text>
+          </View>
+          <View className='flash-row'>
+            {flash.map((f) => (
+              <View className='flash-card' key={f.id} onClick={() => Taro.navigateTo({ url: `/pages/detail/index?id=${f.productId}` }).catch(() => {})}>
+                {f.productImage ? (
+                  <Image className='flash-img' src={f.productImage} mode='aspectFill' lazyLoad />
+                ) : (
+                  <View className='flash-img flash-img-empty'>🐾</View>
+                )}
+                <View className='flash-main'>
+                  <Text className='flash-title'>{f.productTitle}</Text>
+                  <View className='flash-meta'>
+                    <Text className='flash-price'>¥{Number(f.salePrice).toFixed(2)}</Text>
+                    <Text className='flash-stock'>剩 {f.stock - f.sold}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
 
       <View className='section-title'>热销推荐</View>
       <View className='grid'>

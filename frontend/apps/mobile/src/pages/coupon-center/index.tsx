@@ -59,14 +59,25 @@ export default function CouponCenter() {
   }, [loadCenter, loadMine])
 
   const claim = async (t: CouponTemplateView) => {
-    try {
-      await post(`/coupons/${t.id}/claim`)
-      Taro.showToast({ title: '领取成功', icon: 'success' })
-      loadCenter()
-      loadMine()
-    } catch (e: any) {
-      Taro.showToast({ title: e.message, icon: 'none' })
+    const doClaim = () =>
+      post(`/coupons/${t.id}/claim`)
+        .then(() => {
+          Taro.showToast({ title: (t.pointsCost ?? 0) > 0 ? '兑换成功' : '领取成功', icon: 'success' })
+          loadCenter()
+          loadMine()
+        })
+        .catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
+    if ((t.pointsCost ?? 0) > 0) {
+      Taro.showModal({
+        title: '积分兑换',
+        content: `确定消耗 ${t.pointsCost} 积分兑换「${t.name}」吗？`,
+        success: (m) => {
+          if (m.confirm) doClaim()
+        },
+      })
+      return
     }
+    doClaim()
   }
 
   return (
@@ -90,7 +101,9 @@ export default function CouponCenter() {
                   {t.newUserOnly ? ' · 新人专享' : ''}
                 </Text>
               </View>
-              <View className='btn-claim' onClick={() => claim(t)}>领取</View>
+              <View className='btn-claim' onClick={() => claim(t)}>
+                {(t.pointsCost ?? 0) > 0 ? `${t.pointsCost}积分` : '领取'}
+              </View>
             </View>
           ))
         ))}

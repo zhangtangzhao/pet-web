@@ -20,12 +20,54 @@ type Member struct {
 	Phone       string     `json:"phone"`
 	Gender      int        `json:"gender"`
 	Status      int        `json:"status"`
+	Points      int64      `json:"points"`
+	InviteCode  string     `json:"inviteCode"`
+	InvitedBy   int64      `json:"invitedBy"`
 	LastLoginAt *time.Time `json:"lastLoginAt"`
 	CreatedAt   time.Time  `json:"createdAt"`
 	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 func (Member) TableName() string { return "member" }
+
+// ─────────────────────────── 收货地址簿 ───────────────────────────
+
+type MemberAddress struct {
+	ID        int64     `gorm:"primaryKey" json:"id"`
+	MemberID  int64     `json:"memberId"`
+	Name      string    `json:"name"`
+	Phone     string    `json:"phone"`
+	Address   string    `json:"address"`
+	IsDefault int       `json:"isDefault"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (MemberAddress) TableName() string { return "member_address" }
+
+// ─────────────────────────── 积分流水 ───────────────────────────
+
+// 积分变动原因
+const (
+	PointsReasonSign     = "sign"          // 每日签到
+	PointsReasonOrder    = "order"         // 消费返积分
+	PointsReasonReview   = "review"        // 评价奖励
+	PointsReasonInvite   = "invite"        // 邀请人奖励
+	PointsReasonInvited  = "invite_reward" // 被邀请人奖励
+	PointsReasonExchange = "exchange"      // 积分兑换优惠券
+)
+
+type PointsLog struct {
+	ID           int64     `gorm:"primaryKey" json:"id"`
+	MemberID     int64     `json:"memberId"`
+	Change       int64     `json:"change"`
+	BalanceAfter int64     `json:"balanceAfter"`
+	Reason       string    `json:"reason"`
+	Ref          string    `json:"ref"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+func (PointsLog) TableName() string { return "points_log" }
 
 type WechatAuth struct {
 	ID         int64     `gorm:"primaryKey" json:"id"`

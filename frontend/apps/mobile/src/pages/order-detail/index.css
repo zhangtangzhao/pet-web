@@ -23,6 +23,9 @@
   font-size: 24rpx;
   opacity: 0.92;
 }
+.odt-hero-15 {
+  background: linear-gradient(135deg, #722ed1, #9254de);
+}
 .odt-hero-40,
 .odt-hero-45,
 .odt-hero-60 {

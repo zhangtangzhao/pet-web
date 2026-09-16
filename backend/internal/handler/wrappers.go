@@ -2,9 +2,14 @@ package handler
 
 import (
 	"context"
+	"net"
 	"net/http"
+	"strings"
+
+	"github.com/zeromicro/go-zero/core/logx"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 )
 
@@ -28,7 +33,7 @@ func memberAuth(sc *svc.ServiceContext, next http.HandlerFunc) http.HandlerFunc 
 	}
 }
 
-// adminAuth 平台端 JWT 校验（独立 secret，typ=admin）
+// adminAuth 平台端 JWT 校验（独立 secret，typ=admin）；非 GET 请求异步落操作审计
 func adminAuth(sc *svc.ServiceContext, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uid, ok := parseAs(r, sc.Config.Auth.AdminAccessSecret, common.TokenTypeAdmin)
@@ -37,8 +42,41 @@ func adminAuth(sc *svc.ServiceContext, next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		ctx := withID(r.Context(), ctxAdminID, uid)
+		if r.Method != http.MethodGet {
+			go auditAdmin(sc, uid, r.Method, r.URL.Path, clientIP(r))
+		}
 		next(w, r.WithContext(ctx))
 	}
+}
+
+// auditAdmin 异步记录管理端写操作（method+path+ip），失败仅日志不影响请求
+func auditAdmin(sc *svc.ServiceContext, adminID int64, method, path, ip string) {
+	a := model.AdminAuditLog{
+		ID: common.NewID(), AdminID: adminID, Method: method, IP: ip,
+	}
+	if rs := []rune(path); len(rs) > 128 {
+		a.Path = string(rs[:128])
+	} else {
+		a.Path = path
+	}
+	var u model.AdminUser
+	if err := sc.DB.Select("username").First(&u, adminID).Error; err == nil {
+		a.AdminName = u.Username
+	}
+	if err := sc.DB.Create(&a).Error; err != nil {
+		logx.Errorf("审计日志落库失败 admin=%d path=%s: %v", adminID, path, err)
+	}
+}
+
+func clientIP(r *http.Request) string {
+	if xf := r.Header.Get("X-Forwarded-For"); xf != "" {
+		return strings.TrimSpace(strings.Split(xf, ",")[0])
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }
 
 func withID(ctx context.Context, key ctxKey, id int64) context.Context {

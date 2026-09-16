@@ -10,6 +10,8 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/growth"
+	"pet/backend/internal/logic/sensitive"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -58,7 +60,7 @@ func Create(sc *svc.ServiceContext, memberID int64, req *types.ReviewCreateReq) 
 	if req.Rating < 1 || req.Rating > 5 {
 		return nil, common.ErrParam
 	}
-	content := trimSpace(req.Content)
+	content := sensitive.Filter(sc.DB, trimSpace(req.Content))
 	if utf8.RuneCountInString(content) > maxContentRunes {
 		return nil, common.ErrParam
 	}
@@ -108,6 +110,8 @@ func Create(sc *svc.ServiceContext, memberID int64, req *types.ReviewCreateReq) 
 	if err := sc.DB.Create(&r).Error; err != nil {
 		return nil, err
 	}
+	// 首评奖励积分（失败仅日志，不影响评价提交）
+	growth.RewardReview(sc, memberID, o.OrderNo)
 	return &types.ReviewView{
 		ID:           strconvI64(r.ID),
 		OrderNo:      r.OrderNo,

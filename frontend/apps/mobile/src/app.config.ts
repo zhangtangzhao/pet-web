@@ -17,6 +17,9 @@ export default defineAppConfig({
     'pages/notify/index',
     'pages/coupon-center/index',
     'pages/favorites/index',
+    'pages/points/index',
+    'pages/invite/index',
+    'pages/address/index',
     'pages/login/index',
   ],
   window: {

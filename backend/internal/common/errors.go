@@ -59,6 +59,12 @@ var (
 	ErrAfterSaleState  = NewErr(400, 41704, "售后状态不允许此操作")
 	ErrAfterSaleAudit  = NewErr(409, 41705, "审核状态已变化，请刷新后重试")
 
+	ErrTooManyRequests = NewErr(429, 41801, "请求过于频繁，请稍后再试")
+	ErrSensitive       = NewErr(400, 41802, "内容包含敏感词，无法提交")
+	ErrPointsNotEnough = NewErr(400, 41803, "积分不足")
+	ErrDepositCoupon   = NewErr(400, 41804, "定金模式暂不支持使用优惠券")
+	ErrInviteCode      = NewErr(400, 41805, "邀请码无效")
+
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")
 	ErrPayConfig = NewErr(500, 50002, "支付未配置")

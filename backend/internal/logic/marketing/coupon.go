@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/growth"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
 	"pet/backend/internal/types"
@@ -74,10 +75,21 @@ func CouponCenter(sc *svc.ServiceContext, memberID int64) ([]types.CouponTemplat
 	return list, nil
 }
 
-// Claim 领取优惠券：CAS 扣减模板库存（并发安全）+ 个人限领校验
+// Claim 领取优惠券：积分兑换扣分（如配置）+ CAS 扣减模板库存（并发安全）+ 个人限领校验
 func Claim(sc *svc.ServiceContext, memberID, templateID int64) error {
 	now := time.Now()
 	return sc.DB.Transaction(func(tx *gorm.DB) error {
+		var t0 model.CouponTemplate
+		if err := tx.First(&t0, templateID).Error; err != nil {
+			return common.ErrNotFound
+		}
+		if t0.PointsCost > 0 {
+			// 积分兑换券：先扣分（不足即失败回滚）
+			if err := growth.DeductTx(tx, memberID, int64(t0.PointsCost),
+				model.PointsReasonExchange, strconv.FormatInt(templateID, 10)); err != nil {
+				return err
+			}
+		}
 		res := tx.Exec(
 			`UPDATE coupon_template SET issued_count = issued_count + 1, updated_at = ?
 			 WHERE id = ? AND status = 1
@@ -289,6 +301,7 @@ func AdminCouponUpsert(sc *svc.ServiceContext, req *types.CouponUpsertReq) error
 		TotalCount:      req.TotalCount,
 		PerLimit:        req.PerLimit,
 		NewUserOnly:     req.NewUserOnly,
+		PointsCost:      req.PointsCost,
 		Status:          normStatus(req.Status),
 	}
 	if t.Type < 1 || t.Type > 3 {
@@ -334,7 +347,7 @@ func AdminCouponUpsert(sc *svc.ServiceContext, req *types.CouponUpsertReq) error
 		"name": t.Name, "type": t.Type, "threshold_amount": t.ThresholdAmount,
 		"discount_amount": t.DiscountAmount, "discount_percent": t.DiscountPercent,
 		"max_discount_amount": t.MaxDiscountAmount, "total_count": t.TotalCount,
-		"per_limit": t.PerLimit, "new_user_only": t.NewUserOnly,
+		"per_limit": t.PerLimit, "new_user_only": t.NewUserOnly, "points_cost": t.PointsCost,
 		"pickup_start": t.PickupStart, "pickup_end": t.PickupEnd,
 		"valid_start": t.ValidStart, "valid_end": t.ValidEnd,
 		"status": t.Status, "updated_at": time.Now(),
@@ -411,6 +424,7 @@ func templateView(t model.CouponTemplate) types.CouponTemplateView {
 		IssuedCount:       t.IssuedCount,
 		PerLimit:          t.PerLimit,
 		NewUserOnly:       t.NewUserOnly,
+		PointsCost:        t.PointsCost,
 		Status:            t.Status,
 		UpdatedAt:         t.UpdatedAt.Format(time.RFC3339),
 	}
