@@ -26,6 +26,14 @@ export default defineAppConfig({
     'pages/square/index',
     'pages/shop/index',
     'pages/encyclopedia/index',
+    'pages/tasks/index',
+    'pages/vip/index',
+    'pages/bargain/index',
+    'pages/auction/index',
+    'pages/booking/index',
+    'pages/insurance/index',
+    'pages/stud/index',
+    'pages/invoices/index',
     'pages/login/index',
     'pages/certificate/index',
   ],
@@ -36,4 +44,5 @@ export default defineAppConfig({
     navigationBarTextStyle: 'black',
   },
 })
+
 

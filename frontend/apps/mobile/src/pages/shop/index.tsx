@@ -27,7 +27,7 @@ export default function PointsShop() {
     if (it.type === 2) {
       (Taro.showModal as any)({
         title: '实物兑换', editable: true, placeholderText: '收货人|手机号|地址',
-        success: (m) => {
+        success: (m: any) => {
           if (!m.confirm || !m.content) return
           const parts = m.content.split('|')
           if (parts.length < 3) { Taro.showToast({ title: '格式：收货人|手机号|地址', icon: 'none' }); return }

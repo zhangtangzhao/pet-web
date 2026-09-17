@@ -23,6 +23,14 @@ const ENTRIES: { icon: string; label: string; url: string }[] = [
   { icon: '🎁', label: '积分签到', url: '/pages/points/index' },
   { icon: '🛒', label: '购物车', url: '/pages/cart/index' },
   { icon: '📸', label: '晒单广场', url: '/pages/square/index' },
+  { icon: '📋', label: '任务中心', url: '/pages/tasks/index' },
+  { icon: '👑', label: 'VIP 会员', url: '/pages/vip/index' },
+  { icon: '🔨', label: '我的砍价', url: '/pages/bargain/index' },
+  { icon: '🔨', label: '竞拍大厅', url: '/pages/auction/index' },
+  { icon: '📅', label: '服务预约', url: '/pages/booking/index' },
+  { icon: '🛡', label: '宠物保险', url: '/pages/insurance/index' },
+  { icon: '❤️', label: '配种服务', url: '/pages/stud/index' },
+  { icon: '🧾', label: '我的发票', url: '/pages/invoices/index' },
   { icon: '🎁', label: '积分商城', url: '/pages/shop/index' },
   { icon: '📖', label: '养宠百科', url: '/pages/encyclopedia/index' },
   { icon: '🐶', label: '宠物档案', url: '/pages/pet/index' },
@@ -130,4 +138,5 @@ export default function Me() {
     </View>
   )
 }
+
 

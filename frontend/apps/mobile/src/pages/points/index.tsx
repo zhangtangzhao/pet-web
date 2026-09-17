@@ -42,7 +42,7 @@ export default function Points() {
   const [cal, setCal] = useState<{ month: string; signedDates: string[]; streak: number; signedToday: boolean }>()
   useEffect(() => { get<any>('/points/sign-calendar').then(setCal).catch(() => {}) }, [])
   const makeup = () => {
-    (Taro.showModal as any)({ title: '补签', editable: true, placeholderText: 'yyyy-MM-dd（本月已过日期）', success: (m) => { if (m.confirm && m.content) post('/points/sign-makeup', { date: m.content.trim() }).then(() => { Taro.showToast({ title: '补签成功', icon: 'success' }); load(); get<any>('/points/sign-calendar').then(setCal).catch(() => {}) }).catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' })) } })
+    (Taro.showModal as any)({ title: '补签', editable: true, placeholderText: 'yyyy-MM-dd（本月已过日期）', success: (m: any) => { if (m.confirm && m.content) post('/points/sign-makeup', { date: m.content.trim() }).then(() => { Taro.showToast({ title: '补签成功', icon: 'success' }); load(); get<any>('/points/sign-calendar').then(setCal).catch(() => {}) }).catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' })) } })
   }
 
   return (
