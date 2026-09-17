@@ -40,6 +40,10 @@ const items = [
   { key: '/flash-sales', icon: <ThunderboltOutlined />, label: '秒杀活动' },
   { key: '/group-buys', icon: <UsergroupAddOutlined />, label: '拼团活动' },
   { key: '/stores', icon: <EnvironmentOutlined />, label: '自提门店' },
+  { key: '/bargain', icon: <ThunderboltOutlined />, label: '砍价活动' },
+  { key: '/auction', icon: <ThunderboltOutlined />, label: '竞拍管理' },
+  { key: '/bookings', icon: <CalendarOutlined />, label: '预约核销' },
+  { key: '/insurance-applies', icon: <SafetyCertificateOutlined />, label: '保险投保' },
   { key: '/points-shop', icon: <GiftIcon />, label: '积分商城' },
   { key: '/activity-calendar', icon: <CalendarOutlined />, label: '活动日历' },
   { key: '/banner', icon: <PictureOutlined />, label: 'Banner 管理' },
@@ -121,4 +125,5 @@ export default function AdminLayout() {
     </Layout>
   )
 }
+
 
