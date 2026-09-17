@@ -28,9 +28,9 @@ export default function Login() {
     }
   }
 
-  if (localStorage.getItem(ACCESS_KEY)) {
-    nav('/')
-  }
+  useEffect(() => {
+    if (localStorage.getItem(ACCESS_KEY)) nav('/')
+  })
 
   return (
     <div
