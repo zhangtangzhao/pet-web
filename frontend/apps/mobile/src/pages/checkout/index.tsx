@@ -50,9 +50,13 @@ export default function Checkout() {
   const [skuId, setSkuId] = useState(params.skuId ?? '')
   const [cartLoaded, setCartLoaded] = useState(!cartMode)
   const [agreeUI, setAgreeUI] = useState(true)
+  const [myPoints, setMyPoints] = useState(0)
+  const [usePoints, setUsePoints] = useState(false)
+  const [pointsToUse, setPointsToUse] = useState(0)
   const [stores, setStores] = useState<{ id: string; name: string; address: string }[]>([])
   const [storeId, setStoreId] = useState('')
   const coAgreeBox = agreeUI ? 'co-agree-box co-agree-on' : 'co-agree-box'
+  const coSvcCheck = usePoints ? 'co-svc-check co-svc-check-on' : 'co-svc-check'
 
   useEffect(() => {
     if (!getToken()) {
@@ -96,6 +100,7 @@ export default function Checkout() {
         if (def) setAddrId(def.id)
       })
       .catch(() => {})
+    get<{ points: number }>('/points').then((r) => setMyPoints(r.points ?? 0)).catch(() => {})
     get<{ depositPercent: number; depositHoldDays: number; myLevelName?: string; myDiscount?: string }>('/trade-config')
       .then((t) => {
         setDepositPercent(t.depositPercent || 0)
@@ -177,6 +182,8 @@ export default function Checkout() {
         shipAddress: addrId ? '' : address.trim(),
         addressId: addrId,
         storeId,
+        usePoints,
+        pointsToUse,
         useDeposit,
         contactName: name,
         contactPhone: phone,
@@ -428,6 +435,20 @@ export default function Checkout() {
         <Text className='co-agree-link' onClick={(e) => { e.stopPropagation(); Taro.navigateTo({ url: '/pages/agreement/index' }).catch(() => {}) }}>《宠物活体购买协议》</Text>
       </View>
 
+      {myPoints >= 100 && !cartMode && !groupMode && (
+        <View className='co-card card co-points-toggle' onClick={() => {
+          const maxUse = Math.min(myPoints, Math.floor(goodsPay * 50))
+          setUsePoints(!usePoints)
+          setPointsToUse(usePoints ? 0 : Math.min(myPoints, Math.floor(goodsPay * 50)))
+        }}>
+          <View className='co-deposit-main'>
+            <Text className='co-deposit-name'>积分抵现</Text>
+            <Text className='co-deposit-desc'>当前 {myPoints} 积分 · 100积分=1元 · 最多抵50%</Text>
+          </View>
+          <View className={coSvcCheck}>{usePoints ? '✓' : ''}</View>
+        </View>
+      )}
+
       <View className='footer'>
         <View className='pay'>
           {useDeposit ? (
@@ -491,6 +512,7 @@ export default function Checkout() {
     </View>
   )
 }
+
 
 
 
