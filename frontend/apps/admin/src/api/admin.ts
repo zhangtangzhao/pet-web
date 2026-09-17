@@ -154,8 +154,8 @@ export async function adminLogin(
     captchaId,
     captchaCode,
   })) as any
-  localStorage.setItem(ACCESS_KEY, data.data.accessToken)
-  localStorage.setItem(REFRESH_KEY, data.data.refreshToken)
+  localStorage.setItem(ACCESS_KEY, data.accessToken)
+  localStorage.setItem(REFRESH_KEY, data.refreshToken)
   return data
 }
 
@@ -831,3 +831,4 @@ export async function downloadCSV(kind: 'orders' | 'members' | 'points', filenam
   a.click()
   URL.revokeObjectURL(url)
 }
+

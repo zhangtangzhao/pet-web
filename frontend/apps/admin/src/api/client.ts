@@ -12,7 +12,14 @@ client.interceptors.request.use((config) => {
 })
 
 client.interceptors.response.use(
-  (resp) => resp.data,
+  (resp) => {
+    const body = resp.data
+    if (body && typeof body === 'object' && 'code' in body) {
+      if (body.code === 0) return body.data
+      return Promise.reject(new Error(body.msg || '请求失败'))
+    }
+    return body
+  },
   (err) => {
     const body = err.response?.data
     if (err.response?.status === 401 && !location.pathname.startsWith('/login')) {
