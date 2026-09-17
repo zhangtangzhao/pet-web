@@ -219,6 +219,8 @@ type CreateOrderReq struct {
 	GroupBuyID      string   `json:"groupBuyId,optional"`      // 拼团下单
 	Agree           bool     `json:"agree,optional"`           // 电子购买协议勾选（后端强校验）
 	BargainLaunchID string   `json:"bargainLaunchId,optional"` // 砍价到底价后按底价下单
+	UsePoints       bool     `json:"usePoints,optional"`       // 积分抵现
+	PointsToUse     int64    `json:"pointsToUse,optional"`     // 使用的积分数量
 	StoreID         string   `json:"storeId,optional"`         // 自提门店
 	UseFreeShip     bool     `json:"useFreeShip,optional"`     // 使用免运费卡
 	ServiceIDs      []string `json:"serviceIds,optional"`      // 增值服务

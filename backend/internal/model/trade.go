@@ -97,11 +97,13 @@ type Order struct {
 	FlashSaleID       int64           `json:"flashSaleId"`                             // 命中的秒杀活动，0=无
 	GuaranteeDays     int             `json:"guaranteeDays"`                           // 健康保障天数快照
 	LevelDiscount     decimal.Decimal `gorm:"type:numeric(10,2)" json:"levelDiscount"` // 等级折扣优惠金额快照
-	GroupTeamID       int64           `json:"groupTeamId"`                             // 拼团团 ID，0=非拼团单
-	PickupCode        string          `json:"pickupCode"`                              // 到店自提核销码（支付后生成）
-	StoreID           int64           `json:"storeId"`                                 // 自提门店，0=非门店单
-	AgreementVersion  string          `json:"agreementVersion"`                        // 购买协议签署版本
-	AgreementSignedAt *time.Time      `json:"agreementSignedAt"`                       // 签署时间
+	PointsDeduct      decimal.Decimal `gorm:"type:numeric(10,2)" json:"pointsDeduct"`
+	PointsUsed        int             `json:"pointsUsed"`
+	GroupTeamID       int64           `json:"groupTeamId"`       // 拼团团 ID，0=非拼团单
+	PickupCode        string          `json:"pickupCode"`        // 到店自提核销码（支付后生成）
+	StoreID           int64           `json:"storeId"`           // 自提门店，0=非门店单
+	AgreementVersion  string          `json:"agreementVersion"`  // 购买协议签署版本
+	AgreementSignedAt *time.Time      `json:"agreementSignedAt"` // 签署时间
 	ContactName       string          `json:"contactName"`
 	ContactPhone      string          `json:"contactPhone"`
 	Remark            string          `json:"remark"`

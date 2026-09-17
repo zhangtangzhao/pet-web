@@ -333,6 +333,36 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		payAmount = goodsPay
 	}
 
+	// 积分抵现：100 积分 = 1 元，最多抵商品金额 50%
+	usePointsDeduct := false
+	var pointsDeduct decimal.Decimal
+	var pointsUsedVal int64
+	if req.UsePoints && req.PointsToUse > 0 {
+		var memberPoints int64
+		sc.DB.Model(&model.Member{}).Select("points").Where("id = ?", memberID).Scan(&memberPoints)
+		toUse := req.PointsToUse
+		if toUse > memberPoints {
+			toUse = memberPoints
+		}
+		maxDeduct := goodsPay.Div(decimal.NewFromInt(2)).Floor()
+		deductYuan := decimal.NewFromInt(toUse / 100)
+		if deductYuan.GreaterThan(maxDeduct) {
+			deductYuan = maxDeduct
+			toUse = maxDeduct.Mul(decimal.NewFromInt(100)).IntPart()
+		}
+		if toUse > 0 && deductYuan.GreaterThan(decimal.Zero) {
+			usePointsDeduct = true
+			pointsUsedVal = toUse
+			pointsDeduct = deductYuan
+		}
+	}
+	if usePointsDeduct {
+		payAmount = payAmount.Sub(pointsDeduct)
+		if payAmount.LessThan(decimal.NewFromFloat(0.01)) {
+			payAmount = decimal.NewFromFloat(0.01)
+		}
+	}
+
 	// 定金锁宠：首笔仅付定金，尾款在 N 天内补齐（closer 超时关单退定金）
 	deposit := decimal.Zero
 	var tailExpireAt *time.Time
@@ -401,6 +431,8 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		ShipFee:        shipFee,
 		ShipAddress:    shipAddress,
 		StoreID:        storeIDOf(pickupStore),
+		PointsDeduct:   pointsDeduct,
+		PointsUsed:     int(pointsUsedVal),
 		ExpireAt:       now.Add(payTTL(sc)),
 	}
 	stampAgreement(&order)
