@@ -25,6 +25,7 @@ import Bargain from './pages/Bargain'
 import Auction from './pages/Auction'
 import Bookings from './pages/Bookings'
 import InsuranceApplies from './pages/InsuranceApplies'
+import HomeConfig from './pages/HomeConfig'
 import Report from './pages/Report'
 import Ops from './pages/Ops'
 
@@ -47,7 +48,7 @@ export default function App() {
         <Route path="bargain" element={<Bargain />} />
         <Route path="auction" element={<Auction />} />
         <Route path="bookings" element={<Bookings />} />
-        <Route path="insurance-applies" element={<InsuranceApplies />} />
+        <Route path="insurance-applies" element={<InsuranceApplies />} />`n        <Route path="home-config" element={<HomeConfig />} />
         <Route path="banner" element={<Banners />} />
         <Route path="shipping" element={<ShipMethods />} />
         <Route path="orders" element={<Orders />} />
@@ -64,5 +65,6 @@ export default function App() {
     </Routes>
   )
 }
+
 
 

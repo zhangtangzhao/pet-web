@@ -321,6 +321,9 @@ export default function Products() {
             </Form.Item>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Form.Item name="certType" label="血统证书类型"><Input placeholder="CFA / CKU / TICA" /></Form.Item>
+            <Form.Item name="certNo" label="血统证书编号"><Input /></Form.Item>
+            <Form.Item name="chipNo" label="芯片号"><Input /></Form.Item>
             <Form.Item name="supplierId" label="供货商">
               <Select
                 allowClear
@@ -341,6 +344,10 @@ export default function Products() {
           <Form.Item name="detailImages" label="详情长图 URL（每行一个）">
             <Input.TextArea rows={3} placeholder={'https://...\nhttps://...'} />
           </Form.Item>
+          <Form.Item name="preSale" label="预售模式"><Select options={[{value:0,label:'否'},{value:1,label:'是'}]} /></Form.Item>
+          <Form.Item name="preSalePrice" label="预售价格"><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="preSaleEta" label="预计到窝日期"><Input placeholder="yyyy-MM-dd" /></Form.Item>
+          <Form.Item name="scheduledOffSaleAt" label="定时下架时间"><Input placeholder="yyyy-MM-dd HH:mm" /></Form.Item>
           <Form.Item name="stockWarnThreshold" label="库存预警阈值（在售库存 ≤ 该值时进入预警）">
             <InputNumber min={0} max={100} style={{ width: '100%' }} />
           </Form.Item>
@@ -373,3 +380,4 @@ export default function Products() {
     </div>
   )
 }
+

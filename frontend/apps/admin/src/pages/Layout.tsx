@@ -44,6 +44,7 @@ const items = [
   { key: '/auction', icon: <ThunderboltOutlined />, label: '竞拍管理' },
   { key: '/bookings', icon: <CalendarOutlined />, label: '预约核销' },
   { key: '/insurance-applies', icon: <SafetyCertificateOutlined />, label: '保险投保' },
+  { key: '/home-config', icon: <PictureOutlined />, label: '首页装修' },
   { key: '/points-shop', icon: <GiftIcon />, label: '积分商城' },
   { key: '/activity-calendar', icon: <CalendarOutlined />, label: '活动日历' },
   { key: '/banner', icon: <PictureOutlined />, label: 'Banner 管理' },
@@ -125,5 +126,6 @@ export default function AdminLayout() {
     </Layout>
   )
 }
+
 
 
