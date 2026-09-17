@@ -154,8 +154,8 @@ export async function adminLogin(
     captchaId,
     captchaCode,
   })) as any
-  localStorage.setItem(ACCESS_KEY, data.accessToken)
-  localStorage.setItem(REFRESH_KEY, data.refreshToken)
+  localStorage.setItem(ACCESS_KEY, data.data.accessToken)
+  localStorage.setItem(REFRESH_KEY, data.data.refreshToken)
   return data
 }
 
