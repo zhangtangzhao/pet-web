@@ -75,6 +75,10 @@ type PetProduct struct {
 	StockWarnThreshold int             `json:"stockWarnThreshold"`
 	PreSale            int             `json:"preSale"`    // 1=预售（未到窝）
 	PreSaleETA         *time.Time      `json:"preSaleEta"` // 预计到窝日期
+	CertType           string          `json:"certType"`
+	CertNo             string          `json:"certNo"`
+	ChipNo             string          `json:"chipNo"`
+	ScheduledOffSaleAt *time.Time      `json:"scheduledOffSaleAt"`
 	CreatedAt          time.Time       `json:"createdAt"`
 	UpdatedAt          time.Time       `json:"updatedAt"`
 }

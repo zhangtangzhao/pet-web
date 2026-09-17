@@ -153,6 +153,10 @@ type ProductDetail struct {
 	Category     CategoryRef `json:"category"`
 	HasSku       int         `json:"hasSku"`
 	Skus         []SkuView   `json:"skus"`
+	CertType     string      `json:"certType,optional"`
+	CertNo       string      `json:"certNo,optional"`
+	ChipNo       string      `json:"chipNo,optional"`
+	PreSale      int         `json:"preSale"`
 	IsFavorite   bool        `json:"isFavorite"`
 	AIEnabled    bool        `json:"aiEnabled"`
 }
@@ -433,6 +437,13 @@ type ProductUpsertReq struct {
 	NextDewormDate     string          `json:"nextDewormDate,optional"`  // yyyy-MM-dd，驱虫到期提醒
 	DetailImages       []string        `json:"detailImages,optional"`
 	StockWarnThreshold string          `json:"stockWarnThreshold,optional"`
+	CertType           string          `json:"certType,optional"`
+	CertNo             string          `json:"certNo,optional"`
+	ChipNo             string          `json:"chipNo,optional"`
+	PreSale            int             `json:"preSale,optional"`
+	PreSalePrice       string          `json:"preSalePrice,optional"`
+	PreSaleETA         string          `json:"preSaleEta,optional"`
+	ScheduledOffSaleAt string          `json:"scheduledOffSaleAt,optional"`
 	Skus               []SkuUpsertItem `json:"skus,optional"`
 }
 
@@ -491,6 +502,7 @@ type AdminProductDetailResp struct {
 	PreSale            int      `json:"preSale"`
 	PreSalePrice       string   `json:"preSalePrice,optional"`
 	PreSaleETA         string   `json:"preSaleEta,optional"`
+	ScheduledOffSaleAt string   `json:"scheduledOffSaleAt,optional"`
 	Skus               []SkuRow `json:"skus"`
 }
 

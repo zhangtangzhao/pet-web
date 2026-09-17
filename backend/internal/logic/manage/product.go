@@ -171,6 +171,16 @@ func AdminProductDetail(sc *svc.ServiceContext, idStr string) (*types.AdminProdu
 		DetailImages:       parseDetailImages(p.DetailImages),
 		StockWarnThreshold: strconv.Itoa(p.StockWarnThreshold),
 		Skus:               skuRows,
+		CertType:           p.CertType,
+		CertNo:             p.CertNo,
+		ChipNo:             p.ChipNo,
+		PreSale:            p.PreSale,
+		ScheduledOffSaleAt: func() string {
+			if p.ScheduledOffSaleAt != nil {
+				return p.ScheduledOffSaleAt.Format("2006-01-02 15:04:05")
+			}
+			return ""
+		}(),
 	}, nil
 }
 
@@ -261,6 +271,28 @@ func UpsertProduct(sc *svc.ServiceContext, req *types.ProductUpsertReq) error {
 	if len(skus) > 0 {
 		hasSku = 1
 	}
+	// 预售/血统/芯片/定时下架
+	var preSalePrice *decimal.Decimal
+	var preSaleETA *time.Time
+	if req.PreSalePrice != "" {
+		v, e := decimal.NewFromString(strings.TrimSpace(req.PreSalePrice))
+		if e == nil && v.Sign() > 0 {
+			preSalePrice = &v
+		}
+	}
+	if req.PreSaleETA != "" {
+		t, e := time.ParseInLocation("2006-01-02", req.PreSaleETA, time.Local)
+		if e == nil {
+			preSaleETA = &t
+		}
+	}
+	var scheduledOffSale *time.Time
+	if req.ScheduledOffSaleAt != "" {
+		t, e := time.Parse(time.RFC3339, req.ScheduledOffSaleAt)
+		if e == nil {
+			scheduledOffSale = &t
+		}
+	}
 
 	err = sc.DB.Transaction(func(tx *gorm.DB) error {
 		if req.ID == "" {
@@ -293,6 +325,12 @@ func UpsertProduct(sc *svc.ServiceContext, req *types.ProductUpsertReq) error {
 				HasSKU:             hasSku,
 				DetailImages:       detailImages,
 				StockWarnThreshold: threshold,
+				CertType:           req.CertType,
+				CertNo:             req.CertNo,
+				ChipNo:             req.ChipNo,
+				PreSale:            req.PreSale,
+				PreSaleETA:         preSaleETA,
+				ScheduledOffSaleAt: scheduledOffSale,
 			}
 			if err := tx.Create(&p).Error; err != nil {
 				return err
@@ -327,6 +365,9 @@ func UpsertProduct(sc *svc.ServiceContext, req *types.ProductUpsertReq) error {
 			"next_vaccine_date": nextVaccine, "next_deworm_date": nextDeworm,
 			"has_sku": hasSku, "detail_images": detailImages,
 			"stock_warn_threshold": threshold,
+			"cert_type":            req.CertType, "cert_no": req.CertNo, "chip_no": req.ChipNo,
+			"pre_sale": req.PreSale, "pre_sale_price": preSalePrice, "pre_sale_eta": preSaleETA,
+			"scheduled_off_sale_at": scheduledOffSale,
 		}).Error; err != nil {
 			return err
 		}
