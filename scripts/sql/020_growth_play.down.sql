@@ -1,0 +1,14 @@
+BEGIN;
+DELETE FROM coupon_template WHERE id = 5131;
+DROP TABLE IF EXISTS invoice;
+DROP TABLE IF EXISTS service_booking;
+DROP TABLE IF EXISTS member_task;
+DROP TABLE IF EXISTS auction_deposit;
+DROP TABLE IF EXISTS auction;
+DROP TABLE IF EXISTS bargain_help;
+DROP TABLE IF EXISTS bargain_launch;
+DROP TABLE IF EXISTS bargain_activity;
+ALTER TABLE community_post DROP COLUMN IF EXISTS breed_id;
+ALTER TABLE pet_product DROP COLUMN IF EXISTS pre_sale, DROP COLUMN IF EXISTS pre_sale_price, DROP COLUMN IF EXISTS pre_sale_eta;
+ALTER TABLE member DROP COLUMN IF EXISTS vip_expire_at;
+COMMIT;

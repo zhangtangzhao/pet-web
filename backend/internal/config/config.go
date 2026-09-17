@@ -122,6 +122,13 @@ type Config struct {
 	Account struct {
 		DeletionCooldownDays int `json:",default=7"`
 	}
+
+	// 付费会员卡
+	Vip struct {
+		PriceYuan       int   `json:",default=99"`   // 年卡价格（元）
+		MonthlyFreeShip int   `json:",default=1"`    // 每月赠送免运费卡
+		MonthlyCouponID int64 `json:",default=5131"` // 每月赠券模板
+	}
 }
 
 // IsProd 生产环境判定（go-zero Mode 取值 pro；兼容 prod）

@@ -80,6 +80,11 @@ var (
 	ErrSignMakeupInvalid  = NewErr(400, 42003, "该日期不可补签")
 	ErrPointsProduct      = NewErr(400, 42004, "积分商品不可兑换")
 	ErrExchangeState      = NewErr(400, 42005, "换货流程状态不允许此操作")
+	ErrBargainInvalid     = NewErr(400, 42101, "砍价活动不可用")
+	ErrAuctionInvalid     = NewErr(400, 42102, "竞拍不可参与（未交保证金/已结束/出价过低）")
+	ErrTaskInvalid        = NewErr(400, 42103, "任务不可领取（已完成或条件未满足）")
+	ErrBookingInvalid     = NewErr(400, 42104, "预约信息无效或时段不可用")
+	ErrInvoiceInvalid     = NewErr(400, 42105, "订单不可申请开票或已申请过")
 
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")

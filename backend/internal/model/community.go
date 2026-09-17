@@ -91,6 +91,7 @@ const (
 type CommunityPost struct {
 	ID        int64     `gorm:"primaryKey" json:"id"`
 	MemberID  int64     `json:"memberId"`
+	BreedID   int64     `json:"breedId"`
 	Content   string    `json:"content"`
 	Images    string    `json:"images"` // JSON 数组
 	Status    int       `json:"status"`

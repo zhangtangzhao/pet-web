@@ -73,6 +73,8 @@ type PetProduct struct {
 	HasSKU             int             `json:"hasSku"`       // 1=挂了启用中的规格
 	DetailImages       string          `json:"detailImages"` // JSON 数组（详情长图 URL）
 	StockWarnThreshold int             `json:"stockWarnThreshold"`
+	PreSale            int             `json:"preSale"`    // 1=预售（未到窝）
+	PreSaleETA         *time.Time      `json:"preSaleEta"` // 预计到窝日期
 	CreatedAt          time.Time       `json:"createdAt"`
 	UpdatedAt          time.Time       `json:"updatedAt"`
 }

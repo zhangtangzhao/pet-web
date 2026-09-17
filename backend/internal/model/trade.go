@@ -72,10 +72,12 @@ const (
 )
 
 const (
-	PayTypePurchase     = 1 // 支付（全款 / 定金首笔）
-	PayTypeRefund       = 2 // 退款
-	PayTypeTail         = 3 // 定金单补尾款
-	PayTypeExchangeDiff = 4 // 换货补差价
+	PayTypePurchase       = 1 // 支付（全款 / 定金首笔）
+	PayTypeRefund         = 2 // 退款
+	PayTypeTail           = 3 // 定金单补尾款
+	PayTypeExchangeDiff   = 4 // 换货补差价
+	PayTypeAuctionDeposit = 5 // 竞拍保证金
+	PayTypeVip            = 6 // VIP 年卡
 )
 
 type Order struct {

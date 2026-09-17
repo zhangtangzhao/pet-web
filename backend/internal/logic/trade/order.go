@@ -226,6 +226,25 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		return fail(err)
 	}
 	unitPrice := p.Price
+	// 砍价到底价购买：消耗资格，按底价成交
+	if req.BargainLaunchID != "" {
+		launchID, gerr := strconv.ParseInt(req.BargainLaunchID, 10, 64)
+		if gerr != nil || launchID <= 0 {
+			return fail(common.ErrParam)
+		}
+		bottom, gerr := marketing.ConsumeBargain(sc, memberID, launchID)
+		if gerr != nil {
+			return fail(gerr)
+		}
+		unitPrice = bottom
+		if flash != nil {
+			ReleaseFlashSale(sc.DB, flash.ID)
+			flash = nil
+		}
+		if sku != nil {
+			sku = nil
+		}
+	}
 	if sku != nil {
 		unitPrice = sku.Price
 	}

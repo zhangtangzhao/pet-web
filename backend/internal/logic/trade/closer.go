@@ -9,6 +9,7 @@ import (
 
 	"pet/backend/internal/common"
 	"pet/backend/internal/logic/auth"
+	"pet/backend/internal/logic/marketing"
 	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/metrics"
 	"pet/backend/internal/model"
@@ -234,6 +235,8 @@ func StartOrderCloser(sc *svc.ServiceContext) {
 		CloseExpiredTails(sc)
 		ExpireGroups(sc)
 		auth.AnonymizeDeleted(sc)
+		marketing.ExpireBargains(sc)
+		marketing.SettleAuctions(sc)
 		AutoConfirmOrders(sc)
 	}
 }

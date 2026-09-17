@@ -28,6 +28,7 @@ type Member struct {
 	Blacklist           int        `json:"blacklist"` // 1=黑名单：可登录但禁交易/评价/领券
 	Birthday            *time.Time `json:"birthday"`
 	FreeShipCards       int        `json:"freeShipCards"`       // 免运费卡（积分商城权益）
+	VipExpireAt         *time.Time `json:"vipExpireAt"`         // 付费会员到期
 	DeleteRequestedAt   *time.Time `json:"deleteRequestedAt"`   // 注销申请时间
 	DeleteCooldownUntil *time.Time `json:"deleteCooldownUntil"` // 冷却截止，过期即匿名化
 	LastLoginAt         *time.Time `json:"lastLoginAt"`

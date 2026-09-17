@@ -209,22 +209,23 @@ type BannerStatusReq struct {
 // ─────────────────────────── 用户端 · 订单支付 ───────────────────────────
 
 type CreateOrderReq struct {
-	ProductID    string   `json:"productId,optional"`   // 购物车批量结算时可不传
-	SkuID        string   `json:"skuId,optional"`       // 规格商品必传
-	CartIds      []string `json:"cartIds,optional"`     // 购物车批量结算（与 productId 二选一）
-	GroupBuyID   string   `json:"groupBuyId,optional"`  // 拼团下单
-	Agree        bool     `json:"agree,optional"`       // 电子购买协议勾选（后端强校验）
-	StoreID      string   `json:"storeId,optional"`     // 自提门店
-	UseFreeShip  bool     `json:"useFreeShip,optional"` // 使用免运费卡
-	ServiceIDs   []string `json:"serviceIds,optional"`  // 增值服务
-	CouponID     string   `json:"couponId,optional"`    // 用户券 ID，空 = 不用券
-	ShipMethodID string   `json:"shipMethodId"`         // 配送方式
-	ShipAddress  string   `json:"shipAddress,optional"` // 收货地址（托运配送类必填）
-	AddressID    string   `json:"addressId,optional"`   // 地址簿地址，优先于手填
-	UseDeposit   bool     `json:"useDeposit,optional"`  // 定金锁宠模式
-	ContactName  string   `json:"contactName"`
-	ContactPhone string   `json:"contactPhone"`
-	Remark       string   `json:"remark,optional"`
+	ProductID       string   `json:"productId,optional"`       // 购物车批量结算时可不传
+	SkuID           string   `json:"skuId,optional"`           // 规格商品必传
+	CartIds         []string `json:"cartIds,optional"`         // 购物车批量结算（与 productId 二选一）
+	GroupBuyID      string   `json:"groupBuyId,optional"`      // 拼团下单
+	Agree           bool     `json:"agree,optional"`           // 电子购买协议勾选（后端强校验）
+	BargainLaunchID string   `json:"bargainLaunchId,optional"` // 砍价到底价后按底价下单
+	StoreID         string   `json:"storeId,optional"`         // 自提门店
+	UseFreeShip     bool     `json:"useFreeShip,optional"`     // 使用免运费卡
+	ServiceIDs      []string `json:"serviceIds,optional"`      // 增值服务
+	CouponID        string   `json:"couponId,optional"`        // 用户券 ID，空 = 不用券
+	ShipMethodID    string   `json:"shipMethodId"`             // 配送方式
+	ShipAddress     string   `json:"shipAddress,optional"`     // 收货地址（托运配送类必填）
+	AddressID       string   `json:"addressId,optional"`       // 地址簿地址，优先于手填
+	UseDeposit      bool     `json:"useDeposit,optional"`      // 定金锁宠模式
+	ContactName     string   `json:"contactName"`
+	ContactPhone    string   `json:"contactPhone"`
+	Remark          string   `json:"remark,optional"`
 }
 
 type WxPayParams struct {
