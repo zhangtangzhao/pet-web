@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro'
 import { clearTokens, get, getToken, post } from '../../request'
 import { LevelView } from '../../types'
 import './index.css'
+import TabBar from '../../components/TabBar'
 
 interface MemberInfo {
   id: string
@@ -134,6 +135,7 @@ export default function Me() {
       <View className='me-logout' onClick={logout}>
         退出登录
       </View>
+    <TabBar active='me' />
     </View>
   )
 }

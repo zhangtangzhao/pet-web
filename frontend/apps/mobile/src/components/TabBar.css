@@ -1,0 +1,1 @@
+.tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;background:#fff;border-top:1px solid #eee;height:56px;z-index:999;padding-bottom:env(safe-area-inset-bottom)}.tabbar-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#999;cursor:pointer}.tabbar-on{color:#86C070}.tabbar-icon{font-size:20px}.tabbar-label{font-size:10px}

@@ -4,6 +4,7 @@ import Taro, { usePullDownRefresh, useReachBottom, useRouter } from '@tarojs/tar
 import { del, get, getToken, post } from '../../request'
 import { CategoryItem, PageResp, ProductCard, SearchHotRow, StringListResp } from '../../types'
 import './index.css'
+import TabBar from '../../components/TabBar'
 
 const SORTS = [
   { v: '', label: '默认' },
@@ -230,6 +231,7 @@ export default function List() {
       {list.length < total && (
         <View className='lst-more'>{loading ? '加载中…' : '上拉加载更多'}</View>
       )}
+    <TabBar active='category' />
     </View>
   )
 }

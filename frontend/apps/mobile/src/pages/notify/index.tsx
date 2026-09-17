@@ -4,6 +4,7 @@ import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { get, getToken, post } from '../../request'
 import { NotifyListResp, NotifyView } from '../../types'
 import './index.css'
+import TabBar from '../../components/TabBar'
 
 const SCENE_ICON: Record<number, string> = { 1: '💬', 2: '📦', 3: '🎫' }
 
@@ -100,6 +101,7 @@ export default function NotifyPage() {
           {loading ? '加载中…' : '加载更多'}
         </View>
       )}
+    <TabBar active='message' />
     </View>
   )
 }

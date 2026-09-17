@@ -3,6 +3,7 @@ import { Image, Input, Text, View } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { get } from '../../request'
 import { ProductCard } from '../../types'
+import TabBar from '../../components/TabBar'
 import './index.css'
 
 const CATS = ['全部', '猫', '狗', '鸟', '异宠']
@@ -89,15 +90,7 @@ export default function Home() {
       )}
       {!loading && products.length === 0 && <View className='home-empty'><Text>暂无商品</Text></View>}
 
-      {/* 底部 Tab */}
-      <View className='home-tabbar'>
-        {TABS.map((t) => (
-          <View key={t.key} className={`home-tab ${t.key === 'home' ? 'home-tab-on' : ''}`} onClick={() => goTab(t.key)}>
-            <Text className='home-tab-icon'>{t.icon}</Text>
-            <Text className='home-tab-label'>{t.label}</Text>
-          </View>
-        ))}
-      </View>
+      <TabBar active='home' />
     </View>
   )
 }
