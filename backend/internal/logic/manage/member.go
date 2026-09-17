@@ -45,7 +45,7 @@ func MemberList(sc *svc.ServiceContext, req *types.MemberListReq) (*types.PageRe
 			ID:          strconv.FormatInt(m.ID, 10),
 			Nickname:    m.Nickname,
 			Avatar:      m.Avatar,
-			Phone:       maskPhone(m.Phone),
+			Phone:       m.Phone,
 			Gender:      m.Gender,
 			Status:      m.Status,
 			OrderCount:  orderCnt,
@@ -102,3 +102,4 @@ func maskPhone(phone string) string {
 	}
 	return phone
 }
+
