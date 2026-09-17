@@ -33,7 +33,7 @@ export default function Home() {
   usePullDownRefresh(() => { load(cat); Taro.stopPullDownRefresh() })
 
   const goDetail = (id: string) => Taro.navigateTo({ url: `/pages/detail/index?id=${id}` }).catch(() => {})
-  const goSearch = () => Taro.navigateTo({ url: '/pages/list/index' }).catch(() => {})
+  const goSearch = () => Taro.switchTab({ url: '/pages/list/index' }).catch(() => {})
   const goTab = (key: string) => {
     const map: Record<string, string> = {
       category: '/pages/list/index',
