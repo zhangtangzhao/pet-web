@@ -54,3 +54,4 @@ INSERT INTO pet_product (id, spu_no, title, category_id, breed_id, price, origin
      '小型', '原始灰', '会站肩膀，亲人互动', '活力好，食欲佳',
      '', 6, 98, 8)
 ON CONFLICT (id) DO NOTHING;
+
