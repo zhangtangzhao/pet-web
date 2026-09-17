@@ -77,6 +77,10 @@ func List(sc *svc.ServiceContext, memberID int64, req *types.PostListReq) (*type
 
 // Create 发布晒单：敏感词过滤 + 风控（联系方式拦截）→ 待审核
 func Create(sc *svc.ServiceContext, memberID int64, req *types.PostCreateReq) error {
+	var breedID int64
+	if req.BreedID != "" {
+		breedID, _ = strconv.ParseInt(req.BreedID, 10, 64)
+	}
 	_ = req
 	if err := risk.CheckReviewContent(sc, memberID, strings.TrimSpace(req.Content)); err != nil {
 		return err
@@ -98,6 +102,7 @@ func Create(sc *svc.ServiceContext, memberID int64, req *types.PostCreateReq) er
 	return sc.DB.Create(&model.CommunityPost{
 		ID:       common.NewID(),
 		MemberID: memberID,
+		BreedID:  breedID,
 
 		Content: content,
 		Images:  string(imgJSON),

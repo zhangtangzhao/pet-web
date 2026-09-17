@@ -1449,6 +1449,7 @@ type PointsOrderShipReq struct {
 type PostCreateReq struct {
 	Content string   `json:"content"`
 	Images  []string `json:"images,optional"`
+	BreedID string   `json:"breedId,optional"`
 }
 
 type PostView struct {
