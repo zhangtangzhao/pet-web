@@ -79,7 +79,7 @@ func DeductTx(db *gorm.DB, memberID, change int64, reason, ref string) error {
 	}).Error
 }
 
-// SignIn 每日签到：Redis SetNX 当日唯一，成功加 Growth.SignPoints
+// SignIn 每日签到：Redis SetNX 当日唯一，成功加 Growth.SignPoints + 连签奖励
 func SignIn(sc *svc.ServiceContext, memberID int64) (int64, bool, error) {
 	pts := norm(sc, sc.Config.Growth.SignPoints)
 	if pts == 0 {
@@ -97,7 +97,117 @@ func SignIn(sc *svc.ServiceContext, memberID int64) (int64, bool, error) {
 	if err != nil {
 		return 0, true, err
 	}
+	// 连签奖励（3 天 / 7 天）：写入 points_log，reason=sign_bonus
+	if streak := currentStreak(sc, memberID); streak > 0 {
+		bonus := 0
+		if streak == 3 {
+			bonus = sc.Config.Growth.SignBonus3
+		} else if streak == 7 {
+			bonus = sc.Config.Growth.SignBonus7
+		}
+		if bonus > 0 {
+			_, _ = Credit(sc, memberID, int64(bonus), "sign_bonus",
+				"streak:"+time.Now().Format("2006-01-02"))
+		}
+	}
 	return balance, true, nil
+}
+
+// signDates 查询某月已签日期（含补签）
+func signDates(sc *svc.ServiceContext, memberID int64, month string) ([]string, error) {
+	var refs []string
+	err := sc.DB.Model(&model.PointsLog{}).
+		Where("member_id = ? AND reason IN ? AND ref LIKE ?", memberID,
+			[]string{model.PointsReasonSign, "sign_makeup"}, month+"-%").
+		Order("ref ASC").Distinct("ref").Pluck("ref", &refs).Error
+	return refs, err
+}
+
+// currentStreak 截至今日（含今日）的连续签到天数
+func currentStreak(sc *svc.ServiceContext, memberID int64) int {
+	day := time.Now()
+	streak := 0
+	for i := 0; i < 400; i++ {
+		ref := day.Format("2006-01-02")
+		var cnt int64
+		sc.DB.Model(&model.PointsLog{}).
+			Where("member_id = ? AND reason IN ? AND ref = ?", memberID,
+				[]string{model.PointsReasonSign, "sign_makeup"}, ref).
+			Count(&cnt)
+		if cnt > 0 {
+			streak++
+		} else if i > 0 || day.Format("2006-01-02") != time.Now().Format("2006-01-02") {
+			break
+		} else if i == 0 {
+			// 今日未签不影响昨日连签链的延续判断
+		}
+		day = day.AddDate(0, 0, -1)
+	}
+	return streak
+}
+
+// SignCalendar 签到日历
+func SignCalendar(sc *svc.ServiceContext, memberID int64, month string) (*types.SignCalendarResp, error) {
+	if len(month) != 7 {
+		month = time.Now().Format("2006-01")
+	}
+	dates, err := signDates(sc, memberID, month)
+	if err != nil {
+		return nil, err
+	}
+	today := time.Now().Format("2006-01-02")
+	signedToday := false
+	for _, d := range dates {
+		if d == today {
+			signedToday = true
+			break
+		}
+	}
+	return &types.SignCalendarResp{
+		Month:       month,
+		SignedDates: dates,
+		Streak:      currentStreak(sc, memberID),
+		SignedToday: signedToday,
+	}, nil
+}
+
+// SignMakeup 补签：本月内未签的过去日期，消耗积分
+func SignMakeup(sc *svc.ServiceContext, memberID int64, date string) error {
+	cost := sc.Config.Growth.SignMakeupCost
+	if cost <= 0 {
+		return common.ErrSignMakeupInvalid
+	}
+	day, err := time.ParseInLocation("2006-01-02", date, time.Local)
+	if err != nil {
+		return common.ErrSignMakeupInvalid
+	}
+	today := time.Now()
+	if day.After(today) || day.Month() != today.Month() || day.Format("2006-01-02") == today.Format("2006-01-02") {
+		return common.ErrSignMakeupInvalid // 仅限本月过去的日期
+	}
+	var cnt int64
+	if err := sc.DB.Model(&model.PointsLog{}).
+		Where("member_id = ? AND reason IN ? AND ref = ?", memberID,
+			[]string{model.PointsReasonSign, "sign_makeup"}, date).
+		Count(&cnt).Error; err != nil {
+		return err
+	}
+	if cnt > 0 {
+		return common.ErrSignMakeupInvalid
+	}
+	if err := Deduct(sc, memberID, int64(cost), "sign_makeup", date); err != nil {
+		return err
+	}
+	// 补签落签到流水（日历可见），积分奖励不补发
+	var balance int64
+	if err := sc.DB.Model(&model.Member{}).Select("points").
+		Where("id = ?", memberID).Scan(&balance).Error; err != nil {
+		return err
+	}
+	return sc.DB.Create(&model.PointsLog{
+		ID: common.NewID(), MemberID: memberID,
+		Change: 0, BalanceAfter: balance, Reason: model.PointsReasonSign, Ref: date,
+	}).Error
 }
 
 // MyPoints 积分余额 + 流水分页

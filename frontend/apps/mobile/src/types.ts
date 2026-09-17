@@ -178,6 +178,8 @@ export interface OrderView {
   levelDiscount?: string // 会员等级优惠金额
   isPickup?: boolean // 到店自提单
   pickupCode?: string // 自提核销码
+  storeName?: string // 自提门店
+  traces?: { happenedAt: string; statusDesc: string; detail?: string }[]
   groupTeamId?: string // 拼团团 ID
   items: {
     productId: string
@@ -467,3 +469,4 @@ export interface CertView {
   quarantineUrl?: string
   supplierName?: string
 }
+

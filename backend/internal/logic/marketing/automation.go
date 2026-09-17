@@ -34,6 +34,7 @@ func StartAutomation(ctx context.Context, sc *svc.ServiceContext) {
 func runAutomation(sc *svc.ServiceContext) {
 	remindAbandonedCarts(sc)
 	recallDormantMembers(sc)
+	giveBirthdayGifts(sc)
 }
 
 // remindAbandonedCarts 购物车加入 N 小时未结算 → 每月至多提醒一次
@@ -89,9 +90,8 @@ func recallDormantMembers(sc *svc.ServiceContext) {
 	}
 }
 
-// grantDormantCoupon 发放沉睡召回券（模板余量校验；券本身不幂等，幂等由通知键+调用频率控制）
-func grantDormantCoupon(sc *svc.ServiceContext, memberID int64) bool {
-	templateID := sc.Config.Automation.DormantCouponID
+// grantCouponByTemplate 通用发券（模板余量校验 + CAS 扣减）
+func grantCouponByTemplate(sc *svc.ServiceContext, memberID, templateID int64) bool {
 	if templateID <= 0 {
 		return false
 	}
@@ -119,4 +119,41 @@ func grantDormantCoupon(sc *svc.ServiceContext, memberID int64) bool {
 		}).Error
 	})
 	return err == nil
+}
+
+// grantDormantCoupon 沉睡召回券
+func grantDormantCoupon(sc *svc.ServiceContext, memberID int64) bool {
+	return grantCouponByTemplate(sc, memberID, sc.Config.Automation.DormantCouponID)
+}
+
+// giveBirthdayGifts 生日当月自动发生日礼券（notify 插入成功即发券，天然幂等）
+func giveBirthdayGifts(sc *svc.ServiceContext) {
+	tplID := sc.Config.Automation.BirthdayCouponID
+	if tplID <= 0 {
+		return
+	}
+	var memberIDs []int64
+	if err := sc.DB.Raw(`
+		SELECT id FROM member
+		WHERE status = 1 AND blacklist = 0 AND delete_requested_at IS NULL
+		  AND birthday IS NOT NULL AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM now())
+		  AND NOT EXISTS (SELECT 1 FROM notification n WHERE n.member_id = member.id AND n.biz_key = ?)
+		LIMIT 200`,
+		"birthday:"+time.Now().Format("2006")).Scan(&memberIDs).Error; err != nil {
+		logx.Errorf("automation: 扫描生日会员失败: %v", err)
+		return
+	}
+	for _, memberID := range memberIDs {
+		// 插入通知（唯一键冲突=本月已发）→ 插入成功才发券
+		key := "birthday:" + strconv.FormatInt(memberID, 10) + ":" + time.Now().Format("2006")
+		res := sc.DB.Exec(`
+			INSERT INTO notification (id, member_id, scene, biz_key, title, content, order_no, status, retry, channel, created_at, updated_at)
+			VALUES (?, ?, ?, ?, '生日快乐', '专属生日礼券已到账，下单即享', '', 3, 0, 0, now(), now())
+			ON CONFLICT DO NOTHING`,
+			common.NewID(), memberID, model.NotifySceneCoupon, key)
+		if res.Error != nil || res.RowsAffected == 0 {
+			continue
+		}
+		grantCouponByTemplate(sc, memberID, tplID)
+	}
 }

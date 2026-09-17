@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Form, Input, InputNumber, message, Modal, Radio, Table, Tabs, Tag } from 'antd'
 import { PageResp } from '../api/client'
+import { confirmExchange } from '../api/engagement'
 import { AfterSaleRow, auditAfterSale, fetchAfterSales } from '../api/admin'
 
 const STATUS_TAG: Record<number, { color: string; text: string }> = {
@@ -77,12 +78,30 @@ export default function AfterSale() {
     { title: '申请时间', dataIndex: 'createdAt', width: 165, render: (v: string) => v?.replace('T', ' ').slice(0, 16) },
     {
       title: '操作',
-      width: 110,
+      width: 200,
       fixed: 'right' as const,
       render: (_: unknown, r: AfterSaleRow) =>
         r.status === 1 ? (
           <Button size="small" type="link" onClick={() => openAudit(r)}>
             审核
+          </Button>
+        ) : r.status === 5 ? (
+          <Button
+            size="small"
+            type="primary"
+            onClick={() => {
+              Modal.confirm({
+                title: `确认换出 · ${r.afterSaleNo}`,
+                content: '输入换出发货的运单号',
+                okText: '确认换出',
+                onOk: async () => {
+                  const el = document.querySelector<HTMLInputElement>('.ant-modal-confirm .ant-input')
+                  try { await confirmExchange(r.afterSaleNo, el?.value?.trim() || 'MANUAL'); message.success('换货完成'); load() } catch (e: any) { message.error(e.message) }
+                },
+              })
+            }}
+          >
+            确认换出
           </Button>
         ) : (
           <span style={{ color: '#999' }}>{r.adminNote || '-'}</span>

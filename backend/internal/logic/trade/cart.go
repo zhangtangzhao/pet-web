@@ -159,6 +159,9 @@ func CartDelete(sc *svc.ServiceContext, memberID, cartID int64) error {
 
 // createCartOrder 购物车批量结算：多商品一单（无增值服务/定金；券与等级折扣按整单生效）
 func createCartOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderReq) (*types.CreateOrderResp, error) {
+	if err := checkAgreement(req.Agree); err != nil {
+		return nil, err
+	}
 	if req.ContactName == "" || req.ContactPhone == "" {
 		return nil, common.NewErr(400, 40001, "请填写联系人信息")
 	}
@@ -317,6 +320,26 @@ func createCartOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOr
 	}
 	payAmount := goodsPay.Add(sm.Fee)
 
+	// 免运费卡
+	useFreeShip := freeShipApplies(sc, memberID, req.UseFreeShip, sm.Fee)
+	shipFee := sm.Fee
+	if useFreeShip {
+		shipFee = decimal.Zero
+		payAmount = goodsPay
+	}
+
+	// 自提门店解析
+	var pickupStore *model.Store
+	if sm.Kind == model.KindPickup {
+		pickupStore, err = resolvePickupStore(sc, req.StoreID)
+		if err != nil {
+			return fail(err)
+		}
+		if shipAddress == "" {
+			shipAddress = resolveStoreAddress(pickupStore)
+		}
+	}
+
 	now := time.Now()
 	order := model.Order{
 		ID:             common.NewID(),
@@ -334,10 +357,12 @@ func createCartOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOr
 		Remark:         req.Remark,
 		ShipMethodID:   sm.ID,
 		ShipMethodName: sm.Name,
-		ShipFee:        sm.Fee,
+		ShipFee:        shipFee,
 		ShipAddress:    shipAddress,
+		StoreID:        storeIDOf(pickupStore),
 		ExpireAt:       now.Add(payTTL(sc)),
 	}
+	stampAgreement(&order)
 	payment := model.Payment{
 		ID:        common.NewID(),
 		PaymentNo: common.NewBizNo("PAY"),
@@ -375,6 +400,11 @@ func createCartOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOr
 		}
 		if err := tx.Create(&payment).Error; err != nil {
 			return err
+		}
+		if useFreeShip {
+			if err := consumeFreeShipTx(tx, memberID); err != nil {
+				return err
+			}
 		}
 		return tx.Where("id IN ? AND member_id = ?", cartIDs, memberID).Delete(&model.Cart{}).Error
 	})

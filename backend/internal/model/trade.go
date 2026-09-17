@@ -72,48 +72,52 @@ const (
 )
 
 const (
-	PayTypePurchase = 1 // 支付（全款 / 定金首笔）
-	PayTypeRefund   = 2 // 退款
-	PayTypeTail     = 3 // 定金单补尾款
+	PayTypePurchase     = 1 // 支付（全款 / 定金首笔）
+	PayTypeRefund       = 2 // 退款
+	PayTypeTail         = 3 // 定金单补尾款
+	PayTypeExchangeDiff = 4 // 换货补差价
 )
 
 type Order struct {
-	ID             int64           `gorm:"primaryKey" json:"id"`
-	OrderNo        string          `json:"orderNo"`
-	MemberID       int64           `json:"memberId"`
-	TotalAmount    decimal.Decimal `gorm:"type:numeric(10,2)" json:"totalAmount"`
-	DiscountAmount decimal.Decimal `gorm:"type:numeric(10,2)" json:"discountAmount"`
-	ServiceFee     decimal.Decimal `gorm:"type:numeric(10,2)" json:"serviceFee"`
-	PayAmount      decimal.Decimal `gorm:"type:numeric(10,2)" json:"payAmount"`
-	CouponID       int64           `json:"couponId"`
-	CouponInfo     string          `json:"couponInfo"`
-	ServiceItems   string          `json:"serviceItems"`
-	Status         int             `json:"status"`
-	DepositAmount  decimal.Decimal `gorm:"type:numeric(10,2)" json:"depositAmount"` // >0 即定金单
-	TailExpireAt   *time.Time      `json:"tailExpireAt"`                            // 尾款补款截止（付定金起 N 天）
-	FlashSaleID    int64           `json:"flashSaleId"`                             // 命中的秒杀活动，0=无
-	GuaranteeDays  int             `json:"guaranteeDays"`                           // 健康保障天数快照
-	LevelDiscount  decimal.Decimal `gorm:"type:numeric(10,2)" json:"levelDiscount"` // 等级折扣优惠金额快照
-	GroupTeamID    int64           `json:"groupTeamId"`                             // 拼团团 ID，0=非拼团单
-	PickupCode     string          `json:"pickupCode"`                              // 到店自提核销码（支付后生成）
-	ContactName    string          `json:"contactName"`
-	ContactPhone   string          `json:"contactPhone"`
-	Remark         string          `json:"remark"`
-	ShipMethodID   int64           `json:"-"`
-	ShipMethodName string          `json:"-"`
-	ShipFee        decimal.Decimal `gorm:"type:numeric(10,2)" json:"-"`
-	ShipAddress    string          `json:"-"`
-	ShipStatus     int             `json:"-"`
-	ShipNo         string          `json:"-"`
-	ShippedAt      *time.Time      `json:"-"`
-	DeliveredAt    *time.Time      `json:"-"`
-	PaidAt         *time.Time      `json:"paidAt"`
-	CompletedAt    *time.Time      `json:"completedAt"`
-	CanceledAt     *time.Time      `json:"canceledAt"`
-	CancelReason   string          `json:"cancelReason"`
-	ExpireAt       time.Time       `json:"expireAt"`
-	CreatedAt      time.Time       `json:"createdAt"`
-	UpdatedAt      time.Time       `json:"updatedAt"`
+	ID                int64           `gorm:"primaryKey" json:"id"`
+	OrderNo           string          `json:"orderNo"`
+	MemberID          int64           `json:"memberId"`
+	TotalAmount       decimal.Decimal `gorm:"type:numeric(10,2)" json:"totalAmount"`
+	DiscountAmount    decimal.Decimal `gorm:"type:numeric(10,2)" json:"discountAmount"`
+	ServiceFee        decimal.Decimal `gorm:"type:numeric(10,2)" json:"serviceFee"`
+	PayAmount         decimal.Decimal `gorm:"type:numeric(10,2)" json:"payAmount"`
+	CouponID          int64           `json:"couponId"`
+	CouponInfo        string          `json:"couponInfo"`
+	ServiceItems      string          `json:"serviceItems"`
+	Status            int             `json:"status"`
+	DepositAmount     decimal.Decimal `gorm:"type:numeric(10,2)" json:"depositAmount"` // >0 即定金单
+	TailExpireAt      *time.Time      `json:"tailExpireAt"`                            // 尾款补款截止（付定金起 N 天）
+	FlashSaleID       int64           `json:"flashSaleId"`                             // 命中的秒杀活动，0=无
+	GuaranteeDays     int             `json:"guaranteeDays"`                           // 健康保障天数快照
+	LevelDiscount     decimal.Decimal `gorm:"type:numeric(10,2)" json:"levelDiscount"` // 等级折扣优惠金额快照
+	GroupTeamID       int64           `json:"groupTeamId"`                             // 拼团团 ID，0=非拼团单
+	PickupCode        string          `json:"pickupCode"`                              // 到店自提核销码（支付后生成）
+	StoreID           int64           `json:"storeId"`                                 // 自提门店，0=非门店单
+	AgreementVersion  string          `json:"agreementVersion"`                        // 购买协议签署版本
+	AgreementSignedAt *time.Time      `json:"agreementSignedAt"`                       // 签署时间
+	ContactName       string          `json:"contactName"`
+	ContactPhone      string          `json:"contactPhone"`
+	Remark            string          `json:"remark"`
+	ShipMethodID      int64           `json:"-"`
+	ShipMethodName    string          `json:"-"`
+	ShipFee           decimal.Decimal `gorm:"type:numeric(10,2)" json:"-"`
+	ShipAddress       string          `json:"-"`
+	ShipStatus        int             `json:"-"`
+	ShipNo            string          `json:"-"`
+	ShippedAt         *time.Time      `json:"-"`
+	DeliveredAt       *time.Time      `json:"-"`
+	PaidAt            *time.Time      `json:"paidAt"`
+	CompletedAt       *time.Time      `json:"completedAt"`
+	CanceledAt        *time.Time      `json:"canceledAt"`
+	CancelReason      string          `json:"cancelReason"`
+	ExpireAt          time.Time       `json:"expireAt"`
+	CreatedAt         time.Time       `json:"createdAt"`
+	UpdatedAt         time.Time       `json:"updatedAt"`
 }
 
 func (Order) TableName() string { return "orders" }

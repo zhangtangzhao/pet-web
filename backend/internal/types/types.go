@@ -53,14 +53,16 @@ type RefreshTokenReq struct {
 }
 
 type MemberInfo struct {
-	ID        string `json:"id"`
-	Nickname  string `json:"nickname"`
-	Avatar    string `json:"avatar"`
-	Phone     string `json:"phone"`
-	Gender    int    `json:"gender"`
-	HasWxBind bool   `json:"hasWxBind"`
-	IsNew     bool   `json:"isNew"`
-	CreatedAt string `json:"createdAt"`
+	ID            string `json:"id"`
+	Nickname      string `json:"nickname"`
+	Avatar        string `json:"avatar"`
+	Phone         string `json:"phone"`
+	Gender        int    `json:"gender"`
+	Birthday      string `json:"birthday,optional"`
+	FreeShipCards int    `json:"freeShipCards"`
+	HasWxBind     bool   `json:"hasWxBind"`
+	IsNew         bool   `json:"isNew"`
+	CreatedAt     string `json:"createdAt"`
 }
 
 type LoginResp struct {
@@ -78,6 +80,7 @@ type UpdateProfileReq struct {
 	Nickname string `json:"nickname,optional"`
 	Avatar   string `json:"avatar,optional"`
 	Gender   int    `json:"gender,optional"`
+	Birthday string `json:"birthday,optional"` // yyyy-MM-dd，生日礼包数据源
 }
 
 // ─────────────────────────── 用户端 · 宠物商品 ───────────────────────────
@@ -210,6 +213,9 @@ type CreateOrderReq struct {
 	SkuID        string   `json:"skuId,optional"`       // 规格商品必传
 	CartIds      []string `json:"cartIds,optional"`     // 购物车批量结算（与 productId 二选一）
 	GroupBuyID   string   `json:"groupBuyId,optional"`  // 拼团下单
+	Agree        bool     `json:"agree,optional"`       // 电子购买协议勾选（后端强校验）
+	StoreID      string   `json:"storeId,optional"`     // 自提门店
+	UseFreeShip  bool     `json:"useFreeShip,optional"` // 使用免运费卡
 	ServiceIDs   []string `json:"serviceIds,optional"`  // 增值服务
 	CouponID     string   `json:"couponId,optional"`    // 用户券 ID，空 = 不用券
 	ShipMethodID string   `json:"shipMethodId"`         // 配送方式
@@ -255,40 +261,50 @@ type OrderItemView struct {
 	SkuSpecs     string `json:"skuSpecs,optional"`
 }
 
+type OrderTraceView struct {
+	HappenedAt string `json:"happenedAt"`
+	StatusDesc string `json:"statusDesc"`
+	Detail     string `json:"detail,optional"`
+}
+
 type OrderView struct {
-	OrderNo         string          `json:"orderNo"`
-	Status          int             `json:"status"`
-	StatusText      string          `json:"statusText"`
-	TotalAmount     string          `json:"totalAmount"`
-	DiscountAmount  string          `json:"discountAmount"`
-	ServiceFee      string          `json:"serviceFee"`
-	ShipFee         string          `json:"shipFee"`
-	PayAmount       string          `json:"payAmount"`
-	CouponInfo      string          `json:"couponInfo"`
-	ServiceItems    string          `json:"serviceItems"` // 服务快照 JSON [{id,name,price}]
-	ContactName     string          `json:"contactName"`
-	ContactPhone    string          `json:"contactPhone"`
-	Remark          string          `json:"remark"`
-	ShipMethod      string          `json:"shipMethod"` // 配送方式名快照
-	ShipAddress     string          `json:"shipAddress"`
-	ShipStatus      int             `json:"shipStatus"` // 0待配送 1配送中 2已送达
-	ShipNo          string          `json:"shipNo"`
-	ExpireAt        string          `json:"expireAt"`
-	PaidAt          string          `json:"paidAt"`
-	ShippedAt       string          `json:"shippedAt,optional"`
-	DeliveredAt     string          `json:"deliveredAt,optional"`
-	CompletedAt     string          `json:"completedAt,optional"`
-	CreatedAt       string          `json:"createdAt"`
-	Items           []OrderItemView `json:"items"`
-	Reviewed        bool            `json:"reviewed"`        // 已评价（status=30 入口态）
-	AftersaleStatus int             `json:"aftersaleStatus"` // 最新售后单状态，0=无售后
-	DepositAmount   string          `json:"depositAmount"`   // 定金，0=非定金单
-	TailExpireAt    string          `json:"tailExpireAt,optional"`
-	GuaranteeDays   int             `json:"guaranteeDays"` // 健康保障天数快照，0=无
-	LevelDiscount   string          `json:"levelDiscount"` // 等级折扣优惠金额，0=无
-	IsPickup        bool            `json:"isPickup"`      // 到店自提单
-	PickupCode      string          `json:"pickupCode,optional"`
-	GroupTeamID     string          `json:"groupTeamId,optional"` // 拼团单团 ID，空=非拼团
+	OrderNo           string           `json:"orderNo"`
+	Status            int              `json:"status"`
+	StatusText        string           `json:"statusText"`
+	TotalAmount       string           `json:"totalAmount"`
+	DiscountAmount    string           `json:"discountAmount"`
+	ServiceFee        string           `json:"serviceFee"`
+	ShipFee           string           `json:"shipFee"`
+	PayAmount         string           `json:"payAmount"`
+	CouponInfo        string           `json:"couponInfo"`
+	ServiceItems      string           `json:"serviceItems"` // 服务快照 JSON [{id,name,price}]
+	ContactName       string           `json:"contactName"`
+	ContactPhone      string           `json:"contactPhone"`
+	Remark            string           `json:"remark"`
+	ShipMethod        string           `json:"shipMethod"` // 配送方式名快照
+	ShipAddress       string           `json:"shipAddress"`
+	ShipStatus        int              `json:"shipStatus"` // 0待配送 1配送中 2已送达
+	ShipNo            string           `json:"shipNo"`
+	ExpireAt          string           `json:"expireAt"`
+	PaidAt            string           `json:"paidAt"`
+	ShippedAt         string           `json:"shippedAt,optional"`
+	DeliveredAt       string           `json:"deliveredAt,optional"`
+	CompletedAt       string           `json:"completedAt,optional"`
+	CreatedAt         string           `json:"createdAt"`
+	Items             []OrderItemView  `json:"items"`
+	Reviewed          bool             `json:"reviewed"`        // 已评价（status=30 入口态）
+	AftersaleStatus   int              `json:"aftersaleStatus"` // 最新售后单状态，0=无售后
+	DepositAmount     string           `json:"depositAmount"`   // 定金，0=非定金单
+	TailExpireAt      string           `json:"tailExpireAt,optional"`
+	GuaranteeDays     int              `json:"guaranteeDays"` // 健康保障天数快照，0=无
+	LevelDiscount     string           `json:"levelDiscount"` // 等级折扣优惠金额，0=无
+	IsPickup          bool             `json:"isPickup"`      // 到店自提单
+	PickupCode        string           `json:"pickupCode,optional"`
+	GroupTeamID       string           `json:"groupTeamId,optional"` // 拼团单团 ID，空=非拼团
+	StoreName         string           `json:"storeName,optional"`   // 自提门店
+	AgreementVersion  string           `json:"agreementVersion,optional"`
+	AgreementSignedAt string           `json:"agreementSignedAt,optional"`
+	Traces            []OrderTraceView `json:"traces"` // 物流轨迹时间线
 }
 
 type ShipMethodView struct {
@@ -826,25 +842,34 @@ type ReviewReplyReq struct {
 // ─────────────────────────── 售后 ───────────────────────────
 
 type AfterSaleApplyReq struct {
-	OrderNo string `json:"orderNo"`
-	Reason  string `json:"reason"`
+	OrderNo           string `json:"orderNo"`
+	Reason            string `json:"reason"`
+	Type              string `json:"type,optional"`              // refund(默认)/exchange
+	ExchangeProductID string `json:"exchangeProductId,optional"` // 换货：目标商品
 }
 
 type AfterSaleView struct {
-	ID              string `json:"id"`
-	AfterSaleNo     string `json:"afterSaleNo"`
-	OrderNo         string `json:"orderNo"`
-	MemberID        string `json:"memberId"`
-	Nickname        string `json:"nickname"`
-	Phone           string `json:"phone"`
-	Reason          string `json:"reason"`
-	RefundAmount    string `json:"refundAmount"`
-	Status          int    `json:"status"`
-	StatusText      string `json:"statusText"`
-	AdminNote       string `json:"adminNote"`
-	RefundPaymentNo string `json:"refundPaymentNo"`
-	AuditAt         string `json:"auditAt"`
-	CreatedAt       string `json:"createdAt"`
+	ID                string `json:"id"`
+	AfterSaleNo       string `json:"afterSaleNo"`
+	OrderNo           string `json:"orderNo"`
+	MemberID          string `json:"memberId"`
+	Nickname          string `json:"nickname"`
+	Phone             string `json:"phone"`
+	Reason            string `json:"reason"`
+	RefundAmount      string `json:"refundAmount"`
+	Type              int    `json:"type"`
+	TypeText          string `json:"typeText"`
+	ExchangeProductID string `json:"exchangeProductId,optional"`
+	ExchangeProduct   string `json:"exchangeProduct,optional"`
+	PriceDiff         string `json:"priceDiff"`
+	ReturnShipNo      string `json:"returnShipNo,optional"`
+	ExchangeShipNo    string `json:"exchangeShipNo,optional"`
+	Status            int    `json:"status"`
+	StatusText        string `json:"statusText"`
+	AdminNote         string `json:"adminNote"`
+	RefundPaymentNo   string `json:"refundPaymentNo"`
+	AuditAt           string `json:"auditAt"`
+	CreatedAt         string `json:"createdAt"`
 }
 
 type AfterSaleOrderReq struct {
@@ -1274,4 +1299,215 @@ type RiskLogResp struct {
 type MemberBlacklistReq struct {
 	ID        string `json:"id"`
 	Blacklist int    `json:"blacklist"` // 1=拉黑 0=解除
+}
+
+// ─────────────────────────── 合规：注销 / 协议 ───────────────────────────
+
+type AccountDeleteReq struct {
+	Reason string `json:"reason,optional"`
+}
+
+type AccountDeleteStatusResp struct {
+	Requested     bool   `json:"requested"`
+	CooldownUntil string `json:"cooldownUntil,optional"`
+	CooldownDays  int    `json:"cooldownDays"`
+}
+
+type AgreementResp struct {
+	Version string `json:"version"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+// ─────────────────────────── 门店 / 轨迹 ───────────────────────────
+
+type StoreView struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Address       string `json:"address"`
+	Phone         string `json:"phone"`
+	BusinessHours string `json:"businessHours"`
+	Status        int    `json:"status"`
+	Sort          int    `json:"sort"`
+	CreatedAt     string `json:"createdAt"`
+}
+
+type StoreUpsertReq struct {
+	ID            string `json:"id,optional"`
+	Name          string `json:"name"`
+	Address       string `json:"address"`
+	Phone         string `json:"phone,optional"`
+	BusinessHours string `json:"businessHours,optional"`
+	Sort          int    `json:"sort,optional"`
+	Status        *int   `json:"status,optional"` // nil=启用
+}
+
+type OrderTraceAddReq struct {
+	OrderNo    string `path:"orderNo"`
+	HappenedAt string `json:"happenedAt,optional"` // RFC3339，空=now
+	StatusDesc string `json:"statusDesc"`
+	Detail     string `json:"detail,optional"`
+}
+
+// ─────────────────────────── 签到日历 / 补签 ───────────────────────────
+
+type SignCalendarResp struct {
+	Month       string   `json:"month"`       // yyyy-MM
+	SignedDates []string `json:"signedDates"` // ["2026-09-01", ...]
+	Streak      int      `json:"streak"`      // 截至今日的连续签到天数
+	SignedToday bool     `json:"signedToday"`
+}
+
+type SignMakeupReq struct {
+	Date string `json:"date"` // yyyy-MM-dd，本月内未签日期
+}
+
+// ─────────────────────────── 积分商城 ───────────────────────────
+
+type PointsProductView struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Image            string `json:"image"`
+	PointsCost       int    `json:"pointsCost"`
+	Stock            int    `json:"stock"`
+	Type             int    `json:"type"`
+	TypeText         string `json:"typeText"`
+	CouponTemplateID string `json:"couponTemplateId,optional"`
+	CouponName       string `json:"couponName,optional"`
+	Description      string `json:"description"`
+}
+
+type PointsShopResp struct {
+	List []PointsProductView `json:"list"`
+}
+
+type PointsProductUpsertReq struct {
+	ID               string `json:"id,optional"`
+	Name             string `json:"name"`
+	Image            string `json:"image,optional"`
+	PointsCost       int    `json:"pointsCost"`
+	Stock            int    `json:"stock"`
+	Type             int    `json:"type"`
+	CouponTemplateID string `json:"couponTemplateId,optional"`
+	Description      string `json:"description,optional"`
+	Sort             int    `json:"sort,optional"`
+	Status           *int   `json:"status,optional"` // nil=启用
+}
+
+type PointsExchangeReq struct {
+	ID      string `path:"id"`
+	Contact string `json:"contact,optional"` // 实物必填
+	Phone   string `json:"phone,optional"`
+	Address string `json:"address,optional"`
+}
+
+type PointsOrderView struct {
+	ID          string `json:"id"`
+	OrderNo     string `json:"orderNo"`
+	ProductName string `json:"productName"`
+	Image       string `json:"image"`
+	PointsCost  int    `json:"pointsCost"`
+	Status      int    `json:"status"`
+	StatusText  string `json:"statusText"`
+	ShipNo      string `json:"shipNo,optional"`
+	Contact     string `json:"contact,optional"`
+	Phone       string `json:"phone,optional"`
+	Address     string `json:"address,optional"`
+	CreatedAt   string `json:"createdAt"`
+}
+
+type PointsOrderListResp struct {
+	List []PointsOrderView `json:"list"`
+}
+
+type PointsOrderShipReq struct {
+	ID     string `path:"id"`
+	ShipNo string `json:"shipNo"`
+}
+
+// ─────────────────────────── 晒单广场 ───────────────────────────
+
+type PostCreateReq struct {
+	Content string   `json:"content"`
+	Images  []string `json:"images,optional"`
+}
+
+type PostView struct {
+	ID        string   `json:"id"`
+	MemberID  string   `json:"memberId"`
+	Nickname  string   `json:"nickname"`
+	Avatar    string   `json:"avatar"`
+	Content   string   `json:"content"`
+	Images    []string `json:"images"`
+	LikeCount int      `json:"likeCount"`
+	Liked     bool     `json:"liked"`
+	Status    int      `json:"status"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+type PostListResp struct {
+	List    []PostView `json:"list"`
+	HasMore bool       `json:"hasMore"`
+}
+
+type PostListReq struct {
+	Cursor string `form:"cursor,optional"`
+	Limit  int    `form:"limit,optional"`
+}
+
+type PostStatusReq struct {
+	ID     string `path:"id"`
+	Status int    `json:"status"` // 1显示 2隐藏
+}
+
+// ─────────────────────────── 运营：活动日历 / 数据大屏 ───────────────────────────
+
+type ActivityCalendarResp struct {
+	Items     []ActivityItem `json:"items"`
+	Conflicts []string       `json:"conflicts"` // 同商品活动时间窗重叠告警
+}
+
+type ActivityItem struct {
+	Type      string `json:"type"` // flash / group / coupon
+	TypeText  string `json:"typeText"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	ProductID string `json:"productId,optional"`
+	StartAt   string `json:"startAt"`
+	EndAt     string `json:"endAt"`
+	Status    int    `json:"status"`
+}
+
+type RealtimeDashboardResp struct {
+	TodayGmv    string           `json:"todayGmv"`
+	TodayOrders int64            `json:"todayOrders"`
+	Hourly      []HourlyPoint    `json:"hourly"`
+	Funnel      map[string]int64 `json:"funnel"` // created/paid/completed/refunded
+	Regions     []RegionRow      `json:"regions"`
+	GeneratedAt string           `json:"generatedAt"`
+}
+
+type HourlyPoint struct {
+	Hour   string `json:"hour"` // "09"
+	Gmv    string `json:"gmv"`
+	Orders int64  `json:"orders"`
+}
+
+type RegionRow struct {
+	Province string `json:"province"`
+	Orders   int64  `json:"orders"`
+}
+
+// ─────────────────────────── 养宠百科 ───────────────────────────
+
+type EncyclopediaBreed struct {
+	BreedID    string `json:"breedId"`
+	BreedName  string `json:"breedName"`
+	Cover      string `json:"cover"`
+	ArticleCnt int    `json:"articleCnt"`
+}
+
+type EncyclopediaArticle struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
 }

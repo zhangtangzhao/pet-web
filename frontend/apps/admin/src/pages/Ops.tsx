@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Input, message, Popconfirm, Space, Switch, Table, Tabs, Tag } from 'antd'
+import { Button, Card, Input, message, Popconfirm, Select, Space, Switch, Table, Tabs, Tag } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
+import { deletePost, fetchPosts, PostRow, setPostStatus } from '../api/engagement'
 import {
   AuditLogRow,
   deleteSensitiveWord,
@@ -262,6 +263,40 @@ function SensitiveWords() {
   )
 }
 
+function Posts() {
+  const [list, setList] = useState<PostRow[]>([])
+  const [status, setStatus] = useState(0)
+  const load = useCallback(async (s = status) => {
+    try { setList(await fetchPosts(s || undefined)) } catch (e: any) { message.error(e.message) }
+  }, [status])
+  useEffect(() => { load() }, [load])
+  const moderate = async (r: PostRow, next: number) => {
+    try { await setPostStatus(r.id, next); message.success('已更新'); load() } catch (e: any) { message.error(e.message) }
+  }
+  const remove = async (r: PostRow) => {
+    try { await deletePost(r.id); message.success('已删除'); load() } catch (e: any) { message.error(e.message) }
+  }
+  return (
+    <>
+      <Space style={{ marginBottom: 12 }}>
+        <Select style={{ width: 160 }} value={status} onChange={(v) => setStatus(v)}
+          options={[{ value: 0, label: '全部' }, { value: 1, label: '显示中' }, { value: 2, label: '已隐藏' }]} />
+      </Space>
+      <Table rowKey="id" size="small" dataSource={list} pagination={false} columns={[
+        { title: '会员', dataIndex: 'nickname', width: 120 },
+        { title: '内容', dataIndex: 'content', ellipsis: true },
+        { title: '图片', dataIndex: 'images', width: 80, render: (imgs: string[]) => (imgs?.length ?? 0) },
+        { title: '点赞', dataIndex: 'likeCount', width: 80 },
+        { title: '状态', dataIndex: 'status', width: 90, render: (v: number) => v === 1 ? <Tag color="green">显示中</Tag> : <Tag color="red">已隐藏</Tag> },
+        { title: '操作', width: 200, render: (_: unknown, r: PostRow) => (<>
+          <Button size="small" type="link" onClick={() => moderate(r, 1)}>通过</Button>
+          <Button size="small" type="link" danger onClick={() => moderate(r, 2)}>隐藏</Button>
+          <Button size="small" type="link" danger onClick={() => remove(r)}>删除</Button>
+        </>) },
+      ] as never} />
+    </>
+  )
+}
 export default function Ops() {
   return (
     <Card title="平台运营">
@@ -270,8 +305,11 @@ export default function Ops() {
           { key: 'audit', label: '操作审计', children: <AuditLogs /> },
           { key: 'sensitive', label: '敏感词', children: <SensitiveWords /> },
           { key: 'risk', label: '风控记录', children: <RiskLogs /> },
+          { key: 'posts', label: '晒单审核', children: <Posts /> },
         ]}
       />
     </Card>
   )
 }
+
+

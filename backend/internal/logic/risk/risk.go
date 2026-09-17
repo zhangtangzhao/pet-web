@@ -25,6 +25,14 @@ func isBlacklisted(sc *svc.ServiceContext, memberID int64) bool {
 	return m.Blacklist == 1
 }
 
+func isDeleting(sc *svc.ServiceContext, memberID int64) bool {
+	var m model.Member
+	if err := sc.DB.Select("delete_requested_at").First(&m, memberID).Error; err != nil {
+		return false
+	}
+	return m.DeleteRequestedAt != nil
+}
+
 func logRisk(sc *svc.ServiceContext, memberID int64, rule, detail string) {
 	_ = sc.DB.Create(&model.RiskLog{
 		ID:       common.NewID(),
@@ -48,6 +56,9 @@ func CheckOrderAllowed(sc *svc.ServiceContext, memberID int64) error {
 		logRisk(sc, memberID, model.RiskRuleBlacklist, "黑名单用户尝试下单")
 		return common.ErrMemberBlacklisted
 	}
+	if isDeleting(sc, memberID) {
+		return common.ErrAccountDeleting
+	}
 	var cnt int64
 	if err := sc.DB.Model(&model.Order{}).
 		Where("member_id = ? AND created_at > ?", memberID, time.Now().Add(-orderWindow)).
@@ -68,6 +79,9 @@ func CheckReviewContent(sc *svc.ServiceContext, memberID int64, content string) 
 		logRisk(sc, memberID, model.RiskRuleBlacklist, "黑名单用户尝试评价")
 		return common.ErrMemberBlacklisted
 	}
+	if isDeleting(sc, memberID) {
+		return common.ErrAccountDeleting
+	}
 	if content == "" || utf8.RuneCountInString(content) > 500 {
 		return nil
 	}
@@ -83,6 +97,9 @@ func CheckTradeAction(sc *svc.ServiceContext, memberID int64, action string) err
 	if isBlacklisted(sc, memberID) {
 		logRisk(sc, memberID, model.RiskRuleBlacklist, "黑名单用户尝试"+action)
 		return common.ErrMemberBlacklisted
+	}
+	if isDeleting(sc, memberID) {
+		return common.ErrAccountDeleting
 	}
 	return nil
 }

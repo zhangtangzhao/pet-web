@@ -17,6 +17,10 @@ import Finance from './pages/Finance'
 import Suppliers from './pages/Suppliers'
 import FlashSales from './pages/FlashSales'
 import Groups from './pages/Groups'
+import Stores from './pages/Stores'
+import PointsShop from './pages/PointsShop'
+import CalendarPage from './pages/Calendar'
+import BigScreen from './pages/BigScreen'
 import Report from './pages/Report'
 import Ops from './pages/Ops'
 
@@ -32,6 +36,10 @@ export default function App() {
         <Route path="marketing" element={<Marketing />} />
         <Route path="flash-sales" element={<FlashSales />} />
         <Route path="group-buys" element={<Groups />} />
+        <Route path="stores" element={<Stores />} />
+        <Route path="points-shop" element={<PointsShop />} />
+        <Route path="activity-calendar" element={<CalendarPage />} />
+        <Route path="bigscreen" element={<BigScreen />} />
         <Route path="banner" element={<Banners />} />
         <Route path="shipping" element={<ShipMethods />} />
         <Route path="orders" element={<Orders />} />
@@ -48,3 +56,4 @@ export default function App() {
     </Routes>
   )
 }
+

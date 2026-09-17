@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"pet/backend/internal/common"
+	"pet/backend/internal/logic/auth"
 	"pet/backend/internal/logic/notify"
 	"pet/backend/internal/metrics"
 	"pet/backend/internal/model"
@@ -224,6 +225,7 @@ func StartOrderCloser(sc *svc.ServiceContext) {
 	CloseExpiredOrders(sc)
 	CloseExpiredTails(sc)
 	ExpireGroups(sc)
+	auth.AnonymizeDeleted(sc)
 	AutoConfirmOrders(sc)
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
@@ -231,6 +233,7 @@ func StartOrderCloser(sc *svc.ServiceContext) {
 		CloseExpiredOrders(sc)
 		CloseExpiredTails(sc)
 		ExpireGroups(sc)
+		auth.AnonymizeDeleted(sc)
 		AutoConfirmOrders(sc)
 	}
 }

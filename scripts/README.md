@@ -86,6 +86,8 @@ docker exec -i $(docker compose ps -q postgres) \
 | [sql/017_member_level.down.sql](sql/017_member_level.down.sql) | 回滚等级列与升级礼包券种子 |
 | [sql/018_commerce_suite.up.sql](sql/018_commerce_suite.up.sql) | 商城深化：cart 购物车 / product_sku 规格 / group_buy+group_team 拼团 / orders 自提核销码与拼团 ID / order_review 三维评分 / pet_profile 宠物档案 / risk_log 风控 / member.blacklist / 商品详情长图与库存预警阈值 / notify 幂等键 / 召回券种子（5120） |
 | [sql/018_commerce_suite.down.sql](sql/018_commerce_suite.down.sql) | 回滚迁移 018 全部对象与种子 |
+| [sql/019_compliance_engagement.up.sql](sql/019_compliance_engagement.up.sql) | 合规与留存：账号注销列/购买协议快照/order_trace 轨迹/售后换货列/store 门店/积分商城 points_product+points_order/免运费卡/生日列与券种子/晒单广场 post+like |
+| [sql/019_compliance_engagement.down.sql](sql/019_compliance_engagement.down.sql) | 回滚迁移 019 全部对象与种子 |
 
 说明：
 
@@ -94,3 +96,4 @@ docker exec -i $(docker compose ps -q postgres) \
 - HTTPS：放开 compose 中 443 映射并挂载证书目录，或在云上由 LB/CDN 终结 TLS。
 
 状态：deploy/ 与 sql/ 已就绪（SQL 已在 PostgreSQL 16 实库验证）；dev/ 辅助脚本按需补充。
+

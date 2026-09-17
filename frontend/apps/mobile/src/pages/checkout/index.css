@@ -438,3 +438,7 @@
 .co-group-banner { display: flex; align-items: center; gap: 16rpx; margin-top: 20rpx; background: #fff7f2; border-radius: 14rpx; padding: 16rpx 20rpx; }
 .co-group-tag { background: #ff4d4f; color: #fff; font-size: 22rpx; font-weight: 700; border-radius: 8rpx; padding: 4rpx 12rpx; flex-shrink: 0; }
 .co-group-desc { font-size: 22rpx; color: #ff6b35; }
+.co-agree { display: flex; align-items: center; gap: 10rpx; padding: 8rpx 30rpx 20rpx; font-size: 22rpx; color: #999; }
+.co-agree-box { width: 30rpx; height: 30rpx; border-radius: 8rpx; border: 2rpx solid #ddd; display: inline-flex; align-items: center; justify-content: center; font-size: 20rpx; color: transparent; }
+.co-agree-on { background: #ff6b35; border-color: #ff6b35; color: #fff !important; }
+.co-agree-link { color: #ff6b35; }

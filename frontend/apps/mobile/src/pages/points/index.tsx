@@ -39,6 +39,12 @@ export default function Points() {
 
   const goExchange = () => Taro.navigateTo({ url: '/pages/coupon-center/index' }).catch(() => {})
 
+  const [cal, setCal] = useState<{ month: string; signedDates: string[]; streak: number; signedToday: boolean }>()
+  useEffect(() => { get<any>('/points/sign-calendar').then(setCal).catch(() => {}) }, [])
+  const makeup = () => {
+    (Taro.showModal as any)({ title: '补签', editable: true, placeholderText: 'yyyy-MM-dd（本月已过日期）', success: (m) => { if (m.confirm && m.content) post('/points/sign-makeup', { date: m.content.trim() }).then(() => { Taro.showToast({ title: '补签成功', icon: 'success' }); load(); get<any>('/points/sign-calendar').then(setCal).catch(() => {}) }).catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' })) } })
+  }
+
   return (
     <View className='pt'>
       <View className='pt-hero'>
@@ -53,6 +59,19 @@ export default function Points() {
           积分兑好礼 ›
         </View>
       </View>
+
+      {cal && (
+        <View className='pt-card pt-cal'>
+          <View className='pt-title'>本月签到 · 连续 {cal.streak} 天</View>
+          <View className='pt-cal-dates'>
+            {cal.signedDates.map((d) => (
+              <Text className='pt-cal-date' key={d}>{d.slice(8)}✓</Text>
+            ))}
+            {cal.signedDates.length === 0 && <Text className='pt-empty'>本月还没签过</Text>}
+          </View>
+          <View className='pt-makeup' onClick={makeup}>补签（消耗 20 积分）</View>
+        </View>
+      )}
 
       <View className='pt-card'>
         <View className='pt-title'>积分明细</View>
@@ -75,3 +94,5 @@ export default function Points() {
     </View>
   )
 }
+
+

@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"time"
+
 	"pet/backend/internal/common"
 	"pet/backend/internal/model"
 	"pet/backend/internal/svc"
@@ -26,6 +28,13 @@ func UpdateProfile(sc *svc.ServiceContext, memberID int64, req *types.UpdateProf
 	}
 	if req.Gender > 0 {
 		updates["gender"] = req.Gender
+	}
+	if req.Birthday != "" {
+		t, err := time.ParseInLocation("2006-01-02", req.Birthday, time.Local)
+		if err != nil {
+			return common.NewErr(400, 40001, "生日格式应为 yyyy-MM-dd")
+		}
+		updates["birthday"] = t
 	}
 	if len(updates) == 0 {
 		return nil

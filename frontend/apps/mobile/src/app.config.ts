@@ -22,6 +22,10 @@ export default defineAppConfig({
     'pages/address/index',
     'pages/cart/index',
     'pages/pet/index',
+    'pages/agreement/index',
+    'pages/square/index',
+    'pages/shop/index',
+    'pages/encyclopedia/index',
     'pages/login/index',
     'pages/certificate/index',
   ],
@@ -32,3 +36,4 @@ export default defineAppConfig({
     navigationBarTextStyle: 'black',
   },
 })
+

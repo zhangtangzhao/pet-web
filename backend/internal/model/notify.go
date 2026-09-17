@@ -10,6 +10,7 @@ const (
 	NotifySceneOrder   = 2 // 订单状态（退款到账/超时关单/售后结果/自动确认）
 	NotifySceneCoupon  = 3 // 优惠券提醒（到期提醒）
 	NotifySceneCare    = 4 // 疫苗/驱虫护理提醒
+	NotifySceneContent = 5 // 内容审核结果（晒单通过/隐藏）
 )
 
 // 投递状态

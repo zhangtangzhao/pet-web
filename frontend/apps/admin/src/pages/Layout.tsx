@@ -8,6 +8,10 @@ import {
   GiftOutlined,
   ThunderboltOutlined,
   UsergroupAddOutlined,
+  EnvironmentOutlined,
+  GiftOutlined as GiftIcon,
+  CalendarOutlined,
+  FundViewOutlined,
   PictureOutlined,
   CarOutlined,
   ProfileOutlined,
@@ -28,12 +32,16 @@ import ChangePwdModal from '../components/ChangePwdModal'
 
 const items = [
   { key: '/', icon: <DashboardOutlined />, label: '运营看板' },
+  { key: '/bigscreen', icon: <FundViewOutlined />, label: '数据大屏' },
   { key: '/products', icon: <ShoppingOutlined />, label: '宠物商品' },
   { key: '/catalog', icon: <TagsOutlined />, label: '分类/品种' },
   { key: '/knowledge', icon: <RobotOutlined />, label: 'AI 知识库' },
   { key: '/marketing', icon: <GiftOutlined />, label: '营销管理' },
   { key: '/flash-sales', icon: <ThunderboltOutlined />, label: '秒杀活动' },
   { key: '/group-buys', icon: <UsergroupAddOutlined />, label: '拼团活动' },
+  { key: '/stores', icon: <EnvironmentOutlined />, label: '自提门店' },
+  { key: '/points-shop', icon: <GiftIcon />, label: '积分商城' },
+  { key: '/activity-calendar', icon: <CalendarOutlined />, label: '活动日历' },
   { key: '/banner', icon: <PictureOutlined />, label: 'Banner 管理' },
   { key: '/shipping', icon: <CarOutlined />, label: '配送方式' },
   { key: '/orders', icon: <ProfileOutlined />, label: '订单管理' },
@@ -113,3 +121,4 @@ export default function AdminLayout() {
     </Layout>
   )
 }
+

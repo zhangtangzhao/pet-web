@@ -73,7 +73,7 @@ flowchart LR
 依赖：Go 1.25+、PostgreSQL 16、Redis 7（默认连 `127.0.0.1:5432` / `127.0.0.1:6379`，可在 `etc/pet-api.yaml` 调整）。
 
 ```bash
-# 1. 初始化数据库（在仓库根执行，共 18 个迁移）
+# 1. 初始化数据库（在仓库根执行，共 19 个迁移）
 psql -U pet -d pet -f scripts/sql/001_init.up.sql
 psql -U pet -d pet -f scripts/sql/002_seed.up.sql
 psql -U pet -d pet -f scripts/sql/003_ai_knowledge.up.sql
@@ -91,6 +91,7 @@ psql -U pet -d pet -f scripts/sql/015_ops.up.sql
 psql -U pet -d pet -f scripts/sql/016_supplier_compliance.up.sql
 psql -U pet -d pet -f scripts/sql/017_member_level.up.sql
 psql -U pet -d pet -f scripts/sql/018_commerce_suite.up.sql
+psql -U pet -d pet -f scripts/sql/019_compliance_engagement.up.sql
 
 # 2. 运行（默认读取 etc/pet-api.yaml，监听 :8888）
 go run .
@@ -143,3 +144,4 @@ docker compose logs -f api              # 看日志
 - **幂等**：微信支付回调以 `payment` 行状态 + 事务 CAS 保证重复通知安全；退款以 `payment` 既有成功退款记录短路 + 确定性退款单号（`RF+售后单号`）保证幂等；新增异步回调类逻辑请沿用该模式
 - **数据库迁移为手工 psql**，无 auto-migrate；新表 / 新列需在 `scripts/sql/` 增加 `00N_*.up/down.sql` 并同步 [docs/03-数据库设计](../docs/03-数据库设计.md)
 - **客服 WebSocket**：鉴权 token 走 query（会进访问日志），生产可对 `/api/ws/` 关闭 access log 或接受该风险；go-zero rest 超时对已升级的长连接无效，nginx 侧已配 `proxy_read_timeout 3600s`；小程序正式环境需 wss 合法域名（TLS 443）
+

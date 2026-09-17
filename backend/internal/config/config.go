@@ -98,6 +98,9 @@ type Config struct {
 		InviteRewardPoints int `json:",default=50"` // 邀请成功双方各得积分
 		DepositPercent     int `json:",default=10"` // 定金比例（%实付金额，向上保底 0.01）
 		DepositHoldDays    int `json:",default=3"`  // 付定金后 N 天内需补尾款；≤0 取 3
+		SignBonus3         int `json:",default=5"`  // 连续签到 3 天额外奖励
+		SignBonus7         int `json:",default=20"` // 连续签到 7 天额外奖励
+		SignMakeupCost     int `json:",default=20"` // 补签消耗积分
 	}
 
 	// 接口限流（Redis 计数器；≤0 关闭对应项）
@@ -109,9 +112,15 @@ type Config struct {
 
 	// 营销自动化（≤0 关闭对应项）
 	Automation struct {
-		CartRemindHours int   `json:",default=24"`   // 购物车加入 N 小时未结算 → 提醒
-		DormantDays     int   `json:",default=30"`   // 距最近支付订单 N 天未下单 → 召回
-		DormantCouponID int64 `json:",default=5120"` // 召回券模板 ID
+		CartRemindHours  int   `json:",default=24"`   // 购物车加入 N 小时未结算 → 提醒
+		DormantDays      int   `json:",default=30"`   // 距最近支付订单 N 天未下单 → 召回
+		DormantCouponID  int64 `json:",default=5120"` // 召回券模板 ID
+		BirthdayCouponID int64 `json:",default=5130"` // 生日礼包券模板 ID
+	}
+
+	// 账号注销（合规：冷静期后匿名化）
+	Account struct {
+		DeletionCooldownDays int `json:",default=7"`
 	}
 }
 

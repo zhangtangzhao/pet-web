@@ -134,6 +134,7 @@ psql -U pet -d pet -f scripts/sql/015_ops.up.sql
 psql -U pet -d pet -f scripts/sql/016_supplier_compliance.up.sql
 psql -U pet -d pet -f scripts/sql/017_member_level.up.sql
 psql -U pet -d pet -f scripts/sql/018_commerce_suite.up.sql
+psql -U pet -d pet -f scripts/sql/019_compliance_engagement.up.sql
 
 # 2. 后端（配置 backend/etc/pet-api.yaml，dev 模板开箱即用）→ :8888
 cd backend && go run .
@@ -160,7 +161,7 @@ cp .env.example .env                                  # 填入全部密钥（勿
 docker compose up -d --build
 
 # 初始化数据库
-for f in 001_init 002_seed 003_ai_knowledge 004_marketing 005_chat 006_review 007_after_sale 008_notify 010_banner 011_review_reply 012_delivery 013_member_growth 014_trade_ext 015_ops 016_supplier_compliance 017_member_level 018_commerce_suite; do
+for f in 001_init 002_seed 003_ai_knowledge 004_marketing 005_chat 006_review 007_after_sale 008_notify 010_banner 011_review_reply 012_delivery 013_member_growth 014_trade_ext 015_ops 016_supplier_compliance 017_member_level 018_commerce_suite 019_compliance_engagement; do
   docker exec -i $(docker compose ps -q postgres) \
     psql -U pet -d pet -v ON_ERROR_STOP=1 < ../sql/$f.up.sql
 done
@@ -241,3 +242,4 @@ pet/
 ## 许可
 
 本项目为商业项目，未附带开源许可。未经授权请勿复制、分发或商用。
+

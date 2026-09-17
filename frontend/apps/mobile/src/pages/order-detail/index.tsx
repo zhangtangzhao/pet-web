@@ -174,6 +174,18 @@ export default function OrderDetail() {
         {terminal && <Text className='odt-hero-tip'>{o.status === 60 ? '退款已原路退回' : '订单已关闭'}</Text>}
       </View>
 
+      {(o.traces ?? []).length > 0 && (
+        <View className='odt-card'>
+          <Text className='odt-card-title'>物流轨迹</Text>
+          {(o.traces ?? []).map((t, i) => (
+            <View className='odt-trace' key={i}>
+              <Text className='odt-trace-time'>{t.happenedAt}</Text>
+              <Text className='odt-trace-desc'>{t.statusDesc}{t.detail ? ' · ' + t.detail : ''}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* 状态时间线 */}
       {!terminal && (
         <View className='odt-card'>

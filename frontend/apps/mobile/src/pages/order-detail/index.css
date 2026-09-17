@@ -234,3 +234,6 @@
 .odt-pickup { margin-top: 16rpx; display: flex; flex-direction: column; align-items: center; gap: 6rpx; background: rgba(255,255,255,0.18); border-radius: 14rpx; padding: 16rpx 28rpx; }
 .odt-pickup-label { font-size: 22rpx; color: rgba(255,255,255,0.85); }
 .odt-pickup-code { font-size: 52rpx; font-weight: 800; letter-spacing: 10rpx; color: #fff; }
+.odt-trace { display: flex; flex-direction: column; gap: 4rpx; padding: 12rpx 0; border-bottom: 1rpx solid #f6f6f6; }
+.odt-trace-time { font-size: 22rpx; color: #999; }
+.odt-trace-desc { font-size: 26rpx; color: #333; }

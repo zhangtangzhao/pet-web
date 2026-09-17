@@ -1,0 +1,20 @@
+.sq { padding: 24rpx; }
+.sq-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
+.sq-title { font-size: 34rpx; font-weight: 700; }
+.sq-add { color: #ff6b35; font-size: 28rpx; font-weight: 600; }
+.sq-form { background: #fff; border-radius: 20rpx; padding: 24rpx; margin-bottom: 24rpx; }
+.sq-textarea { width: 100%; height: 140rpx; font-size: 26rpx; }
+.sq-publish { margin-top: 16rpx; background: linear-gradient(135deg, #ff6b35, #ff8f5c); color: #fff; text-align: center; border-radius: 36rpx; padding: 16rpx; font-size: 26rpx; }
+.sq-empty { text-align: center; color: #999; padding: 120rpx 0; font-size: 26rpx; }
+.sq-card { background: #fff; border-radius: 20rpx; padding: 26rpx; margin-bottom: 22rpx; }
+.sq-card-head { display: flex; align-items: center; gap: 14rpx; }
+.sq-avatar { width: 64rpx; height: 64rpx; border-radius: 50%; background: #f4f4f4; }
+.sq-nick { font-size: 28rpx; font-weight: 600; flex: 1; }
+.sq-time { font-size: 22rpx; color: #999; }
+.sq-content { display: block; margin-top: 14rpx; font-size: 27rpx; color: #333; line-height: 1.6; }
+.sq-imgs { display: flex; gap: 10rpx; margin-top: 14rpx; flex-wrap: wrap; }
+.sq-img { width: 200rpx; height: 200rpx; border-radius: 12rpx; }
+.sq-actions { display: flex; justify-content: space-between; margin-top: 16rpx; font-size: 26rpx; color: #666; }
+.sq-liked { color: #ff4d4f; }
+.sq-del { color: #bbb; }
+.sq-more { text-align: center; color: #999; font-size: 24rpx; padding: 20rpx 0; }

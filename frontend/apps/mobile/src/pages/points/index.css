@@ -122,3 +122,6 @@
   font-size: 20px;
   color: #bbb;
 }
+.pt-cal-dates { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 14rpx; }
+.pt-cal-date { font-size: 22rpx; color: #ff6b35; background: #fff3ec; border-radius: 8rpx; padding: 6rpx 14rpx; }
+.pt-makeup { margin-top: 16rpx; font-size: 24rpx; color: #1890ff; text-align: right; }

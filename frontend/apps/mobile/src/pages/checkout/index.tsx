@@ -49,6 +49,10 @@ export default function Checkout() {
   const [groupBuy, setGroupBuy] = useState<GroupBuyInfo | null>(null)
   const [skuId, setSkuId] = useState(params.skuId ?? '')
   const [cartLoaded, setCartLoaded] = useState(!cartMode)
+  const [agreeUI, setAgreeUI] = useState(true)
+  const [stores, setStores] = useState<{ id: string; name: string; address: string }[]>([])
+  const [storeId, setStoreId] = useState('')
+  const coAgreeBox = agreeUI ? 'co-agree-box co-agree-on' : 'co-agree-box'
 
   useEffect(() => {
     if (!getToken()) {
@@ -75,6 +79,7 @@ export default function Checkout() {
         .then((list) => setGroupBuy((list ?? []).find((g) => g.id === params.groupId) ?? null))
         .catch(() => {})
     }
+    get<{ id: string; name: string; address: string }[]>('/stores').then(setStores).catch(() => {})
     get<ShipMethod[]>('/ship/methods')
       .then((list) => {
         setShipMethods(list ?? [])
@@ -167,9 +172,11 @@ export default function Checkout() {
     setSubmitting(true)
     try {
       const body: Record<string, unknown> = {
+        agree: true,
         shipMethodId,
         shipAddress: addrId ? '' : address.trim(),
         addressId: addrId,
+        storeId,
         useDeposit,
         contactName: name,
         contactPhone: phone,
@@ -301,6 +308,18 @@ export default function Checkout() {
               )
             })}
           </View>
+          {shipMethod?.kind === 1 && (
+            <View className='co-addr'>
+              <View className='co-addr-chips'>
+                {stores.map((s) => (
+                  <View key={s.id} className={`co-addr-chip ${storeId === s.id ? 'co-addr-chip-on' : ''}`} onClick={() => setStoreId(storeId === s.id ? '' : s.id)}>
+                    {s.name}
+                  </View>
+                ))}
+              </View>
+              {storeId && <Text className='pshop-desc'>{stores.find((s) => s.id === storeId)?.address}</Text>}
+            </View>
+          )}
           {shipMethod?.kind === 2 && (
             <View className='co-addr'>
               {addrs.length > 0 && (
@@ -403,6 +422,12 @@ export default function Checkout() {
         <Input className='co-input' placeholder='联系手机号' type='number' maxlength={11} value={phone} onInput={(e) => setPhone(e.detail.value)} />
       </View>
 
+      <View className='co-agree' onClick={() => setAgreeUI(!agreeUI)}>
+        <Text className={coAgreeBox}>{agreeUI ? '✓' : ''}</Text>
+        <Text>已阅读并同意</Text>
+        <Text className='co-agree-link' onClick={(e) => { e.stopPropagation(); Taro.navigateTo({ url: '/pages/agreement/index' }).catch(() => {}) }}>《宠物活体购买协议》</Text>
+      </View>
+
       <View className='footer'>
         <View className='pay'>
           {useDeposit ? (
@@ -416,7 +441,7 @@ export default function Checkout() {
             </>
           )}
         </View>
-        <View className={`btn-submit ${submitting ? 'btn-submit-off' : ''}`} onClick={submit}>
+        <View className={`btn-submit ${submitting || !agreeUI ? 'btn-submit-off' : ''}`} onClick={() => { if (!agreeUI) { Taro.showToast({ title: '请先同意购买协议', icon: 'none' }); return } submit() }}>
           {useDeposit ? '付定金锁宠' : '提交订单'}
         </View>
       </View>
@@ -466,3 +491,10 @@ export default function Checkout() {
     </View>
   )
 }
+
+
+
+
+
+
+

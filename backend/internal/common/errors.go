@@ -75,6 +75,11 @@ var (
 	ErrGroupInvalid       = NewErr(400, 41907, "拼团活动不可用")
 	ErrCartEmpty          = NewErr(400, 41908, "请先勾选要结算的商品")
 	ErrPickupVerify       = NewErr(400, 41909, "核销码错误或订单状态不允许核销")
+	ErrAccountDeleting    = NewErr(403, 42001, "账号注销处理中，暂无法进行该操作")
+	ErrAgreementRequired  = NewErr(400, 42002, "请先阅读并同意购买协议")
+	ErrSignMakeupInvalid  = NewErr(400, 42003, "该日期不可补签")
+	ErrPointsProduct      = NewErr(400, 42004, "积分商品不可兑换")
+	ErrExchangeState      = NewErr(400, 42005, "换货流程状态不允许此操作")
 
 	ErrInternal  = NewErr(500, 50000, "系统异常")
 	ErrWxAPI     = NewErr(502, 50001, "微信接口异常")

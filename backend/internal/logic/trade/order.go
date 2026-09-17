@@ -99,6 +99,9 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 	if err := risk.CheckOrderAllowed(sc, memberID); err != nil {
 		return nil, err
 	}
+	if err := checkAgreement(req.Agree); err != nil {
+		return nil, err
+	}
 	productID, err := parseID(req.ProductID)
 	if err != nil {
 		return nil, err
@@ -303,6 +306,14 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 	}
 	payAmount := goodsPay.Add(sm.Fee)
 
+	// 免运费卡：有卡 + 勾选 + 运费 > 0 → 运费 0，事务内扣卡
+	useFreeShip := freeShipApplies(sc, memberID, req.UseFreeShip, sm.Fee)
+	shipFee := sm.Fee
+	if useFreeShip {
+		shipFee = decimal.Zero
+		payAmount = goodsPay
+	}
+
 	// 定金锁宠：首笔仅付定金，尾款在 N 天内补齐（closer 超时关单退定金）
 	deposit := decimal.Zero
 	var tailExpireAt *time.Time
@@ -333,6 +344,18 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		firstPay = deposit
 	}
 
+	// 自提门店解析（自提单必选）
+	var pickupStore *model.Store
+	if sm.Kind == model.KindPickup {
+		pickupStore, err = resolvePickupStore(sc, req.StoreID)
+		if err != nil {
+			return fail(err)
+		}
+		if shipAddress == "" {
+			shipAddress = resolveStoreAddress(pickupStore)
+		}
+	}
+
 	now := time.Now()
 	order := model.Order{
 		ID:             common.NewID(),
@@ -356,10 +379,12 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		Remark:         req.Remark,
 		ShipMethodID:   sm.ID,
 		ShipMethodName: sm.Name,
-		ShipFee:        sm.Fee,
+		ShipFee:        shipFee,
 		ShipAddress:    shipAddress,
+		StoreID:        storeIDOf(pickupStore),
 		ExpireAt:       now.Add(payTTL(sc)),
 	}
+	stampAgreement(&order)
 	item := model.OrderItem{
 		ID:           common.NewID(),
 		ProductID:    p.ID,
@@ -413,7 +438,15 @@ func CreateOrder(sc *svc.ServiceContext, memberID int64, req *types.CreateOrderR
 		if err := tx.Create(&item).Error; err != nil {
 			return err
 		}
-		return tx.Create(&payment).Error
+		if err := tx.Create(&payment).Error; err != nil {
+			return err
+		}
+		if useFreeShip {
+			if err := consumeFreeShipTx(tx, memberID); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return fail(err)
@@ -581,6 +614,35 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 			}
 		}
 	}
+	// 自提门店名 + 物流轨迹
+	storeNameMap := map[int64]string{}
+	storeIDs := make([]int64, 0, len(orders))
+	for _, o := range orders {
+		if o.StoreID > 0 {
+			storeIDs = append(storeIDs, o.StoreID)
+		}
+	}
+	if len(storeIDs) > 0 {
+		var stores []model.Store
+		if err := sc.DB.Select("id", "name").Where("id IN ?", storeIDs).Find(&stores).Error; err == nil {
+			for _, s := range stores {
+				storeNameMap[s.ID] = s.Name
+			}
+		}
+	}
+	traceMap := map[string][]types.OrderTraceView{}
+	{
+		var traces []model.OrderTrace
+		if err := sc.DB.Where("order_no IN ?", orderNos).Order("happened_at ASC").Find(&traces).Error; err == nil {
+			for _, t := range traces {
+				traceMap[t.OrderNo] = append(traceMap[t.OrderNo], types.OrderTraceView{
+					HappenedAt: t.HappenedAt.Format("01-02 15:04"),
+					StatusDesc: t.StatusDesc,
+					Detail:     t.Detail,
+				})
+			}
+		}
+	}
 	views := make([]*types.OrderView, 0, len(orders))
 	for _, o := range orders {
 		_, isReviewed := reviewedSet[o.OrderNo]
@@ -612,6 +674,14 @@ func BuildOrderViews(sc *svc.ServiceContext, orders []model.Order) ([]*types.Ord
 			GuaranteeDays:   o.GuaranteeDays,
 			IsPickup:        smKindMap[o.ShipMethodID] == model.KindPickup,
 			PickupCode:      o.PickupCode,
+			StoreName:       storeNameMap[o.StoreID],
+			Traces:          traceMap[o.OrderNo],
+		}
+		if o.AgreementVersion != "" {
+			v.AgreementVersion = o.AgreementVersion
+		}
+		if o.AgreementSignedAt != nil {
+			v.AgreementSignedAt = o.AgreementSignedAt.Format("2006-01-02 15:04:05")
 		}
 		if o.GroupTeamID > 0 {
 			v.GroupTeamID = strconv.FormatInt(o.GroupTeamID, 10)

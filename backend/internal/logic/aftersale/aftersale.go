@@ -39,6 +39,23 @@ func Apply(sc *svc.ServiceContext, memberID int64, req *types.AfterSaleApplyReq)
 	if reason == "" || utf8.RuneCountInString(reason) > maxReasonRunes {
 		return nil, common.ErrParam
 	}
+	asType := model.AfterSaleTypeRefund
+	exchangeProductID := int64(0)
+	var priceDiff decimal.Decimal
+	var targetPrice decimal.Decimal
+	if trimSpace(req.Type) == "exchange" {
+		asType = model.AfterSaleTypeExchange
+		id, err := strconv.ParseInt(trimSpace(req.ExchangeProductID), 10, 64)
+		if err != nil || id <= 0 {
+			return nil, common.ErrParam
+		}
+		var target model.PetProduct
+		if err := sc.DB.Select("id", "price").First(&target, id).Error; err != nil {
+			return nil, common.NewErr(400, 41208, "换货目标商品不存在")
+		}
+		exchangeProductID = id
+		targetPrice = target.Price
+	}
 	var o model.Order
 	if err := sc.DB.Where("order_no = ? AND member_id = ?", req.OrderNo, memberID).First(&o).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -61,15 +78,26 @@ func Apply(sc *svc.ServiceContext, memberID int64, req *types.AfterSaleApplyReq)
 	if cnt > 0 {
 		return nil, common.ErrAfterSaleActive
 	}
+	if asType == model.AfterSaleTypeExchange {
+		// 补差价 = 目标商品现价 - 原订单实付（负数按 0 处理）
+		diff := targetPrice.Sub(o.PayAmount)
+		if diff.LessThan(decimal.Zero) {
+			diff = decimal.Zero
+		}
+		priceDiff = diff
+	}
 
 	as := model.AfterSale{
-		ID:           common.NewID(),
-		AfterSaleNo:  common.NewBizNo("AS"),
-		OrderNo:      o.OrderNo,
-		MemberID:     memberID,
-		Reason:       reason,
-		RefundAmount: o.PayAmount, // 默认全额，审核时可调
-		Status:       model.AfterSalePending,
+		ID:                common.NewID(),
+		AfterSaleNo:       common.NewBizNo("AS"),
+		OrderNo:           o.OrderNo,
+		MemberID:          memberID,
+		Reason:            reason,
+		RefundAmount:      o.PayAmount, // 默认全额，审核时可调
+		Type:              asType,
+		ExchangeProductID: exchangeProductID,
+		PriceDiff:         priceDiff,
+		Status:            model.AfterSalePending,
 	}
 	if err := sc.DB.Create(&as).Error; err != nil {
 		var pgErr *pgconn.PgError
@@ -214,6 +242,28 @@ func Audit(sc *svc.ServiceContext, afterSaleNo string, agree bool, amountStr, no
 		return nil
 	}
 
+	// 换货单：同意即进入换货流程（不退款），待用户寄回后由平台确认换出
+	if as.Type == model.AfterSaleTypeExchange {
+		res := sc.DB.Model(&model.AfterSale{}).
+			Where("id = ? AND status = ?", as.ID, model.AfterSalePending).
+			Updates(map[string]any{
+				"status": model.AfterSaleAgreed, "admin_note": note,
+				"audit_at": now, "updated_at": now,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return common.ErrAfterSaleAudit
+		}
+		if err := notify.Enqueue(sc, as.MemberID, model.NotifySceneOrder,
+			"exchangeagree:"+as.AfterSaleNo, "换货已同意",
+			"请按指引寄回宠物，并在售后详情填写回寄单号", as.OrderNo); err != nil {
+			logx.Errorf("换货同意通知入队失败 %s: %v", as.AfterSaleNo, err)
+		}
+		return nil
+	}
+
 	// 同意：确定退款金额（默认申请金额，可调；上限为实付）
 	refundAmount := as.RefundAmount
 	if trimSpace(amountStr) != "" {
@@ -272,24 +322,142 @@ func Audit(sc *svc.ServiceContext, afterSaleNo string, agree bool, amountStr, no
 
 func view(r model.AfterSale, nickname, phone string) *types.AfterSaleView {
 	v := &types.AfterSaleView{
-		ID:              strconv.FormatInt(r.ID, 10),
-		AfterSaleNo:     r.AfterSaleNo,
-		OrderNo:         r.OrderNo,
-		MemberID:        strconv.FormatInt(r.MemberID, 10),
-		Nickname:        nickname,
-		Phone:           phone,
-		Reason:          r.Reason,
-		RefundAmount:    r.RefundAmount.StringFixed(2),
-		Status:          r.Status,
-		StatusText:      model.AfterSaleStatusText(r.Status),
-		AdminNote:       r.AdminNote,
-		RefundPaymentNo: r.RefundPaymentNo,
-		CreatedAt:       r.CreatedAt.Format(time.RFC3339),
+		ID:                strconv.FormatInt(r.ID, 10),
+		AfterSaleNo:       r.AfterSaleNo,
+		OrderNo:           r.OrderNo,
+		MemberID:          strconv.FormatInt(r.MemberID, 10),
+		Nickname:          nickname,
+		Phone:             phone,
+		Reason:            r.Reason,
+		RefundAmount:      r.RefundAmount.StringFixed(2),
+		Status:            r.Status,
+		StatusText:        model.AfterSaleStatusText(r.Status),
+		AdminNote:         r.AdminNote,
+		RefundPaymentNo:   r.RefundPaymentNo,
+		Type:              r.Type,
+		TypeText:          afterSaleTypeText(r.Type),
+		ExchangeProductID: strconv.FormatInt(r.ExchangeProductID, 10),
+		PriceDiff:         r.PriceDiff.StringFixed(2),
+		ReturnShipNo:      r.ReturnShipNo,
+		ExchangeShipNo:    r.ExchangeShipNo,
+		CreatedAt:         r.CreatedAt.Format(time.RFC3339),
 	}
 	if r.AuditAt != nil {
 		v.AuditAt = r.AuditAt.Format(time.RFC3339)
 	}
 	return v
+}
+
+func afterSaleTypeText(t int) string {
+	if t == model.AfterSaleTypeExchange {
+		return "换货"
+	}
+	return "退款"
+}
+
+// ReturnShip 用户寄回（换货：同意后 → 已寄回待平台确认）
+func ReturnShip(sc *svc.ServiceContext, memberID int64, afterSaleNo, shipNo string) error {
+	shipNo = trimSpace(shipNo)
+	if shipNo == "" {
+		return common.ErrParam
+	}
+	var as model.AfterSale
+	if err := sc.DB.Where("after_sale_no = ? AND member_id = ?", afterSaleNo, memberID).First(&as).Error; err != nil {
+		return common.ErrAfterSale
+	}
+	if as.Type != model.AfterSaleTypeExchange || as.Status != model.AfterSaleAgreed {
+		return common.ErrExchangeState
+	}
+	res := sc.DB.Model(&model.AfterSale{}).
+		Where("id = ? AND status = ?", as.ID, model.AfterSaleAgreed).
+		Updates(map[string]any{"status": model.AfterSaleExchSent, "return_ship_no": shipNo, "updated_at": time.Now()})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return common.ErrExchangeState
+	}
+	return nil
+}
+
+// PayDiff 换货补差价支付（PriceDiff > 0 时需先支付，支付流水 order_no = 售后单号）
+func PayDiff(sc *svc.ServiceContext, memberID int64, afterSaleNo string) (*types.CreateOrderResp, error) {
+	var as model.AfterSale
+	if err := sc.DB.Where("after_sale_no = ? AND member_id = ?", afterSaleNo, memberID).First(&as).Error; err != nil {
+		return nil, common.ErrAfterSale
+	}
+	if as.Type != model.AfterSaleTypeExchange || as.Status != model.AfterSaleAgreed {
+		return nil, common.ErrExchangeState
+	}
+	if as.PriceDiff.LessThanOrEqual(decimal.Zero) {
+		return nil, common.NewErr(400, 40001, "该换货单无需补差价")
+	}
+	var pay model.Payment
+	err := sc.DB.Where("order_no = ? AND pay_type = ? AND status = ?",
+		as.AfterSaleNo, model.PayTypeExchangeDiff, model.PayStatusPending).First(&pay).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		pay = model.Payment{
+			ID: common.NewID(), PaymentNo: common.NewBizNo("PAY"),
+			OrderNo: as.AfterSaleNo, MemberID: memberID,
+			Amount: as.PriceDiff, Channel: model.PayChannelMini,
+			PayType: model.PayTypeExchangeDiff, Status: model.PayStatusPending,
+		}
+		if err := sc.DB.Create(&pay).Error; err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	return &types.CreateOrderResp{
+		OrderNo:   as.AfterSaleNo,
+		PaymentNo: pay.PaymentNo,
+		PayAmount: as.PriceDiff.StringFixed(2),
+	}, nil
+}
+
+// ConfirmExchange 平台确认换出（校验补差价已支付 → 换货完成）
+func ConfirmExchange(sc *svc.ServiceContext, afterSaleNo, exchangeShipNo string) error {
+	exchangeShipNo = trimSpace(exchangeShipNo)
+	if exchangeShipNo == "" {
+		return common.ErrParam
+	}
+	var as model.AfterSale
+	if err := sc.DB.Where("after_sale_no = ?", afterSaleNo).First(&as).Error; err != nil {
+		return common.ErrAfterSale
+	}
+	if as.Type != model.AfterSaleTypeExchange || as.Status != model.AfterSaleExchSent {
+		return common.ErrExchangeState
+	}
+	if as.PriceDiff.GreaterThan(decimal.Zero) {
+		var cnt int64
+		if err := sc.DB.Model(&model.Payment{}).
+			Where("order_no = ? AND pay_type = ? AND status = ?",
+				afterSaleNo, model.PayTypeExchangeDiff, model.PayStatusSuccess).
+			Count(&cnt).Error; err != nil {
+			return err
+		}
+		if cnt == 0 {
+			return common.NewErr(400, 42005, "用户尚未支付补差价")
+		}
+	}
+	now := time.Now()
+	res := sc.DB.Model(&model.AfterSale{}).
+		Where("id = ? AND status = ?", as.ID, model.AfterSaleExchSent).
+		Updates(map[string]any{
+			"status": model.AfterSaleExchDone, "exchange_ship_no": exchangeShipNo, "updated_at": now,
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return common.ErrExchangeState
+	}
+	if err := notify.Enqueue(sc, as.MemberID, model.NotifySceneOrder,
+		"exchangedone:"+afterSaleNo, "换货完成",
+		"换货已完成，新宠物已发出，运单号 "+exchangeShipNo, as.OrderNo); err != nil {
+		logx.Errorf("换货完成通知入队失败 %s: %v", afterSaleNo, err)
+	}
+	return nil
 }
 
 // memberTexts 批量取会员昵称/手机号：memberID → [nickname, phone]
