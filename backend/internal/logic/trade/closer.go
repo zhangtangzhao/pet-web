@@ -237,6 +237,9 @@ func StartOrderCloser(sc *svc.ServiceContext) {
 		auth.AnonymizeDeleted(sc)
 		marketing.ExpireBargains(sc)
 		marketing.SettleAuctions(sc)
+		ScheduledOffSaleScan(sc)
 		AutoConfirmOrders(sc)
 	}
 }
+
+

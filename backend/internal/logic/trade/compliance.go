@@ -135,3 +135,9 @@ func storeIDOf(s *model.Store) int64 {
 }
 
 var _ = auth.AnonymizeDeleted
+
+// ScheduledOffSaleScan closer：到达定时下架时间的在售商品自动下架
+func ScheduledOffSaleScan(sc *svc.ServiceContext) {
+	sc.DB.Exec("UPDATE pet_product SET status = ?, updated_at = now() WHERE status = ? AND scheduled_off_sale_at IS NOT NULL AND scheduled_off_sale_at <= now()",
+		model.ProductOffSale, model.ProductOnSale)
+}
