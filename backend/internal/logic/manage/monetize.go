@@ -15,7 +15,9 @@ import (
 
 func InsuranceList(sc *svc.ServiceContext) ([]types.InsuranceProductView, error) {
 	var rows []model.InsuranceProduct
-	if err := sc.DB.Where("status = 1").Order("id ASC").Find(&rows).Error; err != nil { return nil, err }
+	if err := sc.DB.Where("status = 1").Order("id ASC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
 	out := make([]types.InsuranceProductView, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, types.InsuranceProductView{ID: strconv.FormatInt(r.ID, 10), Name: r.Name, Company: r.Company, CoverDesc: r.CoverDesc, Price: r.Price.StringFixed(2)})
@@ -35,13 +37,17 @@ func AdminInsuranceUpsert(sc *svc.ServiceContext, req *types.InsuranceProductVie
 func AdminInsuranceApplyList(sc *svc.ServiceContext) ([]map[string]any, error) {
 	var rows []map[string]any
 	err := sc.DB.Table("insurance_apply a").Select("a.*, m.nickname").Joins("LEFT JOIN member m ON m.id = a.member_id").Order("a.id DESC").Limit(100).Scan(&rows).Error
-	if rows == nil { rows = []map[string]any{} }
+	if rows == nil {
+		rows = []map[string]any{}
+	}
 	return rows, err
 }
 
 func StudList(sc *svc.ServiceContext) ([]types.StudServiceView, error) {
 	var rows []model.StudService
-	if err := sc.DB.Where("status = 1").Order("id DESC").Limit(50).Find(&rows).Error; err != nil { return nil, err }
+	if err := sc.DB.Where("status = 1").Order("id DESC").Limit(50).Find(&rows).Error; err != nil {
+		return nil, err
+	}
 	out := make([]types.StudServiceView, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, types.StudServiceView{ID: strconv.FormatInt(r.ID, 10), BreedName: r.BreedName, PetName: r.PetName, HealthCerts: r.HealthCerts, Price: r.Price.StringFixed(2), Description: r.Description})
@@ -60,7 +66,9 @@ func AdminStudUpsert(sc *svc.ServiceContext, req *types.StudUpsertReq) error {
 
 func HomeConfigGet(sc *svc.ServiceContext) (string, error) {
 	var hc model.HomeConfig
-	if err := sc.DB.First(&hc, 1).Error; err != nil { return "[]", nil }
+	if err := sc.DB.First(&hc, 1).Error; err != nil {
+		return "[]", nil
+	}
 	return hc.Config, nil
 }
 
@@ -70,8 +78,12 @@ func HomeConfigSet(sc *svc.ServiceContext, config string) error {
 
 func ScheduledOffSale(sc *svc.ServiceContext, productID int64, at *time.Time) error {
 	res := sc.DB.Model(&model.PetProduct{}).Where("id = ?", productID).Update("scheduled_off_sale_at", at)
-	if res.Error != nil { return res.Error }
-	if res.RowsAffected == 0 { return common.ErrNotFound }
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return common.ErrNotFound
+	}
 	return nil
 }
 
@@ -84,30 +96,42 @@ func ScheduledOffSaleScan(sc *svc.ServiceContext) {
 func InsuranceApplyCreate(sc *svc.ServiceContext, memberID int64, req *types.InsuranceApplyReq) error {
 	pid, _ := strconv.ParseInt(req.ProductID, 10, 64)
 	var p model.InsuranceProduct
-	if err := sc.DB.First(&p, pid).Error; err != nil { return common.ErrParam }
+	if err := sc.DB.First(&p, pid).Error; err != nil {
+		return common.ErrParam
+	}
 	return sc.DB.Create(&model.InsuranceApply{ID: common.NewID(), MemberID: memberID, ProductID: pid, ProductName: p.Name, Contact: req.Contact, Phone: req.Phone}).Error
 }
 
 func DistributorApply(sc *svc.ServiceContext, memberID int64) error {
 	var cnt int64
 	sc.DB.Model(&model.Distributor{}).Where("member_id = ?", memberID).Count(&cnt)
-	if cnt > 0 { return common.NewErr(400, 40001, "已是分销达人") }
+	if cnt > 0 {
+		return common.NewErr(400, 40001, "已是分销达人")
+	}
 	return sc.DB.Create(&model.Distributor{ID: common.NewID(), MemberID: memberID, Level: 1, CommissionRate: decimal.NewFromFloat(5)}).Error
 }
 
 func DistributorInfo(sc *svc.ServiceContext, memberID int64) (*model.Distributor, error) {
 	var d model.Distributor
-	if err := sc.DB.Where("member_id = ?", memberID).First(&d).Error; err != nil { return nil, common.ErrNotFound }
+	if err := sc.DB.Where("member_id = ?", memberID).First(&d).Error; err != nil {
+		return nil, common.ErrNotFound
+	}
 	return &d, nil
 }
 
 func DistributorWithdrawal(sc *svc.ServiceContext, memberID int64, amountStr string) error {
 	amount, _ := decimal.NewFromString(amountStr)
 	var d model.Distributor
-	if err := sc.DB.Where("member_id = ? AND status = 1", memberID).First(&d).Error; err != nil { return common.ErrParam }
-	if d.Balance.LessThan(amount) || amount.LessThanOrEqual(decimal.Zero) { return common.NewErr(400, 40001, "余额不足") }
+	if err := sc.DB.Where("member_id = ? AND status = 1", memberID).First(&d).Error; err != nil {
+		return common.ErrParam
+	}
+	if d.Balance.LessThan(amount) || amount.LessThanOrEqual(decimal.Zero) {
+		return common.NewErr(400, 40001, "余额不足")
+	}
 	return sc.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Exec("UPDATE distributor SET balance = balance - ?, updated_at = now() WHERE id = ? AND balance >= ?", amount, d.ID, amount).Error; err != nil { return err }
+		if err := tx.Exec("UPDATE distributor SET balance = balance - ?, updated_at = now() WHERE id = ? AND balance >= ?", amount, d.ID, amount).Error; err != nil {
+			return err
+		}
 		return tx.Create(&model.DistributorWithdrawal{ID: common.NewID(), DistributorID: d.ID, Amount: amount}).Error
 	})
 }

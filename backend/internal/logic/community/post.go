@@ -99,9 +99,9 @@ func Create(sc *svc.ServiceContext, memberID int64, req *types.PostCreateReq) er
 		ID:       common.NewID(),
 		MemberID: memberID,
 
-		Content:  content,
-		Images:   string(imgJSON),
-		Status:   model.PostPending,
+		Content: content,
+		Images:  string(imgJSON),
+		Status:  model.PostPending,
 	}).Error
 }
 
@@ -216,5 +216,3 @@ func AdminDelete(sc *svc.ServiceContext, postID int64) error {
 	}
 	return nil
 }
-
-

@@ -485,6 +485,12 @@ type AdminProductDetailResp struct {
 	NextDewormDate     string   `json:"nextDewormDate,optional"`
 	DetailImages       []string `json:"detailImages"`
 	StockWarnThreshold string   `json:"stockWarnThreshold"`
+	CertType           string   `json:"certType,optional"`
+	CertNo             string   `json:"certNo,optional"`
+	ChipNo             string   `json:"chipNo,optional"`
+	PreSale            int      `json:"preSale"`
+	PreSalePrice       string   `json:"preSalePrice,optional"`
+	PreSaleETA         string   `json:"preSaleEta,optional"`
 	Skus               []SkuRow `json:"skus"`
 }
 

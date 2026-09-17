@@ -241,5 +241,3 @@ func StartOrderCloser(sc *svc.ServiceContext) {
 		AutoConfirmOrders(sc)
 	}
 }
-
-
