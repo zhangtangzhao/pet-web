@@ -122,12 +122,11 @@ export default function Me() {
         </View>
       )}
 
-      <View className='me-entries'>
+      <View className='me-grid'>
         {ENTRIES.map((e) => (
-          <View className='me-entry' key={e.url} onClick={() => goEntry(e.url)}>
-            <Text className='me-entry-icon'>{e.icon}</Text>
-            <Text className='me-entry-label'>{e.label}</Text>
-            <Text className='me-entry-arrow'>›</Text>
+          <View className='me-grid-item' key={e.url} onClick={() => goEntry(e.url)}>
+            <Text className='me-grid-icon'>{e.icon}</Text>
+            <Text className='me-grid-label'>{e.label}</Text>
           </View>
         ))}
       </View>
@@ -138,5 +137,6 @@ export default function Me() {
     </View>
   )
 }
+
 
 

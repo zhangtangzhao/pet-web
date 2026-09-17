@@ -142,3 +142,8 @@
   font-size: 22px;
   opacity: 0.85;
 }
+
+.me-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20rpx 10rpx; background: #fff; border-radius: 20rpx; padding: 30rpx 20rpx; margin-top: 24rpx; }
+.me-grid-item { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
+.me-grid-icon { font-size: 44rpx; }
+.me-grid-label { font-size: 22rpx; color: #333; text-align: center; }
