@@ -1,0 +1,50 @@
+{
+  "mobile390": {
+    "homeWidth": {
+      "page": 390,
+      "card": 186
+    },
+    "listWidth": {
+      "page": 390,
+      "card": 186
+    },
+    "detailWidth": {
+      "page": 390,
+      "card": 377
+    }
+  },
+  "tablet768": {
+    "homeWidth": {
+      "page": 768,
+      "card": 164
+    },
+    "listWidth": {
+      "page": 768,
+      "card": 164
+    },
+    "detailWidth": {
+      "page": 768,
+      "card": 237
+    }
+  },
+  "desktop1440": {
+    "homeWidth": {
+      "page": 1160,
+      "card": 262
+    },
+    "listWidth": {
+      "page": 1160,
+      "card": 262
+    },
+    "detailWidth": {
+      "page": 1440,
+      "card": 237
+    }
+  },
+  "sku": {
+    "width": 390,
+    "viewport": 390,
+    "confirmHeight": 45,
+    "chipHeight": 45
+  }
+}

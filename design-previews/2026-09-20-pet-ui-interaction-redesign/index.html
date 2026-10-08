@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>宠物项目 UI 与交互重构方案</title>
+  <style>
+    :root {
+      --ink: #17181a;
+      --ink-2: #5f6670;
+      --line: #e4e5e7;
+      --paper: #f5f4f1;
+      --coral: #f4623a;
+      --trust: #2b6a8c;
+      --leaf: #2f6b4f;
+      --amber: #f0b429;
+      --radius: 10px;
+      --shadow: 0 12px 30px rgba(20, 20, 22, .08);
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100vw; overflow-x: hidden; }
+    body { margin: 0; background: var(--paper); color: var(--ink); }
+    a { color: inherit; }
+    .topbar {
+      position: sticky; top: 0; z-index: 30;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      min-height: 62px; padding: 12px 24px;
+      background: rgba(245,244,241,.94); border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand strong { font-size: 17px; }
+    .brand span { color: var(--ink-2); font-size: 13px; white-space: nowrap; }
+    .nav { min-width: 0; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+    .nav::-webkit-scrollbar { display: none; }
+    .nav a {
+      padding: 8px 11px; border-radius: 999px; color: var(--ink-2);
+      font-size: 13px; text-decoration: none; white-space: nowrap;
+    }
+    .nav a:hover { background: #fff; color: var(--ink); }
+    main { width: min(1360px, calc(100% - 40px)); margin: 0 auto; }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; padding: 42px 0 30px; align-items: end; }
+    h1 { margin: 0 0 16px; font-size: clamp(32px, 5vw, 54px); line-height: 1.1; letter-spacing: 0; }
+    .hero p { margin: 0; max-width: 720px; color: var(--ink-2); font-size: 17px; line-height: 1.7; }
+    .metric-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+    .metric-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 13px; }
+    .metric-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+    .metric-list span:last-child { color: var(--ink-2); }
+    .section { padding: 32px 0; }
+    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
+    h2 { margin: 0; font-size: 25px; line-height: 1.25; }
+    .head-note { color: var(--ink-2); font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .direction { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .direction-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 17px 18px; }
+    .direction-head strong { font-size: 17px; }
+    .recommend { padding: 5px 8px; border-radius: 999px; background: #17181a; color: #fff; font-size: 11px; white-space: nowrap; }
+    .mini { position: relative; height: 355px; background: #eee; overflow: hidden; }
+    .phone {
+      width: 330px; height: 660px; transform: scale(.53); transform-origin: 0 0;
+      position: absolute; left: 50%; top: 12px; translate: -50% 0;
+      border-radius: 28px; overflow: hidden; box-shadow: 0 0 0 7px #222;
+      display: grid; grid-template-rows: auto 1fr auto;
+    }
+    .statusline { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; font-size: 11px; }
+    .phone-body { overflow: hidden; }
+    .phone-foot { display: flex; align-items: center; justify-content: space-around; min-height: 42px; font-size: 10px; }
+    .meta { padding: 18px; display: grid; gap: 12px; }
+    .meta p { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+    .traits { display: flex; flex-wrap: wrap; gap: 7px; }
+    .traits span { padding: 5px 8px; border-radius: 999px; background: #f2f2f0; color: #45484d; font-size: 12px; }
+    .explainer { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 22px; align-items: start; }
+    .card { min-width: 0; max-width: 100%; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+    .card h3 { margin: 0 0 12px; font-size: 17px; }
+    .card p, .card li { font-size: 14px; line-height: 1.65; color: #45484d; }
+    .card ul { margin: 0; padding-left: 18px; }
+    .flowmap { display: grid; gap: 14px; }
+    .flow-row { display: grid; grid-template-columns: 92px minmax(0,1fr); gap: 14px; align-items: start; }
+    .flow-label { min-height: 28px; display: flex; align-items: center; justify-content: center; background: #17181a; color: #fff; border-radius: 999px; font-size: 12px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { min-height: 28px; display: inline-flex; align-items: center; padding: 5px 10px; border: 1px solid #d8d9db; border-radius: 999px; background: #fff; font-size: 12px; color: #2b2e32; }
+    .arrow { color: var(--ink-2); padding: 0 2px; }
+    .tables { max-width: 100%; overflow-x: auto; }
+    table { width: 100%; table-layout: fixed; border-collapse: collapse; background: #fff; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 12px; text-align: left; vertical-align: top; line-height: 1.5; overflow-wrap: anywhere; }
+    th { white-space: nowrap; color: #5f6670; font-weight: 650; background: #fbfbfa; }
+    td code, p code { padding: 2px 5px; border-radius: 4px; background: #eeeefc; font-size: 12px; color: #31427d; }
+    .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+    .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 16px 0 6px; }
+    .swatch { height: 46px; border-radius: 8px; border: 1px solid rgba(0,0,0,.08); }
+    .token-lines { max-width: 100%; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; white-space: pre; overflow-x: auto; background: #181a1e; color: #f2f3f4; border-radius: 10px; padding: 18px; line-height: 1.7; }
+    .tag { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 5px; font-size: 11px; font-weight: 650; }
+    .tag.info { color: #275d75; background: #e8f2f6; }
+    .tag.warn { color: #7a4b0d; background: #fdf0d4; }
+    .tag.danger { color: #8a2523; background: #fde8e7; }
+    .tag.success { color: #23633b; background: #e7f4e9; }
+    details { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 0; }
+    details + details { margin-top: 12px; }
+    summary { padding: 15px 18px; cursor: pointer; font-weight: 650; font-size: 15px; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    details .inner { padding: 0 18px 18px; }
+    .footer-note { padding: 26px 0 48px; color: var(--ink-2); font-size: 13px; }
+    @media (max-width: 900px) {
+      main { width: 100% !important; max-width: 100vw; margin: 0; padding-inline: 14px; }
+      .hero, .metric-card, .card, .direction, .explainer { width: 100% !important; max-width: 100% !important; }
+      .topbar { padding: 10px 14px; }
+      .brand span { display: none; }
+      .hero { grid-template-columns: 1fr; padding: 30px 0 10px; }
+      .grid, .two-col, .three-col { grid-template-columns: 1fr; }
+      .explainer { grid-template-columns: 1fr; }
+      .flow-row { grid-template-columns: 1fr; }
+      .flow-label { justify-content: flex-start; }
+      .mini { height: 390px; }
+      .phone { transform: scale(.48); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+
+    /* Direction A: trustworthy commerce */
+    .a-phone { background: #fff; color: #161719; }
+    .a-search { margin: 10px 14px 12px; display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px; background: #f3f2f1; border-radius: 9px; color: #7b7f85; font-size: 11px; }
+    .a-assurance { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; padding: 0 14px 12px; }
+    .a-assurance div { padding: 7px; background: #f8f7f5; border-radius: 8px; font-size: 9px; color: #494d52; text-align: center; }
+    .a-title { padding: 0 14px 8px; font-size: 14px; font-weight: 700; }
+    .a-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px; }
+    .a-card { border: 1px solid #eee; border-radius: 12px; overflow: hidden; background: #fff; }
+    .a-card img { width: 100%; height: 94px; object-fit: cover; display: block; }
+    .a-body { padding: 7px; }
+    .a-name { font-size: 10px; line-height: 1.3; height: 26px; overflow: hidden; }
+    .a-price { color: #f4623a; font-weight: 800; font-size: 13px; margin-top: 4px; }
+    .a-badge { font-size: 8px; color: #2b6a8c; background: #e8f2f6; padding: 2px 4px; border-radius: 3px; margin-left: 3px; }
+    .a-foot { background: #fff; border-top: 1px solid #eee; color: #65696f; }
+    .a-foot .active { color: #f4623a; font-weight: 700; }
+
+    /* Direction B: organic field manual */
+    .b-phone { background: #f3efe4; color: #212423; }
+    .b-top { padding: 12px 14px 4px; }
+    .b-kicker { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: #66705f; }
+    .b-title { font-family: Georgia, "Songti SC", serif; font-size: 19px; line-height: 1.2; margin-top: 5px; }
+    .b-hero { margin: 10px 14px; height: 165px; border-radius: 3px; overflow: hidden; position: relative; }
+    .b-hero img { width: 100%; height: 100%; object-fit: cover; }
+    .b-hero p { position: absolute; left: 9px; bottom: 8px; margin: 0; background: rgba(243,239,228,.9); padding: 5px 7px; font-size: 9px; color: #2b322c; }
+    .b-list { display: grid; gap: 7px; padding: 0 14px; }
+    .b-row { display: grid; grid-template-columns: 56px 1fr; gap: 8px; background: #fff; border-radius: 3px; overflow: hidden; }
+    .b-row img { width: 100%; height: 44px; object-fit: cover; }
+    .b-row div { padding: 6px 7px; }
+    .b-row strong { display: block; font-size: 10px; }
+    .b-row span { font-size: 8px; color: #66705f; }
+    .b-foot { background: #f3efe4; border-top: 1px solid #d9d2c2; color: #66705f; }
+    .b-foot .active { color: #2f6b4f; font-weight: 700; }
+
+    /* Direction C: dark operations console */
+    .c-phone { background: #181b1f; color: #f2f3f3; }
+    .c-top { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 5px; }
+    .c-top strong { font-size: 14px; }
+    .c-live { font-size: 9px; color: #181b1f; background: #f0b429; padding: 2px 5px; border-radius: 3px; }
+    .c-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; padding: 8px 14px 12px; }
+    .c-stats div { background: #22262b; border-radius: 6px; padding: 7px; }
+    .c-stats span { display: block; font-size: 7px; color: #9aa0a5; }
+    .c-stats b { font-size: 13px; }
+    .c-list { display: grid; gap: 6px; padding: 0 14px; }
+    .c-item { display: grid; grid-template-columns: 47px 1fr auto; gap: 7px; align-items: center; background: #22262b; border-radius: 6px; padding: 6px; }
+    .c-item img { width: 47px; height: 37px; object-fit: cover; border-radius: 4px; }
+    .c-item strong { display: block; font-size: 9px; }
+    .c-item span { font-size: 7px; color: #9aa0a5; }
+    .c-price { color: #f0b429; font-weight: 700; font-size: 10px; }
+    .c-foot { background: #181b1f; border-top: 1px solid #30343a; color: #9aa0a5; }
+    .c-foot .active { color: #f0b429; }
+
+    /* Direction D: pet market */
+    .d-phone { background: #fff4dd; color: #241f1b; }
+    .d-hero { padding: 12px 14px 0; display: flex; align-items: center; justify-content: space-between; }
+    .d-title { font-family: Verdana, "Microsoft YaHei", sans-serif; font-size: 20px; line-height: 1; font-weight: 800; }
+    .d-filter { display: flex; gap: 5px; padding: 10px 14px; }
+    .d-filter span { background: #fff; border: 1px solid #d9b98c; padding: 4px 8px; border-radius: 999px; font-size: 9px; }
+    .d-filter .on { background: #221d19; color: #fff; border-color: #221d19; }
+    .d-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; padding: 0 14px; }
+    .d-card { background: #fff; border: 2px solid #241f1b; border-radius: 12px; overflow: hidden; box-shadow: 3px 3px 0 #f4623a; }
+    .d-card img { width: 100%; height: 80px; object-fit: cover; display: block; }
+    .d-body { padding: 7px; }
+    .d-name { font-size: 9px; }
+    .d-price { font-weight: 800; color: #f4623a; font-size: 12px; margin-top: 4px; }
+    .d-foot { background: #fff4dd; border-top: 2px solid #241f1b; color: #685a48; }
+    .d-foot .active { color: #f4623a; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>宠物项目重构方案</strong>
+      <span>移动端 H5 / 微信小程序 + 运营后台桌面端</span>
+    </div>
+    <nav class="nav" aria-label="方案章节">
+      <a href="#directions">视觉方向</a>
+      <a href="#architecture">信息架构</a>
+      <a href="#navigation">跳转矩阵</a>
+      <a href="#interactions">交互规则</a>
+      <a href="#states">状态规范</a>
+      <a href="#tokens">设计 Token</a>
+      <a href="#handoff">前端交接</a>
+      <a href="#confirm">待确认</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <h1>把杂乱入口收敛成一条可信任的宠物购买与养护链路</h1>
+        <p>现有页面已覆盖商品、订单、购物车、售后、AI、营销、会员和大量运营能力，但视觉表达分散，移动端功能入口过度堆叠，后台菜单缺少任务分组。本方案保留真实业务骨架，重构信息层级、跳转规则、状态系统和桌面/移动端布局。</p>
+      </div>
+      <aside class="metric-card">
+        <ul class="metric-list">
+          <li><span>主要用户</span><span>C 端买家 / 运营后台管理员</span></li>
+          <li><span>核心任务</span><span>看宠物、比健康信息、下单、追踪履约</span></li>
+          <li><span>视觉冒险度</span><span>3 / 10</span></li>
+          <li><span>动效强度</span><span>3 / 10</span></li>
+          <li><span>信息密度</span><span>移动 4，桌面 7</span></li>
+          <li><span>交付性质</span><span>方向样机 + 可执行设计规格</span></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="section" id="directions">
+      <div class="section-head">
+        <h2>四个视觉方向</h2>
+        <div class="head-note">A 为推荐方向；最终实现需在工单确认方向后进入前端改造。</div>
+      </div>
+      <div class="grid">
+        <article class="direction">
+          <div class="direction-head"><strong>A · 可信活体电商</strong><span class="recommend">推荐</span></div>
+          <div class="mini"><div class="phone a-phone" aria-label="方向 A 移动端样机">
+            <div class="statusline"><span>9:41</span><span>5G</span></div>
+            <div class="phone-body">
+              <div class="a-search">搜索品种、年龄、健康记录</div>
+              <div class="a-assurance"><div>健康核验</div><div>正规协议</div><div>平台保障</div></div>
+              <div class="a-title">今日可领养宠物</div>
+              <div class="a-grid">
+                <div class="a-card"><img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=720&q=80" alt=""><div class="a-body"><div class="a-name">英短蓝白 · 3 个月 · 已驱虫</div><div class="a-price">¥3,280<span class="a-badge">疫苗 2 针</span></div></div></div>
+                <div class="a-card"><img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=720&q=80" alt=""><div class="a-body"><div class="a-name">柯基 · 公 · 性格亲人</div><div class="a-price">¥4,980</div></div></div>
+                <div class="a-card"><img src="https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=720&q=80" alt=""><div class="a-body"><div class="a-name">布偶 · 疫苗齐全</div><div class="a-price">¥5,600</div></div></div>
+                <div class="a-card"><img src="https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=720&q=80" alt=""><div class="a-body"><div class="a-name">金渐层 · 2.4kg</div><div class="a-price">¥4,180</div></div></div>
+              </div>
+            </div>
+            <div class="phone-foot a-foot"><span class="active">首页</span><span>发现</span><span>消息</span><span>我的</span></div>
+          </div></div>
+          <div class="meta">
+            <p>以标准电商心智为骨架：搜索与信任承诺前置，宠物档案、价格、健康状态形成稳定卡片层级。风格克制，适合活体交易的高决策成本场景。</p>
+            <div class="traits"><span>亮底</span><span>珊瑚橙 + 石墨</span><span>4:3 商品图</span><span>移动 2 列</span></div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-head"><strong>B · 自然养护手册</strong></div>
+          <div class="mini"><div class="phone b-phone" aria-label="方向 B 移动端样机">
+            <div class="statusline"><span>9:41</span><span>5G</span></div>
+            <div class="phone-body">
+              <div class="b-top"><div class="b-kicker">Pet Field Guide</div><div class="b-title">为你的家庭<br>找一只合适的伙伴</div></div>
+              <div class="b-hero"><img src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=900&q=80" alt=""><p>先看生活方式匹配，再看品种价格</p></div>
+              <div class="b-list">
+                <div class="b-row"><img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=360&q=80" alt=""><div><strong>低敏家庭 · 推荐布偶</strong><span>安静 / 已驱虫 / 疫苗 2 针</span></div></div>
+                <div class="b-row"><img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=360&q=80" alt=""><div><strong>有院家庭 · 柯基</strong><span>活泼 / 亲人 / 3 个月</span></div></div>
+                <div class="b-row"><img src="https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=360&q=80" alt=""><div><strong>新手首选 · 英短</strong><span>适应力强 / 独立</span></div></div>
+              </div>
+            </div>
+            <div class="phone-foot b-foot"><span class="active">发现</span><span>百科</span><span>消息</span><span>我的</span></div>
+          </div></div>
+          <div class="meta">
+            <p>把商品流转译为养护决策内容：大图、衬线标题、场景化推荐更强，适合品牌叙事，但转化页需要额外控制商业信息的清晰度。</p>
+            <div class="traits"><span>暖纸底</span><span>苔绿</span><span>衬线标题</span><span>非对称编辑式</span></div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-head"><strong>C · 专业暗色控台</strong></div>
+          <div class="mini"><div class="phone c-phone" aria-label="方向 C 移动端样机">
+            <div class="statusline"><span>9:41</span><span>5G</span></div>
+            <div class="phone-body">
+              <div class="c-top"><strong>门店经营</strong><span class="c-live">实时</span></div>
+              <div class="c-stats"><div><span>今日成交</span><b>38</b></div><div><span>待发货</span><b>12</b></div><div><span>售后</span><b>3</b></div></div>
+              <div class="c-list">
+                <div class="c-item"><img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=240&q=80" alt=""><div><strong>布偶 · 3 个月</strong><span>库存 1 · 门店自提</span></div><span class="c-price">¥5,600</span></div>
+                <div class="c-item"><img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=240&q=80" alt=""><div><strong>柯基 · 公</strong><span>库存 2 · 托运配送</span></div><span class="c-price">¥4,980</span></div>
+                <div class="c-item"><img src="https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=240&q=80" alt=""><div><strong>英短蓝白</strong><span>库存 1 · 待核验</span></div><span class="c-price">¥3,280</span></div>
+                <div class="c-item"><img src="https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=240&q=80" alt=""><div><strong>金渐层</strong><span>库存 3 · 预约中</span></div><span class="c-price">¥4,180</span></div>
+              </div>
+            </div>
+            <div class="phone-foot c-foot"><span>经营</span><span class="active">库存</span><span>履约</span><span>我的</span></div>
+          </div></div>
+          <div class="meta">
+            <p>更接近 B 端经营工具：高密度、暗色、实时指标突出，适合卖家或连锁门店视角。若 C 端仍以普通买家为主，不建议作为全局方向。</p>
+            <div class="traits"><span>暗底</span><span>琥珀强调</span><span>数据密度高</span><span>状态色强</span></div>
+          </div>
+        </article>
+
+        <article class="direction">
+          <div class="direction-head"><strong>D · 活力宠物集市</strong></div>
+          <div class="mini"><div class="phone d-phone" aria-label="方向 D 移动端样机">
+            <div class="statusline"><span>9:41</span><span>5G</span></div>
+            <div class="phone-body">
+              <div class="d-hero"><div class="d-title">宠物集市</div><span class="tag warn">限时开放</span></div>
+              <div class="d-filter"><span class="on">全部</span><span>猫</span><span>狗</span><span>异宠</span></div>
+              <div class="d-grid">
+                <div class="d-card"><img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=360&q=80" alt=""><div class="d-body"><div class="d-name">英短蓝白</div><div class="d-price">¥3,280</div></div></div>
+                <div class="d-card"><img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=360&q=80" alt=""><div class="d-body"><div class="d-name">柯基宝宝</div><div class="d-price">¥4,980</div></div></div>
+                <div class="d-card"><img src="https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=360&q=80" alt=""><div class="d-body"><div class="d-name">布偶</div><div class="d-price">¥5,600</div></div></div>
+                <div class="d-card"><img src="https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=360&q=80" alt=""><div class="d-body"><div class="d-name">金渐层</div><div class="d-price">¥4,180</div></div></div>
+              </div>
+            </div>
+            <div class="phone-foot d-foot"><span class="active">集市</span><span>活动</span><span>消息</span><span>我的</span></div>
+          </div></div>
+          <div class="meta">
+            <p>情绪和活动氛围更强：粗描边、撞色、活动入口显眼，适合短期营销专题或社区版块；活体交易详情页仍需降低装饰强度。</p>
+            <div class="traits"><span>高明度</span><span>粗边卡片</span><span>营销导向</span><span>密度中等</span></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="architecture">
+      <div class="section-head">
+        <h2>信息架构</h2>
+        <div class="head-note">移动端 36 个现存页面收敛为 4 个一级 Tab + 6 组任务；桌面按工作域分组。</div>
+      </div>
+      <div class="explainer">
+        <div class="card">
+          <h3>移动端一级导航</h3>
+          <ul>
+            <li><strong>首页</strong>：可购宠物、健康筛选、信任承诺、活动入口。</li>
+            <li><strong>发现</strong>：分类/筛选列表、养宠百科、AI 选宠、晒单广场。</li>
+            <li><strong>消息</strong>：订单、客服、优惠券、系统通知。</li>
+            <li><strong>我的</strong>：账户、订单/售后、宠物档案、营销资产、服务设置。</li>
+          </ul>
+        </div>
+        <div class="flowmap">
+          <div class="flow-row"><div class="flow-label">购买链</div><div class="chips"><span class="chip">首页</span><span class="arrow">→</span><span class="chip">列表 /list</span><span class="arrow">→</span><span class="chip">详情 /detail</span><span class="arrow">→</span><span class="chip">结算 /checkout</span><span class="arrow">→</span><span class="chip">支付</span><span class="arrow">→</span><span class="chip">订单详情</span></div></div>
+          <div class="flow-row"><div class="flow-label">履约链</div><div class="chips"><span class="chip">订单列表</span><span class="arrow">→</span><span class="chip">订单详情</span><span class="arrow">→</span><span class="chip">配送 / 自提核销</span><span class="arrow">→</span><span class="chip">确认收货</span><span class="arrow">→</span><span class="chip">健康证书</span><span class="arrow">→</span><span class="chip">评价</span></div></div>
+          <div class="flow-row"><div class="flow-label">售后链</div><div class="chips"><span class="chip">订单详情</span><span class="arrow">→</span><span class="chip">发起售后</span><span class="arrow">→</span><span class="chip">我的售后</span><span class="arrow">→</span><span class="chip">审核 / 退款</span><span class="arrow">→</span><span class="chip">订单详情</span></div></div>
+          <div class="flow-row"><div class="flow-label">养护链</div><div class="chips"><span class="chip">我的</span><span class="arrow">→</span><span class="chip">宠物档案</span><span class="arrow">→</span><span class="chip">疫苗/驱虫提醒</span><span class="arrow">→</span><span class="chip">服务预约 / 保险</span></div></div>
+          <div class="flow-row"><div class="flow-label">后台</div><div class="chips"><span class="chip">运营看板</span><span class="arrow">→</span><span class="chip">商品 / 订单 / 售后</span><span class="arrow">→</span><span class="chip">营销 / 会员</span><span class="arrow">→</span><span class="chip">财务 / 审计</span><span class="arrow">→</span><span class="chip">客服 / 配置</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="navigation">
+      <div class="section-head">
+        <h2>页面与跳转矩阵</h2>
+        <div class="head-note">以下路径均来自现有路由与类型定义，未定义业务目标的活动入口不进入默认首页。</div>
+      </div>
+      <div class="tables card">
+        <table>
+          <thead><tr><th>入口</th><th>当前路由</th><th>目标 / 新规则</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>首页搜索</td><td><code>/pages/list/index</code></td><td>带关键词占位进入列表，不使用 switchTab，除非原生 TabBar 配置完成</td><td><span class="tag info">需修路由</span></td></tr>
+            <tr><td>首页分类</td><td>当前 <code>categoryId=</code> 为空</td><td>映射真实分类 ID 到 <code>/pages/list/index?categoryId=</code></td><td><span class="tag danger">缺陷</span></td></tr>
+            <tr><td>宠物卡片</td><td><code>/pages/detail/index?id=</code></td><td>navigateTo；推荐位仅在同页面内替换目标或回退重开，避免无限堆栈</td><td><span class="tag info">已明确</span></td></tr>
+            <tr><td>立即购买</td><td><code>/pages/checkout/index?id&skuId</code></td><td>未选规格时展开 SKU 半屏，不跳转；登录成功返回原详情并恢复规格</td><td><span class="tag success">可实施</span></td></tr>
+            <tr><td>购物车结算</td><td><code>/pages/checkout/index?from=cart</code></td><td>选中 ID 存临时态，返回/删除商品时同步校验，失败保留可结算项</td><td><span class="tag success">可实施</span></td></tr>
+            <tr><td>提交订单</td><td><code>/pages/order-detail/index?orderNo=</code></td><td>成功后 replace 当前栈；失败保留表单、金额、优惠券和滚动位置</td><td><span class="tag success">可实施</span></td></tr>
+            <tr><td>订单消息</td><td>当前只到订单列表</td><td>携带 <code>orderNo</code> 直达订单详情</td><td><span class="tag info">需确认消息模型</span></td></tr>
+            <tr><td>登录</td><td>redirect 参数不完整</td><td>统一编码完整路由和 query；登录后回原页并恢复筛选/规格</td><td><span class="tag warn">重点</span></td></tr>
+            <tr><td>Banner</td><td><code>product/category/search/custom</code></td><td>沿用现有白名单；未知类型只记录埋点，不跳转</td><td><span class="tag success">已明确</span></td></tr>
+            <tr><td>订单详情返回</td><td>当前 redirectTo 订单列表</td><td>有来源栈时 navigateBack；无栈时 fallback 订单列表</td><td><span class="tag danger">缺陷</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="two-col" style="margin-top:22px">
+        <div class="card">
+          <h3>我的页分组</h3>
+          <ul>
+            <li><strong>资产与订单</strong>：订单、售后、评价、发票。</li>
+            <li><strong>宠物服务</strong>：宠物档案、预约、保险、配种。</li>
+            <li><strong>权益与营销</strong>：优惠券、积分、积分商城、邀请、任务、会员。</li>
+            <li><strong>账户与偏好</strong>：地址、收藏、消息设置、协议、客服。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>桌面后台导航分组</h3>
+          <ul>
+            <li><strong>经营</strong>：看板、数据大屏、经营报表。</li>
+            <li><strong>商品与库存</strong>：宠物商品、分类品种、供货商、门店。</li>
+            <li><strong>交易履约</strong>：订单、售后、配送方式、预约核销。</li>
+            <li><strong>增长与客服</strong>：营销、活动、会员、评价、人工客服。</li>
+            <li><strong>平台</strong>：财务、审计、敏感词、首页装修、Banner。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="interactions">
+      <div class="section-head"><h2>全量交互规则</h2><div class="head-note">规则按可复用组件抽象，桌面与移动端共用状态语义。</div></div>
+      <div class="three-col">
+        <div class="card"><h3>导航与返回</h3><ul><li>四个一级 Tab 使用原生 TabBar，切换保留滚动位置。</li><li>详情类页面入栈，返回不重置列表筛选。</li><li>所有登录跳转携带完整 redirect，登录后恢复原任务。</li><li>可恢复筛选状态写入 URL。</li></ul></div>
+        <div class="card"><h3>列表与筛选</h3><ul><li>筛选变化采用 300ms 防抖请求，取消旧请求。</li><li>触底加载显示骨架卡，加载失败显示重试条。</li><li>空态提供“清除筛选”和“查看全部”。</li><li>切分类/价格/性别保留已选排序。</li></ul></div>
+        <div class="card"><h3>商品详情</h3><ul><li>健康档案先于营销内容，异常值显示“待补充”。</li><li>有 SKU 必选；未选时购买按钮引导展开 SKU。</li><li>收藏乐观更新，失败回滚并提示。</li><li>图片支持预览，视频只进入详情后加载。</li></ul></div>
+        <div class="card"><h3>结算</h3><ul><li>金额变化区段定位：商品、服务、券、会员、运费、定金。</li><li>定金、积分、优惠券互斥关系实时展示禁用原因。</li><li>配送方式切换时清空不相关地址输入。</li><li>提交按钮双防重；协议未勾选不清空表单。</li></ul></div>
+        <div class="card"><h3>订单与售后</h3><ul><li>待支付展示截止时间与可取消操作。</li><li>自提已支付单突出核销码并可复制。</li><li>可售后才显示申请入口；待审核可撤销。</li><li>危险操作必须确认并说明结果。</li></ul></div>
+        <div class="card"><h3>消息与后台</h3><ul><li>未读使用小红点，不常驻“已载入”文案。</li><li>消息已读乐观更新，失败回滚。</li><li>桌面表格保存列宽、筛选与分页。</li><li>写操作提供二次确认、加载态、403 提示。</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="states">
+      <div class="section-head"><h2>关键状态规范</h2><div class="head-note">每个页面按加载、空、错误、权限、成功、危险操作六态验收。</div></div>
+      <div class="tables card">
+        <table>
+          <thead><tr><th>场景</th><th>加载</th><th>空</th><th>错误 / 权限</th><th>成功</th></tr></thead>
+          <tbody>
+            <tr><td>宠物列表</td><td>保持网格的图片/标题骨架</td><td>“暂无符合条件的宠物” + 清除筛选</td><td>“列表加载失败，重试”；未登录浏览不阻断</td><td>滚动位置和筛选保留</td></tr>
+            <tr><td>商品详情</td><td>头图、价格、档案分段骨架</td><td>“宠物已下架” + 推荐相似宠物</td><td>404 提示返回列表；401 展开登录</td><td>收藏/加购即时反馈</td></tr>
+            <tr><td>结算页</td><td>金额行占位，不闪烁</td><td>购物车无可用商品，返回购物车</td><td>字段错误逐项提示并聚焦</td><td>创建订单后进入支付/订单</td></tr>
+            <tr><td>订单</td><td>订单卡骨架</td><td>按状态给主行动：去逛逛 / 查看售后</td><td>支付确认中不可重复支付</td><td>状态时间线更新</td></tr>
+            <tr><td>后台表格</td><td>表格骨架与筛选可用</td><td>说明可创建对象</td><td>403 显示无权限与申请入口</td><td>行状态更新并显示 toast</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="tokens">
+      <div class="section-head"><h2>推荐设计 Token</h2><div class="head-note">以方向 A 生成；若选其他方向，只替换主题层，不改业务组件契约。</div></div>
+      <div class="two-col">
+        <div class="card">
+          <h3>色彩与层级</h3>
+          <div class="swatches"><span class="swatch" style="background:#F4623A"></span><span class="swatch" style="background:#2B6A8C"></span><span class="swatch" style="background:#F7F4F0"></span><span class="swatch" style="background:#17181A"></span></div>
+          <ul><li>主色用于主按钮、选中态和价格强调。</li><li>信任蓝用于健康、协议、平台保障。</li><li>语义色只用于状态，不做大面积装饰。</li><li>正文对比度至少 4.5:1。</li></ul>
+        </div>
+        <div class="card">
+          <h3>尺寸与栅格</h3>
+          <ul><li>移动：320 / 375 / 414 / 768；桌面：1280 / 1440 / 1920。</li><li>4px 基数；卡片 12px；按钮胶囊 999px。</li><li>移动商品卡 2 列，768 以上 3-4 列。</li><li>触控目标 44px；底部栏避开 safe area。</li></ul>
+        </div>
+      </div>
+      <pre class="token-lines">--color-primary: #F4623A;
+--color-primary-hover: #D94E2B;
+--color-trust: #2B6A8C;
+--color-success: #2F7A4D;
+--color-warning: #B7791F;
+--color-danger: #C4322D;
+--surface-page: #F7F4F0;
+--surface-card: #FFFFFF;
+--text-primary: #17181A;
+--text-secondary: #5F6670;
+--border-subtle: #E4E5E7;
+--radius-card: 12px;
+--radius-control: 999px;
+--space-1: 4px; --space-2: 8px; --space-3: 12px;
+--space-4: 16px; --space-6: 24px; --space-8: 32px;
+--font-title: 17px/1.3 650;
+--font-body: 14px/1.6 400;
+--font-caption: 12px/1.5 400;
+--shadow-card: 0 12px 30px rgba(20,20,22,.08);</pre>
+    </section>
+
+    <section class="section" id="handoff">
+      <div class="section-head"><h2>前端交接</h2><div class="head-note">方向确认后可分三批进入实现。</div></div>
+      <div class="three-col">
+        <div class="card"><h3>P0 · 可直接实现</h3><ul><li>设计 Token 与基础组件样式。</li><li>首页、列表、详情、结算、订单详情。</li><li>修复分类参数、登录 redirect、返回语义、TabBar。</li></ul></div>
+        <div class="card"><h3>P1 · 高价值补齐</h3><ul><li>我的页分组与营销资产聚合。</li><li>消息直达订单、客服与通知中心。</li><li>宠物档案和健康提醒入口。</li></ul></div>
+        <div class="card"><h3>P2 · 桌面重构</h3><ul><li>后台菜单按工作域折叠。</li><li>列表 + 详情抽屉、批量操作、审计反馈。</li><li>大屏与报表保留桌面专用密度。</li></ul></div>
+      </div>
+    </section>
+
+    <section class="section" id="confirm">
+      <div class="section-head"><h2>需要业务确认</h2><div class="head-note">这些项目不能从代码唯一推导，未确认前不进入默认跳转或首页装修。</div></div>
+      <div class="two-col">
+        <div class="card"><h3>跳转范围</h3><ul><li>“跳转相关功能”是 Banner 目标跳转、模块入口聚合，还是修复现有跳转缺陷？</li><li>消息中心是否需要按订单号、客服会话、优惠券分别直达？</li><li>晒单、任务、砍价、竞拍、预约、保险、配种是否都属于本期 C 端一级能力？</li></ul></div>
+        <div class="card"><h3>平台与资产</h3><ul><li>优先交付微信小程序还是 H5？</li><li>是否优先重构 C 端，后台桌面进入第二批？</li><li>品牌色、Logo、真实宠物照片和运营素材由哪方提供？</li><li>支付结果页是否可新增独立路由，还是必须停留在订单详情？</li></ul></div>
+      </div>
+    </section>
+
+    <p class="footer-note">本页是设计方向样机与交互规格，不是最终上线页面。样机中的价格、库存与健康状态均为示意数据。</p>
+  </main>
+</body>
+</html>
+

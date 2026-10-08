@@ -1,0 +1,25 @@
+{
+  "direct": {
+    "width": 44,
+    "height": 44,
+    "text": "返回"
+  },
+  "directFallbackUrl": "http://127.0.0.1:18122/pages/index/index",
+  "list": {
+    "width": 44,
+    "height": 44,
+    "text": "返回"
+  },
+  "listBackUrl": "http://127.0.0.1:18122/pages/list/index",
+  "search": {
+    "width": 44,
+    "height": 44,
+    "text": "返回"
+  },
+  "searchBackUrl": "http://127.0.0.1:18122/pages/list/index?keyword=%E6%90%9C%E7%B4%A2",
+  "recommend": {
+    "width": 44,
+    "height": 44,
+    "text": "返回"
+  }
+}

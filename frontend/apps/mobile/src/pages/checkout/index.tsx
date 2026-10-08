@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Image, Input, Text, Textarea, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { get, getToken, post } from '../../request'
+import { goLogin } from '../../navigation'
+import { ErrorState, Skeleton } from '../../components/Feedback'
 import {
   AddressView,
   CartItem,
@@ -55,27 +57,38 @@ export default function Checkout() {
   const [pointsToUse, setPointsToUse] = useState(0)
   const [stores, setStores] = useState<{ id: string; name: string; address: string }[]>([])
   const [storeId, setStoreId] = useState('')
+  const [checkoutError, setCheckoutError] = useState('')
+  const [checkoutLoading, setCheckoutLoading] = useState(true)
+  const [reloadToken, setReloadToken] = useState(0)
   const coAgreeBox = agreeUI ? 'co-agree-box co-agree-on' : 'co-agree-box'
   const coSvcCheck = usePoints ? 'co-svc-check co-svc-check-on' : 'co-svc-check'
 
   useEffect(() => {
+    setCheckoutError('')
+    setCheckoutLoading(true)
     if (!getToken()) {
-      Taro.redirectTo({
-        url: `/pages/login/index?redirect=${encodeURIComponent(`/pages/checkout/index?id=${params.id}`)}`,
-      }).catch(() => {})
+      const redirectQuery = new URLSearchParams({ id: params.id || '' })
+      if (params.skuId) redirectQuery.set('skuId', params.skuId)
+      if (params.groupId) redirectQuery.set('groupId', params.groupId)
+      if (cartMode) redirectQuery.set('from', 'cart')
+      goLogin(`/pages/checkout/index?${redirectQuery.toString()}`).catch(() => {})
       return
     }
+    let primaryRequest: Promise<unknown> | undefined
     if (cartMode) {
       const ids = (Taro.getStorageSync('pet_cart_ids') as string[]) || []
-      get<CartListResp>('/cart').then((r) => {
+      primaryRequest = get<CartListResp>('/cart').then((r) => {
         const want = new Set(ids)
         setCartItems((r.list ?? []).filter((i) => want.has(i.id) && i.onSale))
         setCartLoaded(true)
-      }).catch(() => setCartLoaded(true))
+      }).catch(() => {
+        setCartLoaded(true)
+        setCheckoutError('购物车加载失败')
+      })
     } else {
-      get<ProductDetail>(`/products/${params.id}`)
+      primaryRequest = get<ProductDetail>(`/products/${params.id}`)
         .then(setD)
-        .catch((e) => Taro.showToast({ title: e.message, icon: 'none' }))
+        .catch(() => setCheckoutError('结算信息加载失败'))
       get<ServiceItemView[]>('/services').then(setServices).catch(() => {})
     }
     if (groupMode) {
@@ -113,7 +126,8 @@ export default function Checkout() {
         }
       })
       .catch(() => {})
-  }, [params.id, cartMode, groupMode])
+    Promise.resolve(primaryRequest).finally(() => setCheckoutLoading(false))
+  }, [params.id, cartMode, groupMode, reloadToken])
 
   // 勾选服务变化后重新拉取可用券（门槛含服务费）
   useEffect(() => {
@@ -206,12 +220,10 @@ export default function Checkout() {
         content: r.isDeposit
           ? `订单号 ${r.orderNo}，已付定金 ¥${r.payAmount}，尾款 ¥${r.tailAmount} 请尽快补齐。`
           : `订单号 ${r.orderNo}，实付 ¥${r.payAmount}。微信支付待商户号联调后开放。`,
-        cancelText: '返回首页',
         confirmText: '查看订单',
+        showCancel: false,
         success: (m) => {
-          Taro.redirectTo({
-            url: m.confirm ? `/pages/order-detail/index?orderNo=${r.orderNo}` : '/pages/index/index',
-          })
+          Taro.redirectTo({ url: `/pages/order-detail/index?orderNo=${r.orderNo}` })
         },
       })
     } catch (e: any) {
@@ -221,7 +233,28 @@ export default function Checkout() {
     }
   }
 
-  if (!d && !cartMode) return <View className='checkout'>加载中…</View>
+  if (checkoutError) {
+    return (
+      <View className='checkout'>
+        <ErrorState
+          title={checkoutError}
+          description="已保留当前结算参数，可重试后继续提交"
+          onRetry={() => {
+            setCartLoaded(!cartMode)
+            setReloadToken((value) => value + 1)
+          }}
+        />
+      </View>
+    )
+  }
+  if (checkoutLoading && ((!d && !cartMode) || (cartMode && !cartLoaded))) {
+    return (
+      <View className='checkout'>
+        <Skeleton variant='checkout' />
+      </View>
+    )
+  }
+  if (!d && !cartMode) return <View className='checkout'><Skeleton variant='checkout' /></View>
   if (cartMode && cartLoaded && cartItems.length === 0) {
     return <View className='checkout'><View className='card co-empty-tip'>购物车里没有可结算的商品</View></View>
   }
@@ -237,7 +270,7 @@ export default function Checkout() {
                 {it.productImage ? (
                   <Image className='co-prod-img' src={it.productImage} mode='aspectFill' />
                 ) : (
-                  <View className='co-prod-img'>🐾</View>
+                  <View className='co-prod-img'>中性占位</View>
                 )}
                 <View className='co-prod-main'>
                   <Text className='co-prod-title'>{it.productTitle}</Text>
@@ -253,7 +286,7 @@ export default function Checkout() {
           {d.mainImage ? (
             <Image className='co-prod-img' src={d.mainImage} mode='aspectFill' />
           ) : (
-            <View className='co-prod-img'>🐾</View>
+            <View className='co-prod-img'>中性占位</View>
           )}
           <View className='co-prod-main'>
             <Text className='co-prod-title'>{d.title}</Text>

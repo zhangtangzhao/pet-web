@@ -2,93 +2,96 @@ import { useEffect, useState } from 'react'
 import { Image, Input, Text, View } from '@tarojs/components'
 import Taro, { usePullDownRefresh } from '@tarojs/taro'
 import { get } from '../../request'
-import { ProductCard } from '../../types'
+import { CategoryItem, ProductCard } from '../../types'
 import TabBar from '../../components/TabBar'
+import { ErrorState, Skeleton } from '../../components/Feedback'
+import ProductCardItem from '../../components/ProductCard'
 import './index.css'
 
-const CATS = ['全部', '猫', '狗', '鸟', '异宠']
-const TABS = [
-  { key: 'home', icon: '🏠', label: '首页' },
-  { key: 'category', icon: '📋', label: '分类' },
-  { key: 'message', icon: '💬', label: '消息' },
-  { key: 'me', icon: '👤', label: '我的' },
-]
+const SEARCH_ICON =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23C64120" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'
+const PROFILE_ICON =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232B6A8C" stroke-width="2" stroke-linecap="round"><path d="M12 4l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V7z"/></svg>'
+const CONTRACT_ICON =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232B6A8C" stroke-width="2" stroke-linecap="round"><path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4M10 16h4"/></svg>'
+const ORDER_ICON =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%232B6A8C" stroke-width="2" stroke-linecap="round"><path d="M5 5h14l-1 14H6z"/><path d="M9 9h6M9 13h6"/></svg>'
 
 export default function Home() {
-  const [cat, setCat] = useState('全部')
+  const [cats, setCats] = useState<CategoryItem[]>([])
+  const [catId, setCatId] = useState('')
   const [products, setProducts] = useState<ProductCard[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const load = (category?: string) => {
     setLoading(true)
-    const qs = category && category !== '全部' ? `&categoryId=` : ''
+    setError('')
+    const qs = category ? `&categoryId=${encodeURIComponent(category)}` : ''
     get<{ list: ProductCard[] }>(`/products?pageSize=20${qs}`)
       .then((r) => setProducts(r?.list ?? []))
-      .catch(() => {})
+      .catch(() => setError('商品加载失败'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load(cat) }, [cat])
+  useEffect(() => {
+    get<CategoryItem[]>('/categories')
+      .then((list) => setCats((list ?? []).filter((item) => item.id && item.name)))
+      .catch(() => setCats([]))
+  }, [])
 
-  usePullDownRefresh(() => { load(cat); Taro.stopPullDownRefresh() })
+  useEffect(() => { load(catId) }, [catId])
+
+  usePullDownRefresh(() => { load(catId); Taro.stopPullDownRefresh() })
 
   const goDetail = (id: string) => Taro.navigateTo({ url: `/pages/detail/index?id=${id}` }).catch(() => {})
-  const goSearch = () => Taro.switchTab({ url: '/pages/list/index' }).catch(() => {})
-  const goTab = (key: string) => {
-    const map: Record<string, string> = {
-      category: '/pages/list/index',
-      message: '/pages/notify/index',
-      me: '/pages/me/index',
-    }
-    if (map[key]) Taro.navigateTo({ url: map[key] }).catch(() => {})
-  }
+  const goSearch = () => Taro.navigateTo({ url: '/pages/list/index' }).catch(() => {})
 
   // Split into two columns for waterfall
   const colL = products.filter((_, i) => i % 2 === 0)
   const colR = products.filter((_, i) => i % 2 === 1)
 
-  const Card = (p: ProductCard) => (
-    <View className='pc-card' onClick={() => goDetail(p.id)}>
-      <View className='pc-img-wrap'>
-        {p.mainImage ? <Image className='pc-img' src={p.mainImage} mode='aspectFill' lazyLoad /> : <View className='pc-img pc-img-empty'>🐾</View>}
-      </View>
-      <View className='pc-body'>
-        <Text className='pc-title'>{p.title}</Text>
-        <View className='pc-bottom'>
-          <Text className='pc-price'>¥{Number(p.price).toFixed(2)}</Text>
-          <Text className='pc-sales'>已售{p.sales}</Text>
-        </View>
-      </View>
-    </View>
-  )
-
   return (
     <View className='home'>
-      {/* 搜索框 */}
       <View className='home-search' onClick={goSearch}>
-        <Text className='home-search-icon'>🔍</Text>
+        <Image className='home-search-icon' src={SEARCH_ICON} />
         <Input className='home-search-input' placeholder='搜索心仪的宠物' disabled />
       </View>
 
-      {/* 分类标签 */}
+      <View className='home-assurance'>
+        <View className='assurance-item'><Image className='assurance-icon' src={PROFILE_ICON} /><Text>宠物档案</Text></View>
+        <View className='assurance-item'><Image className='assurance-icon' src={CONTRACT_ICON} /><Text>交易协议</Text></View>
+        <View className='assurance-item'><Image className='assurance-icon' src={ORDER_ICON} /><Text>订单状态</Text></View>
+      </View>
+
+      <View className='home-section-head'>
+        <Text className='home-section-title'>精选在售宠物</Text>
+        <Text className='home-view-all' onClick={goSearch}>查看全部</Text>
+      </View>
+
       <View className='home-cats'>
-        {CATS.map((c) => (
-          <View key={c} className={`home-cat ${cat === c ? 'home-cat-on' : ''}`} onClick={() => setCat(c)}>
-            <Text>{c}</Text>
+        {[{ id: '', name: '全部' }, ...cats].map((c) => (
+          <View key={c.id || 'all'} className={`home-cat ${catId === c.id ? 'home-cat-on' : ''}`} onClick={() => setCatId(c.id)}>
+            <Text>{c.name}</Text>
           </View>
         ))}
       </View>
 
-      {/* 商品瀑布流 */}
       {loading ? (
-        <View className='home-loading'><Text>加载中…</Text></View>
+        <Skeleton variant='home' />
+      ) : error ? (
+        <ErrorState
+          title='商品加载失败'
+          description="请检查网络后重试，已保留当前分类"
+          onRetry={() => load(catId)}
+        />
       ) : (
         <View className='home-grid'>
-          <View className='home-col'>{colL.map(Card)}</View>
-          <View className='home-col'>{colR.map(Card)}</View>
+          <View className='home-col'>{colL.map((p) => <ProductCardItem key={p.id} product={p} tone='home' onOpen={() => goDetail(p.id)} />)}</View>
+          <View className='home-col'>{colR.map((p) => <ProductCardItem key={p.id} product={p} tone='home' onOpen={() => goDetail(p.id)} />)}</View>
         </View>
       )}
-      {!loading && products.length === 0 && <View className='home-empty'><Text>暂无商品</Text></View>}
+      {!loading && !error && products.length === 0 && <View className='home-state'><Text>暂无商品</Text></View>}
 
       <TabBar active='home' />
     </View>

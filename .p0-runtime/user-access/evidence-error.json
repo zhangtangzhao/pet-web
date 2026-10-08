@@ -1,0 +1,6 @@
+2026-09-21T10:28:11.971Z page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:10087/pages/index/index
+Call log:
+[2m  - navigating to "http://127.0.0.1:10087/pages/index/index", waiting until "domcontentloaded"[22m
+
+    at hardLoad (D:\test-project\pet\.p0-runtime\verify-user-access.cjs:35:14)
+    at run (D:\test-project\pet\.p0-runtime\verify-user-access.cjs:106:43)

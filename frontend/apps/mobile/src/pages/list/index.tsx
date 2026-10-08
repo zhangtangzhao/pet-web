@@ -5,6 +5,8 @@ import { del, get, getToken, post } from '../../request'
 import { CategoryItem, PageResp, ProductCard, SearchHotRow, StringListResp } from '../../types'
 import './index.css'
 import TabBar from '../../components/TabBar'
+import { ErrorState, Skeleton } from '../../components/Feedback'
+import ProductCardItem from '../../components/ProductCard'
 
 const SORTS = [
   { v: '', label: '默认' },
@@ -25,6 +27,7 @@ export default function List() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [listError, setListError] = useState('')
   // 搜索增强：热搜 / 历史 / 联想
   const [hots, setHots] = useState<SearchHotRow[]>([])
   const [hist, setHist] = useState<string[]>([])
@@ -78,6 +81,7 @@ export default function List() {
   const load = useCallback(
     async (nextPage: number, append: boolean, kw = keyword, cid = categoryId, st = sort) => {
       setLoading(true)
+      setListError('')
       try {
         const qs = new URLSearchParams({ page: String(nextPage), pageSize: String(PAGE_SIZE) })
         if (kw) qs.set('keyword', kw)
@@ -88,7 +92,7 @@ export default function List() {
         setTotal(resp.total)
         setPage(nextPage)
       } catch (e: any) {
-        Taro.showToast({ title: e.message, icon: 'none' })
+        setListError(nextPage === 1 ? '商品加载失败' : '更多内容加载失败')
       } finally {
         setLoading(false)
       }
@@ -122,7 +126,10 @@ export default function List() {
   return (
     <View className='lst'>
       <View className='lst-search'>
-        <Text className='lst-search-icon'>🔍</Text>
+        <Image
+          className='lst-search-icon'
+          src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23C64120" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'
+        />
         <Input
           className='lst-input'
           value={keyword}
@@ -143,7 +150,7 @@ export default function List() {
             {sugs.length > 0
               ? sugs.map((s) => (
                   <View className='lst-sug' key={s} onClick={() => doSearch(s)}>
-                    🔍 {s}
+                    {s}
                   </View>
                 ))
               : (
@@ -209,26 +216,30 @@ export default function List() {
         ))}
       </View>
 
-      {list.length === 0 && !loading && <View className='lst-empty'>没有找到合适的宠物，换个条件试试～</View>}
+      {!loading && !listError && (
+        <View className='lst-count'>
+          <Text>共 {total} 只</Text>
+        </View>
+      )}
+
+      {loading && list.length === 0 && <Skeleton variant='list' />}
+      {!loading && listError && list.length === 0 && (
+        <ErrorState
+          title={listError}
+          description={`已保留“${keyword || '全部关键词'}”和当前筛选`}
+          onRetry={() => load(1, false)}
+        />
+      )}
+      {!loading && !listError && list.length === 0 && <View className='lst-empty'>没有找到合适的宠物，换个条件试试～</View>}
       <View className='lst-grid'>
         {list.map((p) => (
-          <View className='lst-card card' key={p.id} onClick={() => goDetail(p)}>
-            {p.mainImage ? (
-              <Image className='lst-img' src={p.mainImage} mode='aspectFill' lazyLoad />
-            ) : (
-              <View className='lst-img lst-img-empty'>🐾</View>
-            )}
-            <View className='lst-body'>
-              <Text className='lst-title'>{p.title}</Text>
-              <View className='lst-meta'>
-                <Text className='price'>¥{p.price}</Text>
-                <Text className='lst-sales'>已售{p.sales}</Text>
-              </View>
-            </View>
-          </View>
+          <ProductCardItem key={p.id} product={p} onOpen={() => goDetail(p)} />
         ))}
       </View>
-      {list.length < total && (
+      {listError && list.length > 0 && (
+        <ErrorState title={listError} description="已保留当前列表和筛选条件" onRetry={() => load(page + 1, true)} />
+      )}
+      {!listError && list.length < total && (
         <View className='lst-more'>{loading ? '加载中…' : '上拉加载更多'}</View>
       )}
     <TabBar active='category' />

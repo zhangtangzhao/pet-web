@@ -1,0 +1,27 @@
+{
+  "skuBuy": {
+    "finalUrl": "http://127.0.0.1:18131/pages/checkout/index?id=sku-p1&skuId=sku-1",
+    "assertion": "立即购买 -> 选择标准方案 -> 确认后自动进入 checkout，URL 含 id=sku-p1&skuId=sku-1"
+  },
+  "skuCart": {
+    "finalUrl": "http://127.0.0.1:18131/pages/detail/index?id=sku-p1",
+    "request": {
+      "method": "POST",
+      "path": "/api/cart",
+      "body": "{\"productId\":\"sku-p1\",\"skuId\":\"sku-2\"}"
+    },
+    "assertion": "加入购物车 -> 选择完整方案 -> 确认后自动 POST /api/cart 并显示成功提示"
+  },
+  "orderRedirect": {
+    "beforeUrl": "http://127.0.0.1:18131/pages/checkout/index?id=sku-p1&skuId=sku-1",
+    "finalUrl": "http://127.0.0.1:18131/pages/order-detail/index?orderNo=order-runtime-1",
+    "assertion": "单确认订单弹窗 -> 查看订单后 URL 变为订单详情，且不再显示 checkout 联系人表单"
+  },
+  "reviewPagination": {
+    "requests": [
+      "/api/products/sku-p1/reviews?limit=10",
+      "/api/products/sku-p1/reviews?limit=10&cursor=p1-r10"
+    ],
+    "assertion": "首页评价请求 product=sku-p1；加载更多继续使用 product=sku-p1 和 cursor=p1-r10，页面出现 p1-r20"
+  }
+}

@@ -3,7 +3,9 @@ import { Image, Text, View } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { askSubscribe, cancelAfterSale, cancelOrder, confirmOrder, goAfterSale, goReview, payOrder, prefetchTmplIds } from '../../orderActions'
 import { get, getToken } from '../../request'
+import { canGoBack, goLogin } from '../../navigation'
 import { OrderView } from '../../types'
+import { ErrorState, Skeleton } from '../../components/Feedback'
 import './index.css'
 
 const SHIP_TEXT: Record<number, string> = { 0: '待配送', 1: '配送中', 2: '已送达' }
@@ -33,21 +35,20 @@ export default function OrderDetail() {
   const { params } = useRouter()
   const orderNo = params.orderNo || ''
   const [o, setO] = useState<OrderView | null>(null)
+  const [orderError, setOrderError] = useState('')
   const [leftSec, setLeftSec] = useState(0)
 
   const load = useCallback(() => {
     return get<OrderView>(`/orders/${orderNo}`)
       .then(setO)
-      .catch((e: any) => {
-        Taro.showToast({ title: e.message, icon: 'none' })
+      .catch(() => {
+        setOrderError('订单详情加载失败')
       })
   }, [orderNo])
 
   useEffect(() => {
     if (!getToken()) {
-      Taro.redirectTo({
-        url: `/pages/login/index?redirect=${encodeURIComponent(`/pages/order-detail/index?orderNo=${orderNo}`)}`,
-      }).catch(() => {})
+      goLogin(`/pages/order-detail/index?orderNo=${encodeURIComponent(orderNo)}`).catch(() => {})
       return
     }
     prefetchTmplIds()
@@ -63,7 +64,24 @@ export default function OrderDetail() {
     return () => clearInterval(t)
   }, [o])
 
-  if (!o) return <View className='odt' />
+  if (!o && orderError) {
+    return (
+      <View className='odt'>
+        <ErrorState
+          title="订单详情加载失败"
+          description={`已保留订单号 ${orderNo}，可重试后继续操作`}
+          onRetry={load}
+        />
+      </View>
+    )
+  }
+  if (!o) {
+    return (
+      <View className='odt'>
+        <Skeleton variant='order' />
+      </View>
+    )
+  }
 
   const reload = () => load()
   const asStatus = o.aftersaleStatus ?? 0
@@ -220,7 +238,7 @@ export default function OrderDetail() {
             {it.productImage ? (
               <Image className='odt-img' src={it.productImage} mode='aspectFill' />
             ) : (
-              <View className='odt-img'>🐾</View>
+              <View className='odt-img'>中性占位</View>
             )}
             <View className='odt-prod-main'>
               <Text className='odt-title'>{it.productTitle}</Text>
@@ -343,8 +361,11 @@ export default function OrderDetail() {
 
       {renderActions()}
 
-      <View className='odt-back' onClick={() => Taro.redirectTo({ url: '/pages/orders/index' })}>
-        返回订单列表
+      <View className='odt-back' onClick={() => {
+        if (canGoBack()) Taro.navigateBack().catch(() => {})
+        else Taro.redirectTo({ url: '/pages/orders/index' }).catch(() => {})
+      }}>
+        {canGoBack() ? '返回' : '返回订单列表'}
       </View>
     </View>
   )

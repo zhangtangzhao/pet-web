@@ -1,0 +1,5 @@
+2026-09-21T08:42:17.230Z locator.waitFor: Timeout 10000ms exceeded.
+Call log:
+[2m  - waiting for getByText('评价内容 p1-r10')[22m
+
+    at run (D:\test-project\pet\.p0-runtime\verify.cjs:298:45)

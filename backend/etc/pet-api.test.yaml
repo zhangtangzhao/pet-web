@@ -14,7 +14,7 @@ Database:
   DataSource: host=127.0.0.1 port=25432 user=pet password=pet123456 dbname=pet sslmode=disable TimeZone=Asia/Shanghai
 
 Redis:
-  Addr: 127.0.0.1:56379
+  Addr: 127.0.0.1:6379
   DB: 0
 
 Snowflake:

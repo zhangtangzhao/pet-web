@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro'
+import { goLoginForCurrentPage } from './navigation'
 
 const BASE_URL = process.env.TARO_ENV === 'h5' ? '/api' : 'https://your-domain.com/api'
 
@@ -39,7 +40,7 @@ export async function request<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path
   if (body.code !== 0) {
     if (body.code === 40100 || body.code === 40101) {
       clearTokens()
-      Taro.navigateTo({ url: '/pages/login/index' }).catch(() => {})
+      goLoginForCurrentPage().catch(() => {})
     }
     throw new Error(body.msg)
   }

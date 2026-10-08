@@ -1,0 +1,16 @@
+{
+  "project_id": "2a355270-52bd-4c58-b684-c5aef05f0ad2",
+  "project_title": "宠物",
+  "resources": [
+    {
+      "id": "d28c9493-92b0-44f1-8007-dfa6d5df63d8",
+      "resource_type": "local_directory",
+      "resource_ref": {
+        "label": "pet",
+        "daemon_id": "019fb153-fd7e-701c-911b-735ffebf948c",
+        "local_path": "D:\\test-project\\pet",
+        "execution_mode": "in_place"
+      }
+    }
+  ]
+}

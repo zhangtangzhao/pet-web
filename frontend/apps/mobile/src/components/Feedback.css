@@ -1,0 +1,145 @@
+.fb-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fb-grid-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fb-card {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fb-media,
+.fb-hero,
+.fb-thumb {
+  background: #ECE8E2;
+}
+
+.fb-media {
+  aspect-ratio: 4 / 3;
+}
+
+.fb-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.fb-line {
+  height: 12px;
+  border-radius: 999px;
+  background: #ECE8E2;
+}
+
+.fb-detail {
+  padding-bottom: 24px;
+}
+
+.fb-hero {
+  height: 300px;
+}
+
+.fb-panel {
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.fb-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fb-list-rows {
+  display: grid;
+  gap: 16px;
+}
+
+.fb-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+}
+
+.fb-row .fb-thumb {
+  width: 72px;
+  height: 64px;
+  border-radius: 8px;
+}
+
+.fb-form {
+  display: grid;
+  gap: 16px;
+}
+
+.fb-error {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-6);
+}
+
+.fb-error-title {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.fb-error-desc {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.fb-retry {
+  min-width: 96px;
+  min-height: 44px;
+  margin-top: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  color: var(--brand);
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.fb-detail .fb-hero {
+  height: 300px;
+}
+
+@media (min-width: 48rem) {
+  .fb-grid-home {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .fb-grid-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .fb-detail .fb-hero {
+    height: 430px;
+  }
+
+  .fb-error,
+  .fb-form {
+    width: min(100%, 1160px);
+    margin: 0 auto;
+  }
+}

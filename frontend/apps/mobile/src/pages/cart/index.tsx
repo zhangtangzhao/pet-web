@@ -2,36 +2,46 @@ import { useCallback, useEffect, useState } from 'react'
 import { Image, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { del, get, getToken, put } from '../../request'
+import { goLogin } from '../../navigation'
+import { ErrorState, Skeleton } from '../../components/Feedback'
 import { CartItem, CartListResp } from '../../types'
 import './index.css'
 
 export default function Cart() {
   const [items, setItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [cartError, setCartError] = useState('')
 
   const load = useCallback(
     () =>
       get<CartListResp>('/cart')
         .then((r) => setItems(r.list ?? []))
-        .catch(() => {})
+        .catch(() => setCartError('购物车加载失败'))
         .finally(() => setLoading(false)),
     [],
   )
 
   useEffect(() => {
     if (!getToken()) {
-      Taro.redirectTo({ url: '/pages/login/index?redirect=%2Fpages%2Fcart%2Findex' }).catch(() => {})
+      goLogin('/pages/cart/index').catch(() => {})
       return
     }
     load()
   }, [load])
 
   const toggle = (it: CartItem) => {
-    put(`/cart/${it.id}`, { checked: it.checked === 1 ? 0 : 1 }).then(load).catch(() => {})
+    put(`/cart/${it.id}`, { checked: it.checked === 1 ? 0 : 1 }).then(load).catch(() => Taro.showToast({ title: '勾选失败，请重试', icon: 'none' }))
   }
 
   const remove = (it: CartItem) => {
-    del(`/cart/${it.id}`).then(load).catch(() => {})
+    Taro.showModal({
+      title: '删除商品',
+      content: `确定从购物车删除「${it.productTitle}」吗？`,
+      success: (result) => {
+        if (!result.confirm) return
+        del(`/cart/${it.id}`).then(load).catch((e: any) => Taro.showToast({ title: e.message, icon: 'none' }))
+      },
+    })
   }
 
   const checkedItems = items.filter((i) => i.checked === 1 && i.onSale)
@@ -51,10 +61,17 @@ export default function Cart() {
 
   return (
     <View className='cart'>
-      {loading && <View className='cart-empty'>加载中…</View>}
-      {!loading && items.length === 0 && (
+      {loading && <Skeleton variant='cart' />}
+      {!loading && cartError && (
+        <ErrorState
+          title="购物车加载失败"
+          description="网络连接不稳定，请稍后重试"
+          onRetry={load}
+        />
+      )}
+      {!loading && !cartError && items.length === 0 && (
         <View className='cart-empty'>
-          <Text className='cart-empty-icon'>🛒</Text>
+          <Text className='cart-empty-icon'>空</Text>
           <Text>购物车还是空的</Text>
         </View>
       )}

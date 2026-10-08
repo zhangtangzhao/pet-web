@@ -45,8 +45,18 @@ export default function Login() {
       setTokens(r.accessToken, r.refreshToken)
       Taro.showToast({ title: '登录成功', icon: 'success' })
       setTimeout(() => {
-        if (params.redirect) Taro.redirectTo({ url: decodeURIComponent(params.redirect) })
-        else Taro.navigateBack()
+        const rawRedirect = params.redirect
+        if (rawRedirect) {
+          let target = rawRedirect
+          try {
+            target = decodeURIComponent(rawRedirect)
+          } catch {
+            target = rawRedirect
+          }
+          Taro.redirectTo({ url: target }).catch(() => {})
+        } else {
+          Taro.navigateBack().catch(() => {})
+        }
       }, 600)
     } catch (e: any) {
       Taro.showToast({ title: e.message, icon: 'none' })

@@ -1,15 +1,43 @@
-page {
-  --brand: #ff7a45;
-  --bg: #f7f7f7;
+page,
+body {
+  --brand: #C64120;
+  --brand-hover: #A83517;
+  --brand-vivid: #F4623A;
+  --brand-soft: #FFF2ED;
+  --trust: #2B6A8C;
+  --trust-soft: #EDF5F8;
+  --success: #2F7A4D;
+  --warning: #B7791F;
+  --danger: #C4322D;
+  --bg: #F7F4F0;
+  --surface: #FFFFFF;
+  --text: #17181A;
+  --text-2: #4D535C;
+  --text-3: #5F6670;
+  --border: #E4E5E7;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 8px 24px rgba(23, 24, 26, 0.06);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-half: 2px;
   background: var(--bg);
-  font-size: 28px;
-  color: #333;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 .card {
-  background: #fff;
-  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .price {
@@ -20,8 +48,25 @@ page {
 .btn-primary {
   background: var(--brand);
   color: #fff;
-  border-radius: 44px;
+  border-radius: 999px;
   text-align: center;
-  padding: 20px 0;
-  font-size: 30px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+@media (min-width: 48rem) {
+  html {
+    /* Taro converts px to rem; write desktop root directly in rem. */
+    font-size: 2.5rem !important;
+  }
 }
